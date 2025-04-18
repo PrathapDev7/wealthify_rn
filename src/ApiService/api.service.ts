@@ -7,7 +7,8 @@ const baseURL = 'https://wealthify-be.onrender.com/api/v1/';
 
 const getHeaders = async () => {
     const headers = {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json', Authorization: ''
+
     };
 
     const token = await AsyncStorage.getItem('wealthify_token');

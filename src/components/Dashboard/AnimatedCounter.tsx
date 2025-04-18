@@ -7,7 +7,7 @@ import Animated, {
     withTiming,
     Easing, runOnJS,
 } from 'react-native-reanimated';
-import {formatNumberWithCommas} from "../../src/utils/helper";
+import {formatNumberWithCommas} from "../../utils/helper";
 
 const AnimatedCounter = ({ fromValue, toValue, duration = 500, style }) => {
     const [displayValue, setDisplayValue] = useState(fromValue);

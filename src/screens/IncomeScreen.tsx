@@ -12,7 +12,7 @@ import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 import ScreenWithHeader from "../components/layout/ScreenWithHeader";
 import APIService from "../ApiService/api.service";
 import { Swipeable } from 'react-native-gesture-handler';
-import ConfirmationModal from "../components/common/ConfirmationModal.txs";
+import ConfirmationModal from "../components/common/ConfirmationModal";
 import AddIncomeModal from "../components/modals/AddIncomeModal";
 
 

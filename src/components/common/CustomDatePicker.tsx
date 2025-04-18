@@ -1,74 +1,76 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import DatePicker from 'react-native-date-picker';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { Button } from 'react-native-paper';
+import { DatePickerModal } from 'react-native-paper-dates';
 import moment from 'moment';
 
-const CustomDatePicker = ({ value, onChange }) => {
+export default function CustomDatePicker({ value, onChange }: { value: string, onChange: (date: string) => void }) {
     const [show, setShow] = useState(false);
+    const [currentDate, setCurrentDate] = useState(new Date());
 
-    const handleDateChange = (selectedDate) => {
-        onChange(moment(selectedDate).format('YYYY-MM-DD'));
+    useEffect(() => {
+        if (value) {
+            const parsedDate = moment(value, 'YYYY-MM-DD').isValid() ? new Date(value) : new Date();
+            setCurrentDate(parsedDate);
+        }
+    }, [value]);
+
+    const handleDateChange = (date: any) => {
+        const formattedDate = moment(date).format('YYYY-MM-DD');
+        setCurrentDate(date);
+        onChange(formattedDate);
+        setShow(false);
     };
 
     return (
         <View style={styles.container}>
-            <TouchableOpacity style={styles.input} onPress={() => setShow(true)}>
-                <Text style={{ color: '#555' }}>{value || 'Select Date'}</Text>
-            </TouchableOpacity>
+            <Button
+                mode="contained"
+                compact={true}
+                onPress={() => setShow(true)}
+                style={styles.input}
+                labelStyle={styles.inputText}
+                contentStyle={styles.inputContent}
+            >
+                {value ? moment(value).format('MMM DD, YYYY') : 'Select Date'}
+            </Button>
 
-            <DatePicker
-                modal
-                open={show}
-                date={new Date(value || Date.now())}
-                onConfirm={(date) => {
-                    setShow(false);
-                    handleDateChange(date)
-                }}
-                onCancel={() => {
-                    setShow(false)
-                }}
-            />
+            {show && (
+                <DatePickerModal
+                    locale="en"
+                    mode="single"
+                    visible={show}
+                    date={currentDate}
+                    onDismiss={() => setShow(false)}
+                    onConfirm={({ date }) => handleDateChange(date)}
+                />
+            )}
         </View>
     );
-};
+}
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#e6e1f8',
-        borderRadius: 8,
-        backgroundColor: '#f7f2ff',
-        padding: 10,
         width: '100%',
     },
-    modalOverlay: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    },
-    datePickerContainer: {
-        backgroundColor: 'white',
-        padding: 20,
+    input: {
+        backgroundColor: '#f7f2ff',
+        borderWidth: 1,
+        borderColor: '#e6e1f8',
+        padding: 0,
         borderRadius: 10,
-        width: 300, // Set a specific width
+        marginBottom: 4,
+        width: '100%',
     },
-    closeButton: {
-        marginTop: 10,
-        backgroundColor: '#2196F3',
-        padding: 10,
-        borderRadius: 5,
-        alignItems: 'center',
+    inputText: {
+        fontSize: 12,
+        color: '#333',
     },
-    closeButtonText: {
-        color: 'white',
-        fontWeight: 'bold',
+    inputContent: {
+        justifyContent: 'flex-start',
+        color: '#333',
+        paddingLeft: 6
     },
 });
-
-export default CustomDatePicker;

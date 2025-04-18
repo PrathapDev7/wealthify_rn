@@ -8,7 +8,7 @@ import API from "../../ApiService/api.service";
 
 const api = new API();
 
-export const getUserData = (data) => {
+export function getUserData(data: any) {
     return async (dispatch) => {
         dispatch({type: FETCH_USER_REQUEST});
         try {
@@ -21,7 +21,7 @@ export const getUserData = (data) => {
             dispatch({type: FETCH_USER_FAILURE, error: error.message});
         }
     };
-};
+}
 
 export const removeUserData = () => ({
     type: DELETE_USER_DATA,

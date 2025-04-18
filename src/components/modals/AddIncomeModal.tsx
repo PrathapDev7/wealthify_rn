@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import RNPickerSelect from 'react-native-picker-select';
+import React, {useEffect, useState} from 'react';
+import {Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
 import moment from 'moment';
 import APIService from "../../ApiService/api.service";
-import { deepClone } from "../../utils/helper";
+import {deepClone} from "../../utils/helper";
 import CustomDatePicker from "../common/CustomDatePicker";
 import spacing from "../../styles/spacing";
+import MyCreatableDropdown from "@/src/components/common/MySelectDropdown";
 
 const api = new APIService();
 
@@ -38,8 +38,8 @@ const AddIncomeModal = ({
         api.getCategories("income").then(res => {
             if (res.data?.length) {
                 setCategories(res.data.map(res => ({
-                    value: res.title,
-                    label: res.title
+                    title: res.title,
+                    value: res.title
                 })));
             }
         });
@@ -102,7 +102,7 @@ const AddIncomeModal = ({
                 }
             }).catch(err => {
                 setLoading(false);
-                setErrors({ submit: true, text: err.response?.data?.message });
+                setErrors({submit: true, text: err.response?.data?.message});
             });
         } else {
             api.addIncome(payload).then(res => {
@@ -114,7 +114,7 @@ const AddIncomeModal = ({
                 }
             }).catch(err => {
                 setLoading(false);
-                setErrors({ submit: true, text: err.response?.data?.message });
+                setErrors({submit: true, text: err.response?.data?.message});
             });
         }
     };
@@ -124,30 +124,22 @@ const AddIncomeModal = ({
             visible={visible}
             animationType="fade"
             transparent
+
             onRequestClose={onClose}
         >
             <View style={styles.overlay}>
                 <View style={styles.modalContainer}>
-                    <Text style={[styles.title, spacing.mb3, spacing.pl4, {fontSize: 20},]}>{isUpdate ? 'Update Income' : 'Add Income'}</Text>
+                    <Text
+                        style={[styles.title, spacing.mb3, spacing.pl4,]}>{isUpdate ? 'Update Income' : 'Add Income'}</Text>
                     <ScrollView>
+                        <Text style={styles.label}>Title</Text>
                         <TextInput
                             placeholder="Enter title"
                             value={formData.title}
                             onChangeText={text => handleChange('title', text)}
                             style={styles.input}
                         />
-                        {errors.title && <Text style={styles.error}>{errors.title}</Text>}
-
-                        <RNPickerSelect
-                            onValueChange={value => handleChange('category', value)}
-                            onDonePress={() => { }}
-                            placeholder={{ label: 'Search to select or create', value: null }}
-                            items={categories}
-                            value={formData.category}
-                            style={pickerSelectStyles}
-                        />
-                        {errors.category && <Text style={styles.error}>{errors.category}</Text>}
-
+                        <Text style={styles.label}>Amount</Text>
                         <TextInput
                             placeholder="Enter income amount"
                             value={formData.amount}
@@ -155,22 +147,28 @@ const AddIncomeModal = ({
                             onChangeText={text => handleChange('amount', text.replace(/[^0-9]/g, ''))}
                             style={styles.input}
                         />
-                        {errors.amount && <Text style={styles.error}>{errors.amount}</Text>}
-
-                            <CustomDatePicker
-                                value={formData.date }
-                                onChange={(selectedDate) => {
-                                    if (selectedDate) {
-                                        handleChange('date', moment(selectedDate).format('YYYY-MM-DD'));
-                                    }
-                                }}
-                            />
-
+                        <Text style={styles.label}>Category</Text>
+                        <MyCreatableDropdown
+                            onSelect={(value: any) => handleChange('category', value)}
+                            placeholder={'Select category'}
+                            options={categories}
+                            value={formData.category}
+                        />
+                        <Text style={styles.label}>Date</Text>
+                        <CustomDatePicker
+                            value={formData.date}
+                            onChange={(selectedDate) => {
+                                if (selectedDate) {
+                                    handleChange('date', moment(selectedDate).format('YYYY-MM-DD'));
+                                }
+                            }}
+                        />
+                        <Text style={[styles.label, spacing.mt2]}>Additional Info (Optional)</Text>
                         <TextInput
-                            placeholder="Enter description"
+                            placeholder="Enter additional Info"
                             value={formData.description}
                             onChangeText={text => handleChange('description', text)}
-                            style={[styles.input, { height: 80}, spacing.mt2]}
+                            style={[styles.input, {height: 80}]}
                             multiline
                         />
                     </ScrollView>
@@ -204,13 +202,13 @@ const styles = StyleSheet.create({
         padding: 20,
         maxHeight: '90%',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: {width: 0, height: 2},
         shadowOpacity: 0.2,
         shadowRadius: 4,
         elevation: 5,
     },
     title: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: '600',
         backgroundColor: '#f6f0ff',
         paddingVertical: 12,
@@ -219,6 +217,11 @@ const styles = StyleSheet.create({
         marginTop: -20,
         marginHorizontal: -20,
         color: '#333',
+    },
+    label: {
+        fontSize: 14,
+        marginBottom: 8,
+        color: '#7c7c7c',
     },
     input: {
         backgroundColor: '#f7f2ff',
@@ -236,11 +239,11 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     buttonRow: {
-        display:'flex',
+        display: 'flex',
         flexDirection: 'row',
         justifyContent: 'flex-end',
         marginTop: 20,
-        gap:15
+        gap: 15
     },
     cancelButton: {
         backgroundColor: '#f0f0f0',
@@ -264,25 +267,3 @@ const styles = StyleSheet.create({
     },
 });
 
-const pickerSelectStyles = {
-    inputIOS: {
-        fontSize: 14,
-        paddingVertical: 12,
-        paddingHorizontal: 10,
-        backgroundColor: '#f7f2ff',
-        borderWidth: 1,
-        borderColor: '#e6e1f8',
-        borderRadius: 10,
-        color: '#333',
-        marginBottom: 10,
-    },
-    inputAndroid: {
-        fontSize: 14,
-        backgroundColor: '#f7f2ff',
-        outlineWidth: 3,
-        outlineColor: 'red',
-        borderRadius: 10,
-        color: '#000',
-        marginBottom: 10,
-    },
-};

@@ -9,7 +9,7 @@ export function InitialLoader() {
         <View style={styles.loadingContainer}>
             <View style={styles.loadingBox}>
                 <LottieView
-                    source={require('../../assets/lottie/loader')}
+                    source={require('../../../assets/lottie/loader')}
                     autoPlay
                     loop
                     style={{ width: 200, height: 200 }}

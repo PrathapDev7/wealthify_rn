@@ -1,7 +1,7 @@
 import React, {useMemo} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import {BarChart} from 'react-native-gifted-charts';
-import {Colors} from "../../src/styles/colors";
+import {Colors} from "../../styles/colors";
 import moment from "moment";
 
 const Past7DaysStats = ({incomeData, expenseData}) => {

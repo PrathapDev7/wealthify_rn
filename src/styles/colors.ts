@@ -3,7 +3,7 @@ export const Colors = {
     primary: '#6F6AF8',
     secondary: '#6cc8ef',
     tertiary: '#5de3c8',
-    quaternary: '#6F6AF8',
+    quaternary: '#ff5c5c',
 
     primaryDarker: '#6F6AF8',
     secondaryDarker: '#61c6d8',

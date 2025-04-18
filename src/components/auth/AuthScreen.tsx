@@ -13,15 +13,18 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
-import FlipWrapper from '../animations/FlipWrapper';
-import APIService from '../ApiService/api.service';
-import { getUserData } from '../redux/Actions/UserActions';
-import { images } from '../../assets/Constants/constants';
+import FlipWrapper from '../../animations/FlipWrapper';
+import APIService from '../../ApiService/api.service';
+import { getUserData } from '../../redux/Actions/UserActions';
+import { images } from '@/assets/Constants/constants';
+import {useRouter} from "expo-router";
+import {useEffect} from "react";
 
 const api = new APIService();
 
-const AuthScreen = ({ navigation }) => {
-    const dispatch = useDispatch();
+const AuthScreen = ( ) => {
+    const dispatch: any = useDispatch();
+    const router = useRouter();
 
     const [showRegisterForm, setShowRegisterForm] = useState(false);
     const [flipping, setFlipping] = useState(false);
@@ -36,6 +39,18 @@ const AuthScreen = ({ navigation }) => {
         password: '',
         confirm_password: '',
     });
+
+    useEffect(() => {
+        checkLoggedInUser();
+    },[]);
+
+    const checkLoggedInUser = async () => {
+        const user = await AsyncStorage.getItem('wealthify_user');
+        if(!!user) {
+            dispatch(getUserData(JSON.parse(user)));
+            router.push('/dashboard');
+        }
+    };
 
     const handleChange = (key, value) => {
         if (showRegisterForm) {
@@ -65,12 +80,11 @@ const AuthScreen = ({ navigation }) => {
         try {
             const res = showRegisterForm ? await api.register(data) : await api.login(data);
             if (res.data) {
-                console.log(res.data);
                 await AsyncStorage.setItem('wealthify_token', res.data.token);
                 await AsyncStorage.setItem('wealthify_user', JSON.stringify(res.data.data));
                 dispatch(getUserData(res.data.user));
                 Toast.show({ type: 'success', text1: showRegisterForm ? 'Registered!' : 'Logged in!' });
-                navigation.navigate('DrawerStack');
+                router.push('/dashboard');
             }
         } catch (err) {
             console.log(err.response);

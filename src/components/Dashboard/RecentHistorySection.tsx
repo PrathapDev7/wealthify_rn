@@ -1,9 +1,9 @@
 import React from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import moment from 'moment';
-import {Colors} from "../../src/styles/colors";
-import {formatNumberWithCommas} from "../../src/utils/helper";
-import spacing from "../../src/styles/spacing";
+import {Colors} from "../../styles/colors";
+import {formatNumberWithCommas} from "../../utils/helper";
+import spacing from "../../styles/spacing";
 
 const RecentHistoryItem = ({ item }) => {
     const isIncome = item.type === 'income';
