@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, StyleSheet, Image, TouchableOpacity, Text} from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome6';
+import Icon from 'react-native-vector-icons/Feather';
 import {Colors} from "../../styles/colors";
 import {images} from "../../../assets/Constants/constants";
 import {capitalize} from "../../utils/helper";
@@ -8,7 +8,7 @@ import {useSelector} from "react-redux";
 import NavMobileButtons from "../NavBar";
 
 const ScreenWithHeader = ({children}) => {
-    const userData = useSelector((state) => state?.userData?.userData) || {};
+    const userData:any = useSelector((state:any) => state?.userData?.userData) || {};
 
     return (
         <View style={{flex: 1, backgroundColor: '#F8F8F8'}}>
@@ -17,7 +17,7 @@ const ScreenWithHeader = ({children}) => {
                     <Image source={images.logo} style={styles.logo}/>
                 </View>
                 <TouchableOpacity style={styles.profileButton}>
-                    <Icon name="user" size={20} color={Colors.primary}/>
+                    <Icon name="user" size={18} color={Colors.quaternary}/>
                     <Text style={styles.profileName}>{capitalize(userData?.username || '')}</Text>
                 </TouchableOpacity>
             </View>

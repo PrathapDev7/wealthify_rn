@@ -49,6 +49,7 @@ const MySelectDropdown = ({ options = [], onSelect, placeholder = '', value='' }
         onSelect(null);
     };
 
+    // @ts-ignore
     return (
         <View>
             <SelectDropdown

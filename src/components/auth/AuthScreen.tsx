@@ -61,7 +61,8 @@ const AuthScreen = ( ) => {
     };
 
     const handleSubmit = async () => {
-        const data = showRegisterForm ? registerData : loginData;
+        const data: any = showRegisterForm ? registerData : loginData;
+
 
         if (showRegisterForm) {
             if (!data.username || !data.email || !data.password || !data.confirm_password) {
@@ -121,6 +122,8 @@ const AuthScreen = ( ) => {
                             showPassword={showPassword}
                             setShowPassword={setShowPassword}
                             onToggleForm={handleFlip}
+                            showConfirmPassword={undefined}
+                            setShowConfirmPassword={undefined}
                         />
                     </FlipWrapper>
                 )}
@@ -177,16 +180,16 @@ const AuthForm = ({
                     icon="person-outline"
                     placeholder="Full name"
                     value={data.username}
-                    onChangeText={(text) => handleChange('username', text)}
-                />
+                    onChangeText={(text) => handleChange('username', text)} secureTextEntry={undefined}
+                    toggleSecure={undefined} showToggle={undefined} showValue={undefined}                />
             )}
 
             <Input
                 icon="mail-outline"
                 placeholder="Email address"
                 value={data.email}
-                onChangeText={(text) => handleChange('email', text)}
-            />
+                onChangeText={(text) => handleChange('email', text)} secureTextEntry={undefined}
+                toggleSecure={undefined} showToggle={undefined} showValue={undefined}            />
 
             <Input
                 icon="lock-closed-outline"

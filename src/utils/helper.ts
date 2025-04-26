@@ -12,6 +12,12 @@ export const handleNumberType = (event) =>{
     }
 };
 
+export const formatWithCommas = (numStr: string) => {
+    const num = numStr.replace(/,/g, '');
+    return num.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+
+
 export const formatNumberWithCommas = (number) => {
     if (typeof number === 'undefined' || number === null) {
         return '0';

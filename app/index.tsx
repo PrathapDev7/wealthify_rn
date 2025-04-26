@@ -13,7 +13,7 @@ const api = new APIService();
 export default function Index() {
     const [initializing, setInitializing] = useState(true);
     const [initialRoute, setInitialRoute] = useState('LoginStack');
-    const dispatch = useDispatch();
+    const dispatch: any = useDispatch();
 
 
     useEffect(() => {

@@ -6,31 +6,41 @@ import moment from 'moment';
 import {useSelector} from 'react-redux';
 import {useNavigation} from '@react-navigation/native';
 import {capitalize, formatNumberWithCommas} from '@/src/utils/helper';
-// import AddIncomeModal from '../components/income/AddIncomeModal'; // You'll need to adapt this
-// import Confirmation from '../components/confirmation/Confirmation'; // You'll need to adapt this
 import ScreenWithHeader from "../src/components/layout/ScreenWithHeader";
 import APIService from "../src/ApiService/api.service";
 import {Swipeable} from 'react-native-gesture-handler';
 import ConfirmationModal from "../src/components/common/ConfirmationModal";
 import AddIncomeModal from "../src/components/modals/AddIncomeModal";
-import { Skeleton } from 'moti/skeleton';
+import { IncomeItemSkeleton } from '@/src/components/skeletons/IncomeItemSkeleton';
+import {Skeleton} from "moti/skeleton";
 
+interface Income {
+    _id?: string;
+    title?: string;
+    date?: string;
+    amount?: number;
+}
+
+interface RangeOption {
+    label: string;
+    value: number;
+}
 
 const api = new APIService();
 
 export default function IncomeScreen() {
     const navigation = useNavigation();
-    const userData = useSelector((state) => state?.userData?.userData) || {};
-    const [incomes, setIncomes] = useState([]);
-    const [filterType, setFilterType] = useState(2); // 1: Today, 2: This month, 3: This year
-    const [loading, setLoading] = useState(true);
-    const [addModalVisible, setAddModalVisible] = useState(false);
-    const [selectedIncome, setSelectedIncome] = useState(null);
-    const [isUpdate, setIsUpdate] = useState(false);
-    const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
-    const [showActionMenu, setShowActionMenu] = useState(null); // Income ID for action menu
+    const userData = useSelector((state: any) => state?.userData?.userData) || {};
+    const [incomes, setIncomes] = useState<Income[]>([]);
+    const [filterType, setFilterType] = useState<number>(2); // 1: Today, 2: This month, 3: This year
+    const [loading, setLoading] = useState<boolean>(true);
+    const [addModalVisible, setAddModalVisible] = useState<boolean>(false);
+    const [selectedIncome, setSelectedIncome] = useState<Income | null>(null);
+    const [isUpdate, setIsUpdate] = useState<boolean>(false);
+    const [confirmDeleteVisible, setConfirmDeleteVisible] = useState<boolean>(false);
+    const [showActionMenu, setShowActionMenu] = useState<string | null>(null); // Income ID for action menu
 
-    const rangeOptions = [
+    const rangeOptions: RangeOption[] = [
         {label: "Today", value: 1},
         {label: "This month", value: 2},
         {label: "This year", value: 3},
@@ -42,7 +52,7 @@ export default function IncomeScreen() {
 
     const getIncomes = () => {
 
-        const data = {type: filterType};
+        const data: any = {type: filterType};
         const momentObj = moment();
 
         if (filterType === 2) {
@@ -57,7 +67,7 @@ export default function IncomeScreen() {
         }
 
         api.getIncomes(data).then(res => {
-            setIncomes(res.data);
+            setIncomes(res.data as Income[]);
             setLoading(false);
         }).catch(err => {
             console.error("Error fetching incomes:", err);
@@ -79,7 +89,7 @@ export default function IncomeScreen() {
                     // Show error toast here
                     console.log("Failed to delete income");
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error deleting income:", error);
                 // Show error toast here
             } finally {
@@ -89,15 +99,15 @@ export default function IncomeScreen() {
         }
     };
 
-    const toggleActionMenu = (incomeId) => {
+    const toggleActionMenu = (incomeId: string) => {
         setShowActionMenu(showActionMenu === incomeId ? null : incomeId);
     };
 
-    const handleFilterChange = (value) => {
+    const handleFilterChange = (value: number) => {
         setFilterType(value);
     };
 
-    const renderRightActions = (progress, dragX, item) => {
+    const renderRightActions = (progress: any, dragX: any, item: Income) => {
         const trans = dragX.interpolate({
             inputRange: [-160, 0],
             outputRange: [0, 160],
@@ -123,14 +133,14 @@ export default function IncomeScreen() {
                         setConfirmDeleteVisible(true);
                     }}
                 >
-                    <Text style={styles.actionText}>Delete</Text>
+                    <Text style={styles.deleteActionText}>Delete</Text>
                 </TouchableOpacity>
             </Animated.View>
         );
     };
 
 
-    const renderIncomeItem = ({item}) => {
+    const renderIncomeItem = ({item}: { item: Income }) => {
         const itemDate = moment(item?.date);
         const today = moment().startOf('day');
         const yesterday = moment().subtract(1, 'day').startOf('day');
@@ -141,7 +151,7 @@ export default function IncomeScreen() {
         } else if (itemDate.isSame(yesterday, 'day')) {
             sectionTitle = 'Yesterday';
         } else if (!incomes.find(inc => moment(inc.date).isSame(itemDate, 'day') && inc !== item)) {
-            sectionTitle = itemDate.format('DD-MMM-YYYY');
+            sectionTitle = itemDate.format('D MMM, YYYY');
         }
 
         return (
@@ -157,12 +167,12 @@ export default function IncomeScreen() {
                                 <Icon name="money-bill-trend-up" size={24} color={Colors.success}/>
                             </View>
                             <View style={styles.textInfo}>
-                                <Text style={styles.incomeTitle}>{capitalize(item?.title) || 'N/A'}</Text>
+                                <Text style={styles.incomeTitle}>{capitalize(item?.title) || 'Income'}</Text>
                                 <Text style={styles.incomeDate}>{itemDate.format("D MMM, YYYY")}</Text>
                             </View>
                         </View>
                         <View style={styles.rightSection}>
-                            <Text style={styles.incomeAmount}>+₹{formatNumberWithCommas(item.amount)}</Text>
+                            <Text style={styles.incomeAmount}>+₹{formatNumberWithCommas(item?.amount)}</Text>
                         </View>
                     </View>
                 </Swipeable>
@@ -170,7 +180,7 @@ export default function IncomeScreen() {
         );
     };
 
-    const groupedIncomes = incomes.reduce((acc, current) => {
+    const groupedIncomes = incomes.reduce((acc: { [key: string]: Income[] }, current) => {
         const dateKey = moment(current.date).startOf('day').format('YYYY-MM-DD');
         if (!acc[dateKey]) {
             acc[dateKey] = [];
@@ -199,6 +209,7 @@ export default function IncomeScreen() {
                     </TouchableOpacity>
                 </View>
 
+
                 {/* Filter Section */}
                 <View style={styles.filterContainer}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -206,54 +217,50 @@ export default function IncomeScreen() {
                             <TouchableOpacity
                                 key={option.value}
                                 style={[
-                                    styles.filterOption,
-                                    filterType === option.value ? styles.filterOptionActive : {},
+                                    styles.filterOption
                                 ]}
                                 onPress={() => handleFilterChange(option.value)}
                             >
-                                <Text style={styles.filterText}>{option.label}</Text>
+                                <Text style={[styles.filterText,
+                                    filterType === option.value ? styles.filterOptionActiveText : {},]}>{option.label}</Text>
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
                 </View>
 
-                {/* Income List */}
-                {loading ? (
-                    <ScrollView style={styles.listContainer}>
-                        {Array(1).fill(0).map((_, index) => (
-                            <Skeleton.Group show={true}>
-                                <Skeleton width={120} height={20} />
-                                <Skeleton width={180} height={20} mt={10} />
-                            </Skeleton.Group>
-                        ))}
-                    </ScrollView>
-                ) : (
-                    <FlatList
-                        style={styles.listContainer}
-                        data={Object.values(groupedIncomes).flat()} // Flatten the grouped data
-                        keyExtractor={(item) => item?._id?.toString() || Math.random().toString()}
-                        renderItem={renderIncomeItem}
-                        ListEmptyComponent={() => (
-                            <View style={styles.emptyList}>
-                                <Text style={styles.emptyListText}>No income records found.</Text>
-                            </View>
-                        )}
-                    />
-                )}
+                <FlatList
+                    style={styles.listContainer}
+                    data={loading ? Array.from({ length: 5 }) : Object.values(groupedIncomes).flat()}
+                    keyExtractor={(item: any, index) =>
+                        loading ? `skeleton-${index}` : item?._id?.toString() || Math.random().toString()
+                    }
+                    renderItem={({ item , index}) =>
+                        loading ? <IncomeItemSkeleton styles={styles} index={index} /> : renderIncomeItem({ item })
+                    }
+                    ListEmptyComponent={
+                        !loading
+                            ? () => (
+                                <View style={styles.emptyList}>
+                                    <Text style={styles.emptyListText}>No income records found.</Text>
+                                </View>
+                            )
+                            : null
+                    }
+                />
 
                 {/* Add Income Modal */}
                 {addModalVisible &&
-                <AddIncomeModal
-                    visible={addModalVisible}
-                    onClose={() => {
-                        setAddModalVisible(!addModalVisible);
-                        setIsUpdate(false);
-                        setSelectedIncome(null);
-                    }}
-                    isUpdate={isUpdate}
-                    selectedIncome={selectedIncome}
-                    updateData={getIncomes}
-                />}
+                    <AddIncomeModal
+                        visible={addModalVisible}
+                        onClose={() => {
+                            setAddModalVisible(false);
+                            setIsUpdate(false);
+                            setSelectedIncome(null);
+                        }}
+                        isUpdate={isUpdate}
+                        selectedIncome={selectedIncome}
+                        updateData={getIncomes}
+                    />}
 
 
                 <ConfirmationModal
@@ -289,14 +296,13 @@ const styles = StyleSheet.create({
     addButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.quaternary,
+        backgroundColor: Colors.success,
         paddingVertical: 8,
         paddingHorizontal: 12,
         borderRadius: 8,
     },
     addButtonText: {
         color: 'white',
-        marginLeft: 8,
         fontWeight: 'bold',
     },
     filterContainer: {
@@ -304,25 +310,22 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 12,
         marginBottom: 10,
-        marginHorizontal: 16
-    },
-    filterLabel: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: Colors.textPrimary,
-        marginBottom: 8,
-    },
-    filterOptions: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        marginHorizontal: 16,
     },
     filterOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginRight: 15,
+        marginRight: 10,
     },
-    filterOptionActive: {
-
+    filterText: {
+        fontSize: 14,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    filterOptionActiveText: {
+        color: 'white',
+        backgroundColor: Colors.secondary,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4
     },
     radio: {
         height: 20,
@@ -339,10 +342,6 @@ const styles = StyleSheet.create({
         width: 12,
         borderRadius: 6,
         backgroundColor: Colors.primary,
-    },
-    filterText: {
-        fontSize: 14,
-        color: Colors.textPrimary,
     },
     listContainer: {
         flex: 1,
@@ -366,6 +365,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         paddingHorizontal: 12,
         borderRadius: 8,
+        marginBottom: 8,
     },
     incomeItem: {
         marginBottom: 8,
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     confirmButton: {
-        backgroundColor: Colors.error,
+        backgroundColor: Colors.danger,
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 5,
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
     },
     sectionHeader: {
         fontSize: 13,
-        fontWeight: 500,
+        fontWeight: '500',
         color: Colors.muted,
         marginTop: 16,
         marginBottom: 8,
@@ -541,13 +541,22 @@ const styles = StyleSheet.create({
     },
     editButton: {
         backgroundColor: Colors.quaternary,
+        borderTopLeftRadius: 4,
+        borderBottomLeftRadius: 4,
     },
     deleteButton: {
-        backgroundColor: Colors.danger,
+        backgroundColor: Colors.dangerSubtle,
+        borderColor: Colors.danger,
+        borderWidth: 1,
+        borderTopRightRadius: 4,
+        borderBottomRightRadius: 4,
     },
     actionText: {
         color: 'white',
-        fontWeight: 500,
+        fontWeight: '500',
         fontSize: 14
+    },
+    deleteActionText :{
+        color: Colors.danger,
     }
 });

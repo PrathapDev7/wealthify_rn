@@ -1,34 +1,64 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
 import moment from 'moment';
 import APIService from "../../ApiService/api.service";
-import {deepClone} from "../../utils/helper";
+import {deepClone, formatWithCommas} from "../../utils/helper";
 import CustomDatePicker from "../common/CustomDatePicker";
 import spacing from "../../styles/spacing";
-import MyCreatableDropdown from "@/src/components/common/MySelectDropdown";
+import MySelectDropdown from "@/src/components/common/MySelectDropdown";
+import { Colors } from '@/src/styles/colors';
+
+
+interface Income {
+    _id?: string;
+    title?: string;
+    description?: string;
+    amount?: number;
+    category?: string;
+    date?: string;
+}
+
+interface Props {
+    visible: boolean;
+    onClose: () => void;
+    isUpdate?: boolean;
+    selectedIncome?: Income;
+    updateData: () => void;
+}
 
 const api = new APIService();
 
-const AddIncomeModal = ({
-                            visible,
-                            onClose,
-                            isUpdate = false,
-                            selectedIncome = {},
-                            updateData
-                        }) => {
-    const [initialForm, setInitialForm] = useState({
+const AddIncomeModal: React.FC<Props> = ({
+                                             visible,
+                                             onClose,
+                                             isUpdate = false,
+                                             selectedIncome = {},
+                                             updateData
+                                         }) => {
+    const [initialForm, setInitialForm] = useState<Income>({
         title: '',
         description: '',
-        amount: '',
+        amount: undefined,
         category: '',
         date: moment().format('YYYY-MM-DD')
     });
-    const [showDatePicker, setShowDatePicker] = useState(false);
-
+    const amountInputRef = useRef<TextInput>(null);
     const [loading, setLoading] = useState(false);
-    const [categories, setCategories] = useState([]);
-    const [formData, setFormData] = useState(deepClone(initialForm));
-    const [errors, setErrors] = useState({});
+    const [categories, setCategories] = useState<Array<any>[]>([]);
+    const [formData, setFormData] = useState<Income>(deepClone(initialForm));
+    const [errors, setErrors] = useState<{
+        amount?: string;
+        submit?: boolean;
+        text?: string;
+    }>({});
+
+    useEffect(() => {
+        if (visible) {
+            setTimeout(() => {
+                amountInputRef.current?.focus();
+            }, 200);
+        }
+    }, [visible]);
 
     useEffect(() => {
         getCategories();
@@ -37,7 +67,7 @@ const AddIncomeModal = ({
     const getCategories = () => {
         api.getCategories("income").then(res => {
             if (res.data?.length) {
-                setCategories(res.data.map(res => ({
+                setCategories(res.data.map((res: { title: string }) => ({
                     title: res.title,
                     value: res.title
                 })));
@@ -50,16 +80,16 @@ const AddIncomeModal = ({
             setFormData({
                 title: selectedIncome.title || '',
                 description: selectedIncome.description || '',
-                amount: selectedIncome.amount?.toString() || '',
+                amount: selectedIncome.amount?.toString() ? parseFloat(selectedIncome.amount.toString()) : undefined,
                 category: selectedIncome.category || '',
-                date: moment(selectedIncome.date).format('YYYY-MM-DD') || '',
+                date: moment(selectedIncome.date).format('YYYY-MM-DD') || moment().format('YYYY-MM-DD'),
             });
         } else {
             setFormData(initialForm);
         }
     }, [isUpdate, selectedIncome]);
 
-    const handleChange = (name, value) => {
+    const handleChange = (name: keyof Income, value: string) => {
         setErrors({});
         const shallowCopy = deepClone(formData);
         shallowCopy[name] = value;
@@ -68,15 +98,7 @@ const AddIncomeModal = ({
 
     const handleValidation = () => {
         let valid = true;
-        let temp = {};
-        if (!formData.title) {
-            temp.title = 'Please enter title';
-            valid = false;
-        }
-        if (!formData.category) {
-            temp.category = 'Please select category';
-            valid = false;
-        }
+        let temp: { amount?: string } = {};
         if (!formData.amount) {
             temp.amount = 'Please enter amount';
             valid = false;
@@ -87,13 +109,13 @@ const AddIncomeModal = ({
 
     const handleSubmit = () => {
         if (!handleValidation()) return;
-        const payload = {
+        const payload: Income = {
             ...formData,
-            amount: Number(formData.amount),
+            amount: formData.amount ? Number(formData.amount) : undefined,
             date: moment(formData.date).format('YYYY-MM-DD'),
         };
         setLoading(true);
-        if (isUpdate) {
+        if (isUpdate && selectedIncome?._id) {
             api.updateIncome(selectedIncome._id, payload).then(res => {
                 if (res.data) {
                     setLoading(false);
@@ -119,6 +141,7 @@ const AddIncomeModal = ({
         }
     };
 
+
     return (
         <Modal
             visible={visible}
@@ -132,6 +155,18 @@ const AddIncomeModal = ({
                     <Text
                         style={[styles.title, spacing.mb3, spacing.pl4,]}>{isUpdate ? 'Update Income' : 'Add Income'}</Text>
                     <ScrollView>
+                        <Text style={styles.label}>Amount</Text>
+                        <TextInput
+                            ref={amountInputRef}
+                            placeholder="Enter income amount"
+                            value={formData.amount ? `₹ ${formatWithCommas(formData.amount.toString())}` : '₹ '}
+                            keyboardType="numeric"
+                            onChangeText={text => {
+                                const raw = text.replace(/[^0-9]/g, ''); // Remove non-numeric
+                                handleChange('amount', raw); // Store raw numeric string/number
+                            }}
+                            style={[styles.input, errors.amount ? { borderColor: 'red' } : {}]}
+                        />
                         <Text style={styles.label}>Title</Text>
                         <TextInput
                             placeholder="Enter title"
@@ -139,17 +174,10 @@ const AddIncomeModal = ({
                             onChangeText={text => handleChange('title', text)}
                             style={styles.input}
                         />
-                        <Text style={styles.label}>Amount</Text>
-                        <TextInput
-                            placeholder="Enter income amount"
-                            value={formData.amount}
-                            keyboardType="numeric"
-                            onChangeText={text => handleChange('amount', text.replace(/[^0-9]/g, ''))}
-                            style={styles.input}
-                        />
+                        {errors.amount && <Text style={styles.error}>{errors.amount}</Text>}
                         <Text style={styles.label}>Category</Text>
-                        <MyCreatableDropdown
-                            onSelect={(value: any) => handleChange('category', value)}
+                        <MySelectDropdown
+                            onSelect={(value: string) => handleChange('category', value)}
                             placeholder={'Select category'}
                             options={categories}
                             value={formData.category}
@@ -161,7 +189,7 @@ const AddIncomeModal = ({
                                 if (selectedDate) {
                                     handleChange('date', moment(selectedDate).format('YYYY-MM-DD'));
                                 }
-                            }}
+                            }} placeholder={''}
                         />
                         <Text style={[styles.label, spacing.mt2]}>Additional Info (Optional)</Text>
                         <TextInput
@@ -181,6 +209,7 @@ const AddIncomeModal = ({
                             <Text style={styles.submitText}>{isUpdate ? 'Update Income' : 'Add Income'}</Text>
                         </TouchableOpacity>
                     </View>
+                    {errors.submit && <Text style={styles.error}>{errors.text}</Text>}
                 </View>
             </View>
         </Modal>
@@ -225,8 +254,8 @@ const styles = StyleSheet.create({
     },
     input: {
         backgroundColor: '#f7f2ff',
-        borderWidth: 1,
         borderColor: '#e6e1f8',
+        borderWidth: 1,
         padding: 12,
         borderRadius: 10,
         marginBottom: 10,
@@ -256,7 +285,7 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     submitButton: {
-        backgroundColor: '#ff5c5c',
+        backgroundColor: Colors.success,
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 10,
@@ -266,4 +295,3 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
 });
-

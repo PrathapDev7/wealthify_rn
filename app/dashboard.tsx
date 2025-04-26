@@ -1,13 +1,13 @@
-import React, {useEffect, useLayoutEffect, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
-import {Colors} from "../src/styles/colors";
+import {Colors} from "@/src/styles/colors";
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import APIService from "../src/ApiService/api.service";
 import moment from 'moment';
 import RecentHistorySection from "../src/components/Dashboard/RecentHistorySection";
 import AnimatedCounter from "../src/components/Dashboard/AnimatedCounter";
-import {getLast7DaysData} from "../src/utils/helper";
+import {getLast7DaysData} from "@/src/utils/helper";
 import Past7DaysStats from "../src/components/Dashboard/Past7DaysStats";
 import ScreenWithHeader from "../src/components/layout/ScreenWithHeader";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,8 +17,8 @@ import {getUserData} from "@/src/redux/Actions/UserActions";
 const api = new APIService();
 
 export default function Dashboard() {
-    const dispatch:any = useDispatch();
-    const userData = useSelector((state) => state?.userData?.userData) || {};
+    const dispatch: any = useDispatch();
+    const userData = useSelector((state: any) => state?.userData?.userData) || {};
     const [incomes, setIncomes] = useState([]);
     const [expenses, setExpenses] = useState([]);
     const [stats, setStats] = useState({
@@ -28,6 +28,7 @@ export default function Dashboard() {
     });
     const [loading, setLoading] = useState(true);
     const [greeting, setGreeting] = useState("Good Morning");
+
 
     const now = moment();
     const hour = now.hour();
@@ -44,13 +45,13 @@ export default function Dashboard() {
 
     const checkLoggedInUser = async () => {
         const user = await AsyncStorage.getItem('wealthify_user');
-        if(!!user) {
+        if (!!user) {
             dispatch(getUserData(JSON.parse(user)));
         }
     };
 
-    const getIncomes =async () => {
-        const data = {};
+    const getIncomes = async () => {
+        const data: any = {};
         const momentObj = moment();
         data.start_date = momentObj.startOf('month').format("YYYY-MM-DD");
         data.end_date = momentObj.endOf('month').format("YYYY-MM-DD");
@@ -63,7 +64,7 @@ export default function Dashboard() {
     };
 
     const getExpenses = () => {
-        const data = {};
+        const data: any = {};
         const momentObj = moment();
         data.start_date = momentObj.startOf('month').format("YYYY-MM-DD");
         data.end_date = momentObj.endOf('month').format("YYYY-MM-DD");
@@ -115,10 +116,11 @@ export default function Dashboard() {
                     <View style={styles.statisticCard}>
                         <View style={styles.statisticLeft}>
                             <Text style={styles.statisticLabel}>TOTAL INCOMES</Text>
-                            <Text style={styles.statisticValue}>₹<AnimatedCounter
+                            <Text style={styles.statisticValue}><AnimatedCounter
                                 fromValue={0}
                                 toValue={stats.total_incomes || 0}
                                 duration={1000}
+                                loading={loading}
                                 style={styles.statisticValueAnimated}
                             /></Text>
 
@@ -137,10 +139,11 @@ export default function Dashboard() {
                     <View style={styles.statisticCard}>
                         <View style={styles.statisticLeft}>
                             <Text style={styles.statisticLabel}>TOTAL EXPENSES</Text>
-                            <Text style={styles.statisticValue}>₹<AnimatedCounter
+                            <Text style={styles.statisticValue}><AnimatedCounter
                                 fromValue={0}
                                 toValue={stats.total_expenses || 0}
                                 duration={1000}
+                                loading={loading}
                                 style={styles.statisticValueAnimated}
                             /></Text>
 
@@ -159,10 +162,11 @@ export default function Dashboard() {
                     <View style={styles.statisticCard}>
                         <View style={styles.statisticLeft}>
                             <Text style={styles.statisticLabel}>TOTAL BALANCE</Text>
-                            <Text style={styles.statisticValue}>₹<AnimatedCounter
+                            <Text style={styles.statisticValue}><AnimatedCounter
                                 fromValue={0}
                                 toValue={(stats.total_incomes || 0) - (stats.total_expenses || 0)}
                                 duration={1000}
+                                loading={loading}
                                 style={styles.statisticValueAnimated}
                             /></Text>
 

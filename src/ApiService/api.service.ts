@@ -2,8 +2,8 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Replace with your actual API base URL
+// const baseURL = 'https://wealthify-be.onrender.com/api/v1/';
 const baseURL = 'https://wealthify-be.onrender.com/api/v1/';
-// const baseURL = 'http://localhost:5000/api/v1/';
 
 const getHeaders = async () => {
     const headers = {
@@ -47,9 +47,6 @@ const request = async (method, path, body = null, query = null) => {
         throw err; // rethrow so you can catch it in calling code if needed
     }
 };
-
-export default request;
-
 
 export default class APIService {
 

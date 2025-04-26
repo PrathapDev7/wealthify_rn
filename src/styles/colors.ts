@@ -1,8 +1,8 @@
 // theme.js
 export const Colors = {
     primary: '#6F6AF8',
-    secondary: '#6cc8ef',
-    tertiary: '#5de3c8',
+    secondary: '#A89DF7',
+    tertiary: '#9ED5F7',
     quaternary: '#ff5c5c',
 
     primaryDarker: '#6F6AF8',
@@ -50,5 +50,7 @@ export const Colors = {
     menuShadowNav: 'rgba(0, 0, 0, 0.05)',
 
     backgroundNavLight: '#ffffff',
-    backgroundNavDark: '#7063E8', // no linear gradient in React Native, but this is the fallback
+    backgroundNavDark: '#7063E8',
+    inputBackground: '#f7f2ff',
+    inputBorder: '#e6e1f8'
 };

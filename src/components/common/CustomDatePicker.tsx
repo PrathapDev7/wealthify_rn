@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Button } from 'react-native-paper';
-import { DatePickerModal } from 'react-native-paper-dates';
+import React, {useEffect, useState} from 'react';
+import {StyleSheet, View} from 'react-native';
+import {Button} from 'react-native-paper';
+import {DatePickerModal} from 'react-native-paper-dates';
 import moment from 'moment';
 
-export default function CustomDatePicker({ value, onChange }: { value: string, onChange: (date: string) => void }) {
+export default function CustomDatePicker({value, onChange, placeholder}: {
+    value: any,
+    placeholder: string,
+    onChange: (date: string) => void
+}) {
     const [show, setShow] = useState(false);
     const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -32,7 +36,7 @@ export default function CustomDatePicker({ value, onChange }: { value: string, o
                 labelStyle={styles.inputText}
                 contentStyle={styles.inputContent}
             >
-                {value ? moment(value).format('MMM DD, YYYY') : 'Select Date'}
+                {value ? moment(value).format('MMM DD, YYYY') : (placeholder || 'Select Date')}
             </Button>
 
             {show && (
@@ -42,7 +46,7 @@ export default function CustomDatePicker({ value, onChange }: { value: string, o
                     visible={show}
                     date={currentDate}
                     onDismiss={() => setShow(false)}
-                    onConfirm={({ date }) => handleDateChange(date)}
+                    onConfirm={({date}) => handleDateChange(date)}
                 />
             )}
         </View>

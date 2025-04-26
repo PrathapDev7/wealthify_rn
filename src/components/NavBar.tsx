@@ -43,8 +43,7 @@ const NavMobileButtons = () => {
             <TouchableOpacity style={styles.button} />
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push('/analysis')}
-
+                onPress={() => router.push('/budget-analysis')}
             >
                 <Icon name="view-dashboard-outline" size={24}  style={styles.icon}/>
                 <Text style={[styles.label, isActive('Analysis') && styles.activeText]}>Analysis</Text>

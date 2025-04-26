@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
-import { Text } from 'react-native';
-import Animated, {
-    useSharedValue,
-    useDerivedValue,
+import React, {useState} from 'react';
+import {Text} from 'react-native';
+import {
+    Easing,
+    runOnJS,
     useAnimatedReaction,
+    useDerivedValue,
+    useSharedValue,
     withTiming,
-    Easing, runOnJS,
 } from 'react-native-reanimated';
 import {formatNumberWithCommas} from "../../utils/helper";
+import {Skeleton} from 'moti/skeleton';
+import {MotiView} from 'moti'
+import CommonSkeletonView from "@/src/components/common/CommonSkeletonView";
 
-const AnimatedCounter = ({ fromValue, toValue, duration = 500, style }) => {
+const AnimatedCounter = ({fromValue, toValue, duration = 500, style, loading = false}) => {
     const [displayValue, setDisplayValue] = useState(fromValue);
     const progress = useSharedValue(0);
 
@@ -37,7 +41,9 @@ const AnimatedCounter = ({ fromValue, toValue, duration = 500, style }) => {
         [currentValue]
     );
 
-    return <Text style={style}>{formatNumberWithCommas(Number(displayValue || 0))}</Text>;
+    if(loading) return <CommonSkeletonView />
+
+    return <Text style={style}>₹{formatNumberWithCommas(Number(displayValue || 0))}</Text>;
 };
 
 export default AnimatedCounter;
