@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Replace with your actual API base URL
 // const baseURL = 'https://wealthify-be.onrender.com/api/v1/';
-const baseURL = 'https://wealthify-be.onrender.com/api/v1/';
+const baseURL = 'http://localhost:5000/api/v1/';
 
 const getHeaders = async () => {
     const headers = {
@@ -58,13 +58,6 @@ export default class APIService {
     }
     register(data) {
         return request('POST', 'register', data);
-    }
-    verifyOTP(data) {
-        return request('POST', 'verify-otp', data);
-    }
-
-    resendOTP(data) {
-        return request('POST', 'resend-otp', data);
     }
 
     getProfile() {
@@ -123,12 +116,8 @@ export default class APIService {
         return request("GET", `get-categories`, {}, {type})
     }
 
-    addSubCategory(data) {
-        return request("POST", "add-sub-category", data)
-    }
-
-    getSubCategories(category) {
-        return request("GET", `get-sub-categories`, {}, {category})
+    getRecentCategories(type) {
+        return request("GET", `get-recent-categories`, {}, {type})
     }
 
     addBudgets(data) {

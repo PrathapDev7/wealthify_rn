@@ -14,6 +14,7 @@ import APIService from "../ApiService/api.service";
 import { Swipeable } from 'react-native-gesture-handler';
 import ConfirmationModal from "../components/common/ConfirmationModal";
 import AddIncomeModal from "../components/modals/AddIncomeModal";
+import { Typography } from "../styles/typography";
 
 
 const api = new APIService();
@@ -283,9 +284,8 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
     },
     headerTitle: {
+        ...Typography.screenTitle,
         color: Colors.textPrimary,
-        fontSize: 18,
-        fontWeight: 'bold',
     },
     addButton: {
         flexDirection: 'row',

@@ -133,6 +133,7 @@ const AddExpenseModal: React.FC<Props> = ({
         setErrors(temp);
         return valid;
     };
+    const submitLabel = `${isUpdate ? 'Update' : 'Save'} ${formData.category ? `${formData.category} ` : ''}Expense`;
 
     const handleSubmit = () => {
         if (!handleValidation()) return;
@@ -283,7 +284,7 @@ const AddExpenseModal: React.FC<Props> = ({
                             <Text style={styles.cancelText}>Close</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                            <Text style={styles.submitText}>{isUpdate ? 'Update Expense' : 'Add Expense'}</Text>
+                            <Text style={styles.submitText}>{submitLabel}</Text>
                         </TouchableOpacity>
                     </View>
                     {errors.submit && <Text style={styles.error}>{errors.text}</Text>}

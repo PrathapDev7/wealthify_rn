@@ -1,337 +1,348 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    Image,
-    ImageBackground,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View,
-    ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
-import FlipWrapper from '../../animations/FlipWrapper';
+import { useRouter } from 'expo-router';
 import APIService from '../../ApiService/api.service';
 import { getUserData } from '../../redux/Actions/UserActions';
-import { images } from '@/assets/Constants/constants';
-import {useRouter} from "expo-router";
-import {useEffect} from "react";
+import {
+    PillButton,
+    ScreenContainer,
+    TextField,
+    CashioIcon,
+} from '@/src/components/ui';
+import { Colors, Fonts, Shadows, Typography, radius, space } from '@/src/styles/theme';
 
 const api = new APIService();
 
-const AuthScreen = ( ) => {
+type Mode = 'login' | 'register';
+
+interface LoginData {
+    mobile: string;
+    password: string;
+}
+interface RegisterData {
+    username: string;
+    mobile: string;
+    password: string;
+    confirm_password: string;
+}
+
+const AuthScreen = () => {
     const dispatch: any = useDispatch();
     const router = useRouter();
 
-    const [showRegisterForm, setShowRegisterForm] = useState(false);
-    const [flipping, setFlipping] = useState(false);
+    const [mode, setMode] = useState<Mode>('register');
     const [loading, setLoading] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-    const [loginData, setLoginData] = useState({ email: '', password: '' });
-    const [registerData, setRegisterData] = useState({
+    const [loginData, setLoginData] = useState<LoginData>({
+        mobile: '',
+        password: '',
+    });
+    const [registerData, setRegisterData] = useState<RegisterData>({
         username: '',
-        email: '',
+        mobile: '',
         password: '',
         confirm_password: '',
     });
 
     useEffect(() => {
-        checkLoggedInUser();
-    },[]);
+        (async () => {
+            const user = await AsyncStorage.getItem('wealthify_user');
+            if (user) {
+                dispatch(getUserData(JSON.parse(user)));
+                router.replace('/dashboard');
+            }
+        })();
+    }, []);
 
-    const checkLoggedInUser = async () => {
-        const user = await AsyncStorage.getItem('wealthify_user');
-        if(!!user) {
-            dispatch(getUserData(JSON.parse(user)));
-            router.push('/dashboard');
-        }
-    };
+    const updateLogin = (key: keyof LoginData, value: string) =>
+        setLoginData((prev) => ({ ...prev, [key]: value }));
 
-    const handleChange = (key, value) => {
-        if (showRegisterForm) {
-            setRegisterData({ ...registerData, [key]: value });
-        } else {
-            setLoginData({ ...loginData, [key]: value });
-        }
-    };
+    const updateRegister = (key: keyof RegisterData, value: string) =>
+        setRegisterData((prev) => ({ ...prev, [key]: value }));
+
+    const toast = (text1: string, type: 'error' | 'success' = 'error') =>
+        Toast.show({ type, text1 });
 
     const handleSubmit = async () => {
-        const data: any = showRegisterForm ? registerData : loginData;
-
-
-        if (showRegisterForm) {
-            if (!data.username || !data.email || !data.password || !data.confirm_password) {
-                return Toast.show({ type: 'error', text1: 'All fields are required' });
+        if (mode === 'register') {
+            const { username, mobile, password, confirm_password } = registerData;
+            if (!username || !mobile || !password || !confirm_password) {
+                return toast('All fields are required');
             }
-            if (data.password !== data.confirm_password) {
-                return Toast.show({ type: 'error', text1: 'Passwords do not match' });
+            if (password !== confirm_password) {
+                return toast('Passwords do not match');
             }
         } else {
-            if (!data.email || !data.password) {
-                return Toast.show({ type: 'error', text1: 'Enter email and password' });
+            if (!loginData.mobile || !loginData.password) {
+                return toast('Enter mobile and password');
             }
         }
 
         setLoading(true);
         try {
-            const res = showRegisterForm ? await api.register(data) : await api.login(data);
+            const res =
+                mode === 'register'
+                    ? await api.register(registerData)
+                    : await api.login(loginData);
+
             if (res.data) {
                 await AsyncStorage.setItem('wealthify_token', res.data.token);
-                await AsyncStorage.setItem('wealthify_user', JSON.stringify(res.data.data));
-                dispatch(getUserData(res.data.user));
-                Toast.show({ type: 'success', text1: showRegisterForm ? 'Registered!' : 'Logged in!' });
-                router.push('/dashboard');
+                await AsyncStorage.setItem(
+                    'wealthify_user',
+                    JSON.stringify(res.data.data),
+                );
+                dispatch(getUserData(res.data.data));
+                toast(mode === 'register' ? 'Account created!' : 'Welcome back!', 'success');
+                router.replace('/dashboard');
             }
-        } catch (err) {
-            console.log(err.response);
-            Toast.show({
-                type: 'error',
-                text1: err.response?.data?.message || 'Something went wrong',
-            });
+        } catch (err: any) {
+            toast(err.response?.data?.message || 'Something went wrong');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleFlip = () => {
-        setFlipping(true);
-        setTimeout(() => {
-            setShowRegisterForm(!showRegisterForm);
-            setFlipping(false);
-        }, 300); // Match flip duration
-    };
+    const swapMode = () => setMode((m) => (m === 'login' ? 'register' : 'login'));
 
-    const image = { uri: 'https://www.shutterstock.com/image-vector/application-smartphone-business-graph-analytics-600nw-1583248045.jpg' };
+    const isRegister = mode === 'register';
 
     return (
-        <ImageBackground source={image} style={styles.background} blurRadius={3}>
-            <View style={styles.flipContainer}>
-                {!showRegisterForm && (
-                    <FlipWrapper direction={flipping ? "out" : "in"} duration={400}>
-                        <AuthForm
-                            type="login"
-                            data={loginData}
-                            handleChange={handleChange}
-                            handleSubmit={handleSubmit}
-                            loading={loading}
-                            showPassword={showPassword}
-                            setShowPassword={setShowPassword}
-                            onToggleForm={handleFlip}
-                            showConfirmPassword={undefined}
-                            setShowConfirmPassword={undefined}
+        <ScreenContainer variant="wash" extendUnderStatusBar>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                style={styles.flex}
+            >
+                <ScrollView
+                    contentContainerStyle={styles.scroll}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.header}>
+                        <View style={styles.lockTile}>
+                            <CashioIcon name="auth_lock" size={30} />
+                        </View>
+                        <Text style={styles.title}>
+                            {isRegister
+                                ? 'Get Started with Cashio'
+                                : 'Welcome back'}
+                        </Text>
+                        <Text style={styles.subtitle}>
+                            {isRegister
+                                ? 'Create your secure wallet in just a few steps.'
+                                : 'Log in to keep your finances on track.'}
+                        </Text>
+                    </View>
+
+                    <View style={styles.form}>
+                        {isRegister && (
+                            <TextField
+                                label="Full name"
+                                placeholder="Your name"
+                                value={registerData.username}
+                                onChangeText={(t) => updateRegister('username', t)}
+                                autoCapitalize="words"
+                                leftIconName="person-outline"
+                            />
+                        )}
+
+                        <TextField
+                            label={isRegister ? 'Email' : 'Mobile number'}
+                            placeholder={isRegister ? 'Enter email' : '10-digit mobile'}
+                            value={isRegister ? registerData.mobile : loginData.mobile}
+                            onChangeText={(t) =>
+                                isRegister
+                                    ? updateRegister('mobile', t)
+                                    : updateLogin('mobile', t)
+                            }
+                            keyboardType={isRegister ? 'email-address' : 'phone-pad'}
+                            leftIconName={isRegister ? undefined : 'call-outline'}
+                            maxLength={isRegister ? undefined : 15}
                         />
-                    </FlipWrapper>
-                )}
 
-                {showRegisterForm  && (
-                    <FlipWrapper direction={flipping ? "out" : "in"} duration={400}>
-                        <AuthForm
-                            type="register"
-                            data={registerData}
-                            handleChange={handleChange}
-                            handleSubmit={handleSubmit}
-                            loading={loading}
-                            showPassword={showPassword}
-                            showConfirmPassword={showConfirmPassword}
-                            setShowPassword={setShowPassword}
-                            setShowConfirmPassword={setShowConfirmPassword}
-                            onToggleForm={handleFlip}
+                        <TextField
+                            label="Password"
+                            placeholder="Enter password"
+                            value={isRegister ? registerData.password : loginData.password}
+                            onChangeText={(t) =>
+                                isRegister
+                                    ? updateRegister('password', t)
+                                    : updateLogin('password', t)
+                            }
+                            secureTextEntry
+                            leftIconName="lock-closed-outline"
                         />
-                    </FlipWrapper>
-                )}
 
+                        {isRegister && (
+                            <TextField
+                                label="Confirm password"
+                                placeholder="Re-enter password"
+                                value={registerData.confirm_password}
+                                onChangeText={(t) => updateRegister('confirm_password', t)}
+                                secureTextEntry
+                                leftIconName="lock-closed-outline"
+                            />
+                        )}
 
-            </View>
-        </ImageBackground>
+                        <PillButton
+                            label={isRegister ? 'Sign Up' : 'Log In'}
+                            onPress={handleSubmit}
+                            loading={loading}
+                            size="lg"
+                            style={styles.cta}
+                        />
+
+                        {isRegister ? (
+                            <>
+                                <View style={styles.orRow}>
+                                    <View style={styles.orLine} />
+                                    <Text style={styles.orText}>Or</Text>
+                                    <View style={styles.orLine} />
+                                </View>
+                                <View style={styles.socialRow}>
+                                    <TouchableOpacity style={styles.socialButton} activeOpacity={0.85}>
+                                        <Icon name="logo-apple" size={16} color={Colors.text} />
+                                        <Text style={styles.socialText}>Apple</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.socialButton} activeOpacity={0.85}>
+                                        <Icon name="logo-google" size={16} color={Colors.text} />
+                                        <Text style={styles.socialText}>Google</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        ) : null}
+
+                        <View style={styles.swapRow}>
+                            <Text style={styles.swapText}>
+                                {isRegister
+                                    ? 'Already have an account?'
+                                    : "Don't have an account?"}
+                            </Text>
+                            <TouchableOpacity onPress={swapMode} hitSlop={10}>
+                                <Text style={styles.swapLink}>
+                                    {isRegister ? ' Log In' : ' Sign Up'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    <Text style={styles.legal}>
+                        By continuing, you agree to our{' '}
+                        <Text style={styles.legalLink}>Terms</Text>{' '}
+                        and <Text style={styles.legalLink}>Privacy Policy</Text>.
+                    </Text>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </ScreenContainer>
     );
 };
-
-const AuthForm = ({
-                      type,
-                      data,
-                      handleChange,
-                      handleSubmit,
-                      loading,
-                      showPassword,
-                      setShowPassword,
-                      showConfirmPassword,
-                      setShowConfirmPassword,
-                      onToggleForm,
-                  }) => {
-    const isRegister = type === 'register';
-    return (
-        <View style={styles.formWrapper}>
-            <View style={styles.logoContainer}>
-                <Image source={images.logoDark} style={styles.logo} />
-            </View>
-            <Text style={styles.titleText}>
-                {isRegister
-                    ? 'Create your account'
-                    : 'Monitor your spending, set goals, and gain insights.\nLogin to get started.'}
-            </Text>
-
-            {isRegister && (
-                <Input
-                    icon="person-outline"
-                    placeholder="Full name"
-                    value={data.username}
-                    onChangeText={(text) => handleChange('username', text)} secureTextEntry={undefined}
-                    toggleSecure={undefined} showToggle={undefined} showValue={undefined}                />
-            )}
-
-            <Input
-                icon="mail-outline"
-                placeholder="Email address"
-                value={data.email}
-                onChangeText={(text) => handleChange('email', text)} secureTextEntry={undefined}
-                toggleSecure={undefined} showToggle={undefined} showValue={undefined}            />
-
-            <Input
-                icon="lock-closed-outline"
-                placeholder="Password"
-                value={data.password}
-                onChangeText={(text) => handleChange('password', text)}
-                secureTextEntry={!showPassword}
-                toggleSecure={() => setShowPassword && setShowPassword((prev) => !prev)}
-                showToggle
-                showValue={showPassword}
-            />
-
-            {isRegister && (
-                <Input
-                    icon="lock-closed-outline"
-                    placeholder="Confirm password"
-                    value={data.confirm_password}
-                    onChangeText={(text) => handleChange('confirm_password', text)}
-                    secureTextEntry={!showConfirmPassword}
-                    toggleSecure={() => setShowConfirmPassword && setShowConfirmPassword((prev) => !prev)}
-                    showToggle
-                    showValue={showConfirmPassword}
-                />
-            )}
-
-            <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{isRegister ? 'Register' : 'Login'}</Text>}
-            </TouchableOpacity>
-
-            <View style={styles.footerTextContainer}>
-                <Text style={styles.footerText}>
-                    {isRegister ? 'Already have an account?' : "Don't have an account?"}
-                </Text>
-                <TouchableOpacity onPress={onToggleForm}>
-                    <Text style={styles.loginText}>{isRegister ? ' Login' : ' Register'}</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
-};
-
-const Input = ({
-                   icon,
-                   placeholder,
-                   value,
-                   onChangeText,
-                   secureTextEntry,
-                   toggleSecure,
-                   showToggle,
-                   showValue,
-               }) => (
-    <View style={styles.inputBox}>
-        <Icon name={icon} size={20} color="#888" style={styles.icon} />
-        <TextInput
-            placeholder={placeholder}
-            style={styles.input}
-            placeholderTextColor="#999"
-            value={value}
-            onChangeText={onChangeText}
-            secureTextEntry={secureTextEntry}
-        />
-        {showToggle && toggleSecure && (
-            <TouchableOpacity onPress={toggleSecure}>
-                <Icon name={showValue ? 'eye' : 'eye-off'} size={20} color="#e85c5c" />
-            </TouchableOpacity>
-        )}
-    </View>
-);
 
 const styles = StyleSheet.create({
-    background: {
-        flex: 1,
-        justifyContent: 'center',
-        padding: 20,
+    flex: { flex: 1 },
+    scroll: {
+        flexGrow: 1,
+        paddingHorizontal: space.xl,
+        paddingTop: space['2xl'],
+        paddingBottom: space['3xl'],
     },
-    flipContainer: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    formWrapper: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 16,
-        padding: 24,
-        shadowColor: '#000',
-        shadowOpacity: 0.2,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 10,
-    },
-    logoContainer: {
+    header: {
         alignItems: 'center',
-        marginBottom: 12,
+        marginTop: space.xl,
+        marginBottom: space['2xl'],
     },
-    logo: {
-        width: 175,
-        height: 34,
+    lockTile: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.72)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: space.md,
     },
-    titleText: {
+    title: {
+        ...Typography.titleLg,
         textAlign: 'center',
-        marginBottom: 20,
-        fontSize: 14,
-        color: '#eee',
-        lineHeight: 20,
+        marginBottom: space.xs,
     },
-    inputBox: {
+    subtitle: {
+        ...Typography.body,
+        color: Colors.textMuted,
+        textAlign: 'center',
+    },
+    form: {
+        marginTop: space.sm,
+    },
+    cta: {
+        marginTop: space.sm,
+    },
+    orRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        marginBottom: 12,
+        marginVertical: space.lg,
+        gap: space.md,
     },
-    input: {
+    orLine: {
         flex: 1,
-        paddingVertical: 10,
-        color: '#333',
+        height: 1,
+        backgroundColor: Colors.divider,
     },
-    icon: {
-        marginRight: 8,
+    orText: {
+        ...Typography.caption,
+        color: Colors.textSubtle,
     },
-    button: {
-        backgroundColor: '#f35d5d',
-        paddingVertical: 12,
-        borderRadius: 8,
-        marginTop: 10,
+    socialRow: {
+        flexDirection: 'row',
+        gap: space.md,
     },
-    buttonText: {
-        color: '#fff',
-        textAlign: 'center',
-        fontWeight: '600',
+    socialButton: {
+        flex: 1,
+        minHeight: 46,
+        borderRadius: radius.md,
+        backgroundColor: Colors.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+        gap: space.sm,
+        ...Shadows.xs,
     },
-    footerTextContainer: {
+    socialText: {
+        ...Typography.bodyMedium,
+        fontSize: 12,
+    },
+    swapRow: {
         flexDirection: 'row',
         justifyContent: 'center',
-        marginTop: 16,
-        flexWrap: 'wrap',
+        marginTop: space.xl,
     },
-    footerText: {
-        color: '#eee',
+    swapText: {
+        ...Typography.body,
+        color: Colors.textMuted,
     },
-    loginText: {
-        color: '#fff',
-        fontWeight: 'bold',
+    swapLink: {
+        ...Typography.body,
+        fontFamily: Fonts.semibold,
+        color: Colors.primary,
+    },
+    legal: {
+        ...Typography.caption,
+        textAlign: 'center',
+        marginTop: 'auto',
+        paddingTop: space.xl,
+        color: Colors.textSubtle,
+    },
+    legalLink: {
+        fontFamily: Fonts.medium,
+        color: Colors.primary,
     },
 });
 

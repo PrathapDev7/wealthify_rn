@@ -106,6 +106,7 @@ const AddIncomeModal: React.FC<Props> = ({
         setErrors(temp);
         return valid;
     };
+    const submitLabel = `${isUpdate ? 'Update' : 'Save'} ${formData.category ? `${formData.category} ` : ''}Income`;
 
     const handleSubmit = () => {
         if (!handleValidation()) return;
@@ -206,7 +207,7 @@ const AddIncomeModal: React.FC<Props> = ({
                             <Text style={styles.cancelText}>Close</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                            <Text style={styles.submitText}>{isUpdate ? 'Update Income' : 'Add Income'}</Text>
+                            <Text style={styles.submitText}>{submitLabel}</Text>
                         </TouchableOpacity>
                     </View>
                     {errors.submit && <Text style={styles.error}>{errors.text}</Text>}

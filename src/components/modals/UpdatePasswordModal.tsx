@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useNavigation } from '@react-navigation/native'; // If you need navigation
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
 import APIService from "../../ApiService/api.service";
 import Toast from 'react-native-toast-message';
 import Spacing from "@/src/styles/spacing";
-import { Colors } from '@/src/styles/colors';
+import TextField from "@/src/components/ui/TextField";
+import { Colors, Shadows, Typography, radius, space } from '@/src/styles/theme';
 
 
 const api = new APIService();
 
 interface FormData {
-    email: string;
     old_password: string;
     new_password: string;
     confirm_new_password: string;
@@ -19,15 +18,12 @@ interface FormData {
 interface Props {
     showModal: boolean;
     closeModal: () => void;
-    userData: { email: string };
+    userData: { mobile: string };
 }
 
-const UpdatePasswordModal: React.FC<Props> = ({ showModal, closeModal, userData }) => {
-    const navigation = useNavigation(); // If you need navigation
-    const [message, setMessage] = useState<any>({}); // Use 'any' or a more specific type
+const UpdatePasswordModal: React.FC<Props> = ({ showModal, closeModal }) => {
     const [loading, setLoading] = useState(false);
     const initialFormData: FormData = {
-        email: "",
         old_password: "",
         new_password: "",
         confirm_new_password: ""
@@ -35,7 +31,6 @@ const UpdatePasswordModal: React.FC<Props> = ({ showModal, closeModal, userData 
     const [formData, setFormData] = useState(initialFormData);
 
     const handleChange = (name: keyof FormData, value: string) => {
-        setMessage({});
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
@@ -63,9 +58,7 @@ const UpdatePasswordModal: React.FC<Props> = ({ showModal, closeModal, userData 
             }
 
             setLoading(true);
-            const data: FormData = { ...formData, email: userData.email };
-
-            const res = await api.updatePassword(data);
+            const res = await api.updatePassword(formData);
             if (res.data) {
                 setLoading(false);
                 showToastMessage("Password updated successfully", 'success');
@@ -91,38 +84,34 @@ const UpdatePasswordModal: React.FC<Props> = ({ showModal, closeModal, userData 
         >
             <View style={styles.overlay}>
                 <View style={styles.modalContainer}>
-                    <Text style={styles.modalTitle}>Update password</Text>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Update password</Text>
+                    </View>
                     <View style={Spacing.mt3}>
-                        <View style={styles.inputRow}>
-                            <Text style={styles.label}>Old password</Text>
-                            <TextInput
-                                style={styles.input}
-                                secureTextEntry
-                                value={formData.old_password}
-                                onChangeText={(text) => handleChange('old_password', text)}
-                                placeholder="Enter old password"
-                            />
-                        </View>
-                        <View style={styles.inputRow}>
-                            <Text style={styles.label}>New password</Text>
-                            <TextInput
-                                style={styles.input}
-                                secureTextEntry
-                                value={formData.new_password}
-                                onChangeText={(text) => handleChange('new_password', text)}
-                                placeholder="Enter new password"
-                            />
-                        </View>
-                        <View style={styles.inputRow}>
-                            <Text style={styles.label}>Confirm new password</Text>
-                            <TextInput
-                                style={styles.input}
-                                secureTextEntry
-                                value={formData.confirm_new_password}
-                                onChangeText={(text) => handleChange('confirm_new_password', text)}
-                                placeholder="Enter confirm new password"
-                            />
-                        </View>
+                        <TextField
+                            label="Old password"
+                            placeholder="Enter old password"
+                            value={formData.old_password}
+                            onChangeText={(text) => handleChange('old_password', text)}
+                            secureTextEntry
+                            leftIconName="lock-closed-outline"
+                        />
+                        <TextField
+                            label="New password"
+                            placeholder="Enter new password"
+                            value={formData.new_password}
+                            onChangeText={(text) => handleChange('new_password', text)}
+                            secureTextEntry
+                            leftIconName="lock-closed-outline"
+                        />
+                        <TextField
+                            label="Confirm new password"
+                            placeholder="Re-enter new password"
+                            value={formData.confirm_new_password}
+                            onChangeText={(text) => handleChange('confirm_new_password', text)}
+                            secureTextEntry
+                            leftIconName="lock-closed-outline"
+                        />
                     </View>
                     <View style={styles.modalFooter}>
                         <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
@@ -134,7 +123,7 @@ const UpdatePasswordModal: React.FC<Props> = ({ showModal, closeModal, userData 
                             disabled={loading}
                         >
                             {loading ? (
-                                <ActivityIndicator color="white" /> // Use ActivityIndicator for loading
+                                <ActivityIndicator color={Colors.textInverse} />
                             ) : (
                                 <Text style={styles.saveButtonText}>Save</Text>
                             )}
@@ -149,36 +138,23 @@ const UpdatePasswordModal: React.FC<Props> = ({ showModal, closeModal, userData 
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        backgroundColor: Colors.overlay,
         justifyContent: 'center',
-        padding: 16,
+        padding: space.xl,
     },
     modalContainer: {
-        backgroundColor: '#fefefe',
-        borderRadius: 16,
-        padding: 20,
+        backgroundColor: Colors.surface,
+        borderRadius: radius.md,
+        padding: space.xl,
         maxHeight: '90%',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 5,
+        ...Shadows.lg,
     },
     modalHeader: {
-        alignItems: 'center',
-        paddingBottom: 12,
+        marginBottom: space.sm,
     },
     modalTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        backgroundColor: '#f6f0ff', // Light orange
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderTopLeftRadius: 16,
-        borderTopRightRadius: 16,
-        marginTop: -20,
-        marginHorizontal: -20,
-        color: '#333',
+        ...Typography.subtitle,
+        color: Colors.text,
     },
     inputRow: {
         marginBottom: 4,
@@ -201,28 +177,30 @@ const styles = StyleSheet.create({
     modalFooter: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
-        marginTop: 20,
-        gap: 15
+        marginTop: space.md,
+        gap: space.md,
     },
     closeButton: {
-        backgroundColor: '#f0f0f0',
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 10,
+        backgroundColor: Colors.surfaceMuted,
+        paddingVertical: 11,
+        paddingHorizontal: space.xl,
+        borderRadius: radius.md,
     },
     closeButtonText: {
-        color: '#333',
-        fontWeight: '500',
+        ...Typography.bodyMedium,
+        color: Colors.text,
     },
     saveButton: {
-        backgroundColor:  Colors.quaternary, // Blue save button
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 10,
+        minWidth: 92,
+        backgroundColor: Colors.primary,
+        paddingVertical: 11,
+        paddingHorizontal: space.xl,
+        borderRadius: radius.md,
+        alignItems: 'center',
     },
     saveButtonText: {
-        color: '#fff',
-        fontWeight: '600',
+        ...Typography.bodyMedium,
+        color: Colors.textInverse,
     },
 });
 

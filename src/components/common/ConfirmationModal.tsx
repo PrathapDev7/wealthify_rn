@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Colors, Shadows, Typography, radius, space } from '@/src/styles/theme';
 
 const ConfirmationModal = ({
                                visible,
@@ -38,49 +39,52 @@ export default ConfirmationModal;
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.4)',
+        backgroundColor: Colors.overlay,
         justifyContent: 'center',
         alignItems: 'center',
+        padding: space.xl,
     },
     modalContainer: {
-        backgroundColor: '#fff',
-        width: '80%',
-        borderRadius: 12,
-        padding: 20,
+        backgroundColor: Colors.surface,
+        width: '100%',
+        maxWidth: 360,
+        borderRadius: radius.md,
+        padding: space.xl,
         alignItems: 'center',
-        elevation: 5,
+        ...Shadows.lg,
     },
     message: {
-        fontSize: 16,
+        ...Typography.bodyMedium,
         textAlign: 'center',
-        marginBottom: 20,
+        marginBottom: space.xl,
+        color: Colors.text,
     },
     buttonRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: '100%',
+        gap: space.md,
     },
     confirmButton: {
         flex: 1,
-        backgroundColor: '#e74c3c',
-        paddingVertical: 10,
-        borderRadius: 8,
+        backgroundColor: Colors.negative,
+        paddingVertical: 11,
+        borderRadius: radius.md,
         alignItems: 'center',
     },
     cancelButton: {
         flex: 1,
-        backgroundColor: '#ccc',
-        paddingVertical: 10,
-        borderRadius: 8,
-        marginRight: 10,
+        backgroundColor: Colors.surfaceMuted,
+        paddingVertical: 11,
+        borderRadius: radius.md,
         alignItems: 'center',
     },
     confirmText: {
-        color: '#fff',
-        fontWeight: 'bold',
+        ...Typography.bodyMedium,
+        color: Colors.textInverse,
     },
     cancelText: {
-        color: '#333',
-        fontWeight: 'bold',
+        ...Typography.bodyMedium,
+        color: Colors.text,
     },
 });
