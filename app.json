@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.prathapdev7.wealthifyexpo",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "permissions": [
@@ -21,8 +25,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.prathapdev7.wealthifyexpo",
-      "minSdkVersion": 34
+      "package": "com.prathapdev7.wealthifyexpo"
     },
     "web": {
       "bundler": "metro",
@@ -54,9 +57,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "315c6315-3c92-4def-8d92-75ce36258fc2"
+        "projectId": "63139b79-e572-4afd-914d-73d73812f702"
       }
     },
-    "owner": "prathapdev7"
+    "owner": "prathap_dev7"
   }
 }
