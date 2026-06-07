@@ -1,5 +1,5 @@
-// Cashio reference palette. Keep these values aligned with
-// cashio_icon_pack/manifest.json and the separate screen references.
+// Wealthify reference palette. Keep these values aligned with
+// wealthify_icon_pack/manifest.json and the separate screen references.
 
 export const Colors = {
     // Brand
@@ -13,7 +13,7 @@ export const Colors = {
     deepPurple: '#160947',
 
     // Accents
-    accent: '#9FE39A',             // mint used in Cashio chart bars
+    accent: '#9FE39A',             // mint used in Wealthify chart bars
     accentDark: '#24D46B',         // success green / expense type
     accentSoft: '#E8F8EE',
 
@@ -31,7 +31,7 @@ export const Colors = {
     blue: '#3364F6',
 
     // Surfaces
-    background: '#F8F6FE',         // Cashio screen body
+    background: '#F8F6FE',         // Wealthify screen body
     surface: '#FFFFFF',            // solid cards
     surfaceMuted: '#F0EDF5',       // muted fills / chips at rest
     surfaceSoft: '#F7F5FA',
@@ -40,7 +40,7 @@ export const Colors = {
     overlay: 'rgba(19, 11, 61, 0.45)',
 
     // Text — ink scale
-    text: '#130B3D',               // primary Cashio ink
+    text: '#130B3D',               // primary Wealthify ink
     textStrong: '#130B3D',
     textSecondary: '#2A2550',
     textBody: '#3B365F',

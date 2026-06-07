@@ -3,7 +3,7 @@ import { Colors } from './colors';
 import { fontSize } from './tokens';
 import { Fonts } from './fonts';
 
-// Preset text styles aligned to the Cashio design system. The Poppins family
+// Preset text styles aligned to the Wealthify design system. The Poppins family
 // name carries the weight (Poppins_700Bold etc.), so we set fontFamily, not
 // fontWeight. Letter-spacing values mirror the CSS counterparts.
 

@@ -28,7 +28,6 @@ interface Slide {
 
 const EXTERNAL_ICONS = {
     megaphone: 'https://cdn-icons-png.flaticon.com/512/1379/1379940.png',
-    trendingUp: 'https://cdn-icons-png.flaticon.com/512/1378/1378603.png',
 } as const;
 
 const ImageIcon = ({
@@ -108,15 +107,6 @@ const PieIcon = () => (
             rounded="circle"
             style={[illoStyles.float, illoStyles.miniHero]}
         />
-        <ImageIcon
-            uri={EXTERNAL_ICONS.trendingUp}
-            size={54}
-            imageSize={42}
-            bg={Colors.surface}
-            elevated
-            style={[illoStyles.float, illoStyles.miniTopRight]}
-        />
-        <IconBadge name="cash" color={Colors.cat.groceries} size={54} iconSize={30} style={[illoStyles.float, illoStyles.miniBottomLeft]} />
     </View>
 );
 
@@ -131,28 +121,6 @@ const InsightIcon = () => (
             rounded="circle"
             style={[illoStyles.float, illoStyles.miniHero]}
         />
-        <IconBadge name="sparkles" color={Colors.cat.subscription} size={54} iconSize={30} style={[illoStyles.float, illoStyles.miniTopLeft]} />
-        <IconBadge name="bulb" color={Colors.cat.marketing} size={54} iconSize={30} style={[illoStyles.float, illoStyles.miniBottomRight]} />
-    </View>
-);
-
-const RewardStack = () => (
-    <View style={illoStyles.rewardStack}>
-        {[
-            { icon: 'gift', label: 'Earn Rewards', sub: 'Invite & earn prizes when friends join.', bg: Colors.warningSoft, color: Colors.warning },
-            { icon: 'share-social', label: 'Earn Sharing', sub: 'Share your link and earn too.', bg: Colors.infoSoft, color: Colors.info },
-            { icon: 'people', label: 'Track Referrals', sub: 'See who joined and what you earn.', bg: Colors.accentSoft, color: Colors.accentDark },
-        ].map((r) => (
-            <View key={r.label} style={illoStyles.rewardCard}>
-                <View style={[illoStyles.rewardIcon, { backgroundColor: r.bg }]}>
-                    <IconBadge name={r.icon} color={r.color} bg="transparent" size={36} iconSize={18} elevated={false} />
-                </View>
-                <View style={{ flex: 1 }}>
-                    <Text style={illoStyles.rewardLabel}>{r.label}</Text>
-                    <Text style={illoStyles.rewardSub}>{r.sub}</Text>
-                </View>
-            </View>
-        ))}
     </View>
 );
 
@@ -171,11 +139,6 @@ const SLIDES: Slide[] = [
         title: 'Insights That Help',
         body: 'See trends month over month, spot patterns, and make better money decisions.',
         illustration: () => <InsightIcon />,
-    },
-    {
-        title: 'Invite Friends, Earn Rewards',
-        body: 'Share Wealthify with friends and get bonuses when they sign up.',
-        illustration: () => <RewardStack />,
     },
 ];
 
@@ -345,22 +308,6 @@ const illoStyles = StyleSheet.create({
         top: 156,
         left: 90,
     },
-    miniTopLeft: {
-        top: 84,
-        left: 42,
-    },
-    miniTopRight: {
-        top: 84,
-        right: 42,
-    },
-    miniBottomLeft: {
-        top: 282,
-        left: 18,
-    },
-    miniBottomRight: {
-        top: 282,
-        right: 18,
-    },
     imageIconFrame: {
         alignItems: 'center',
         justifyContent: 'center',
@@ -369,39 +316,5 @@ const illoStyles = StyleSheet.create({
     },
     float: {
         position: 'absolute',
-    },
-    rewardStack: {
-        height: 320,
-        justifyContent: 'flex-start',
-        paddingHorizontal: space.md,
-        paddingTop: space['7xl'],
-        marginTop: space['4xl'],
-        gap: space.md,
-        maxWidth: 340,
-        alignSelf: 'center',
-        width: '100%',
-    },
-    rewardCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: Colors.surface,
-        borderRadius: radius.sm,
-        padding: space.md,
-        gap: space.md,
-        ...Shadows.sm,
-    },
-    rewardIcon: {
-        width: 44,
-        height: 44,
-        borderRadius: radius.sm,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    rewardLabel: {
-        ...Typography.bodyStrong,
-        marginBottom: 2,
-    },
-    rewardSub: {
-        ...Typography.bodySm,
     },
 });

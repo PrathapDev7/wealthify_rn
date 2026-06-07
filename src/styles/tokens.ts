@@ -1,4 +1,4 @@
-// Raw numeric design tokens. Matches cashio-ui-screens.css.
+// Raw numeric design tokens. Matches wealthify-ui-screens.css.
 // For utility-class style spacing (mt3, p2, etc.) use ./spacing instead.
 
 export const space = {
@@ -16,7 +16,7 @@ export const space = {
     '7xl': 64,
 } as const;
 
-// Radius scale matches the Cashio CSS: xs10 / sm14 / md18 / lg24 / xl30.
+// Radius scale matches the Wealthify CSS: xs10 / sm14 / md18 / lg24 / xl30.
 export const radius = {
     none: 0,
     xs: 10,
@@ -31,7 +31,7 @@ export const radius = {
     full: 9999,
 } as const;
 
-// Type sizes match the Cashio CSS.
+// Type sizes match the Wealthify CSS.
 export const fontSize = {
     tiny: 10,
     caption: 11,          // rendered as 10.5px in CSS; round to 11 for RN integer

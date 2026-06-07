@@ -1,3 +1,5 @@
+import {remoteImage} from './remoteAssets';
+
 export const MenuItems = [
     {
         path: `/dashboard`,
@@ -50,10 +52,10 @@ export const MENU_BEHAVIOUR = {
 };
 
 export const images = {
-    logo: require('../../assets/img/logo/wealthify-main.png'),
-    logoDark: require('../../assets/img/logo/wealthify-black.png'),
-    iconINR: require('../../assets/icons/inr.svg'),
-    iconINRWhite: require('../../assets/icons/inrWhite.png')
+    logo: remoteImage('assets/img/logo/wealthify-main.png'),
+    logoDark: remoteImage('assets/img/logo/wealthify-black.png'),
+    iconINR: remoteImage('assets/icons/inr.svg'),
+    iconINRWhite: remoteImage('assets/icons/inrWhite.png')
 };
 
 export const settings = {

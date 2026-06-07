@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useDispatch } from "react-redux";
@@ -25,16 +25,20 @@ import {
 } from "@/src/styles/theme";
 import { formatNumberWithCommas } from "@/src/utils/helper";
 import { resolveCategoryIcon } from "@/src/utils/categoryIcon";
+import SkeletonBlock from "@/src/components/skeletons/SkeletonBlock";
 
 const api = new APIService();
 
 interface Txn {
   _id?: string;
-  type?: "income" | "expense";
+  type?: "income" | "expense" | string;
   title?: string;
   category?: string;
   sub_category?: string;
   date?: string;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
   amount?: number;
 }
 
@@ -47,6 +51,7 @@ export default function DashboardScreen() {
     total_incomes: number;
     total_expenses: number;
   }>({ allData: [], total_incomes: 0, total_expenses: 0 });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -56,12 +61,14 @@ export default function DashboardScreen() {
   }, []);
 
   const loadStats = useCallback(() => {
+    setLoading(true);
     api
       .getStats()
       .then((res) => {
         if (res.data?.response) setStats(res.data.response);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   useFocusEffect(
@@ -85,6 +92,10 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
+        {loading ? (
+          <DashboardSkeleton />
+        ) : (
+          <>
         <View style={styles.topRow}>
           <CircleIconButton
             name="settings-outline"
@@ -172,14 +183,75 @@ export default function DashboardScreen() {
         {recent.length === 0 ? (
           <FirstTransactionCard />
         ) : (
-          recent.map((t, idx) => <TxnRow key={t._id || idx} txn={t} />)
+          recent.map((t, idx) => (
+            <TxnRow
+              key={t._id || idx}
+              txn={t}
+              onPress={() =>
+                router.push({
+                  pathname: "/transaction-detail",
+                  params: getTransactionRouteParams(t),
+                })
+              }
+            />
+          ))
         )}
 
         <View style={styles.bottomSpacer} />
+          </>
+        )}
       </ScrollView>
     </ScreenContainer>
   );
 }
+
+const DashboardSkeleton = () => (
+  <>
+    <View style={styles.topRow}>
+      <SkeletonBlock width={42} height={42} radius={21} />
+      <SkeletonBlock width={124} height={34} radius={17} />
+      <SkeletonBlock width={42} height={42} radius={21} />
+    </View>
+
+    <View style={styles.hero}>
+      <SkeletonBlock width={116} height={16} radius={8} style={skeletonStyles.centered} />
+      <SkeletonBlock width={184} height={46} radius={12} style={skeletonStyles.heroValue} />
+      <SkeletonBlock width={238} height={18} radius={9} style={skeletonStyles.centered} />
+    </View>
+
+    <Card style={styles.walletCard}>
+      <View style={styles.walletLeft}>
+        <SkeletonBlock width={42} height={42} radius={21} />
+        <SkeletonBlock width={132} height={18} radius={9} style={skeletonStyles.walletLabel} />
+      </View>
+      <View style={styles.walletRight}>
+        <SkeletonBlock width={96} height={18} radius={9} />
+        <SkeletonBlock width={18} height={18} radius={9} style={skeletonStyles.chevron} />
+      </View>
+    </Card>
+
+    <View style={[styles.sectionHeader, skeletonStyles.sectionHeader]}>
+      <SkeletonBlock width={154} height={20} radius={10} />
+      <SkeletonBlock width={54} height={16} radius={8} />
+    </View>
+
+    {Array.from({ length: 6 }).map((_, index) => (
+      <View key={index} style={txnStyles.row}>
+        <SkeletonBlock width={44} height={44} radius={22} />
+        <View style={txnStyles.middle}>
+          <SkeletonBlock width={index % 2 ? 132 : 104} height={17} radius={8} />
+          <SkeletonBlock width={82} height={13} radius={6} style={skeletonStyles.txnDate} />
+        </View>
+        <View style={txnStyles.right}>
+          <SkeletonBlock width={78} height={17} radius={8} />
+          <SkeletonBlock width={18} height={18} radius={9} style={skeletonStyles.chevron} />
+        </View>
+      </View>
+    ))}
+
+    <View style={styles.bottomSpacer} />
+  </>
+);
 
 const FirstTransactionCard = () => (
   <Card elevation="sm" style={styles.emptyCard}>
@@ -194,15 +266,43 @@ const FirstTransactionCard = () => (
   </Card>
 );
 
-const TxnRow: React.FC<{ txn: Txn }> = ({ txn }) => {
+const getTransactionKind = (txn: Txn) =>
+  txn.type === "income" ? "income" : "expense";
+
+const getTransactionRouteParams = (txn: Txn) => {
+  const transactionType = getTransactionKind(txn);
+
+  return {
+    id: txn._id || "",
+    transactionType,
+    title: txn.title || "",
+    category: txn.category || "",
+    subCategory: txn.sub_category || "",
+    expenseType: transactionType === "expense" ? txn.type || "self" : "",
+    date: txn.date || "",
+    description: txn.description || "",
+    amount: String(txn.amount || 0),
+    createdAt: txn.createdAt || "",
+    updatedAt: txn.updatedAt || "",
+  };
+};
+
+const TxnRow: React.FC<{ txn: Txn; onPress?: () => void }> = ({
+  txn,
+  onPress,
+}) => {
   const isIncome = txn.type === "income";
   const sign = isIncome ? "+" : "-";
   const amountColor = isIncome ? Colors.accentDark : Colors.negative;
   const label = txn.title || txn.category || "Untitled";
-  const icon = resolveCategoryIcon(txn.category, txn.type);
+  const icon = resolveCategoryIcon(txn.category, isIncome ? "income" : "expense");
 
   return (
-    <View style={txnStyles.row}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={txnStyles.row}
+    >
       <IconBadge
         name={icon.name}
         color={icon.color}
@@ -228,7 +328,7 @@ const TxnRow: React.FC<{ txn: Txn }> = ({ txn }) => {
           <Icon name="chevron-forward" size={15} color={Colors.textSubtle} />
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 };
 
@@ -268,7 +368,7 @@ const styles = StyleSheet.create({
   },
   heroValue: {
     ...Typography.displayLg,
-    fontFamily: Fonts.medium,
+    fontFamily: Fonts.semibold,
     letterSpacing: 1,
     marginBottom: space.sm,
   },
@@ -384,5 +484,30 @@ const txnStyles = StyleSheet.create({
     height: 18,
     alignItems: "center",
     justifyContent: "center",
+  },
+});
+
+const skeletonStyles = StyleSheet.create({
+  centered: {
+    alignSelf: "center",
+  },
+  heroValue: {
+    alignSelf: "center",
+    marginVertical: space.sm,
+  },
+  walletLabel: {
+    marginLeft: space.md,
+  },
+  chevron: {
+    marginLeft: space.sm,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: space.sm,
+  },
+  txnDate: {
+    marginTop: 6,
   },
 });

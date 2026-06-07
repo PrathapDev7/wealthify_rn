@@ -14,7 +14,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import APIService from '@/src/ApiService/api.service';
 import {
-    CashioIcon,
+    WealthifyIcon,
     CircleIconButton,
     ScreenContainer,
 } from '@/src/components/ui';
@@ -29,6 +29,7 @@ import {
 } from '@/src/styles/theme';
 import { resolveCategoryIcon } from '@/src/utils/categoryIcon';
 import { DEFAULT_CATEGORIES } from '@/src/utils/defaultCategories';
+import SkeletonBlock from '@/src/components/skeletons/SkeletonBlock';
 
 const api = new APIService();
 const LABEL_SCROLL_INTERVAL_MS = 3200;
@@ -46,13 +47,26 @@ export default function SelectCategoryScreen() {
         type?: 'expense' | 'income';
         returnTo?: string;
         currentCategory?: string;
+        id?: string;
+        transactionType?: 'expense' | 'income';
+        title?: string;
+        category?: string;
+        subCategory?: string;
+        expenseType?: string;
+        date?: string;
+        description?: string;
+        amount?: string;
+        createdAt?: string;
+        updatedAt?: string;
     }>();
     const type = (params.type as 'expense' | 'income') || 'expense';
     const returnToBudget = params.returnTo === 'set-budget';
+    const returnToTransactionDetail = params.returnTo === 'transaction-detail';
 
     const [query, setQuery] = useState('');
     const [searchFocused, setSearchFocused] = useState(false);
     const [categories, setCategories] = useState<CategoryOpt[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         setCategories([]);
@@ -60,11 +74,13 @@ export default function SelectCategoryScreen() {
     }, [type]);
 
     const load = () => {
+        setLoading(true);
         api.getCategories(type)
             .then((res) => {
                 if (res.data?.length) setCategories(res.data);
             })
-            .catch(() => {});
+            .catch(() => {})
+            .finally(() => setLoading(false));
     };
 
     // Merge BE categories with the curated defaults so the grid is never empty
@@ -110,6 +126,26 @@ export default function SelectCategoryScreen() {
             return;
         }
 
+        if (returnToTransactionDetail) {
+            router.replace({
+                pathname: '/transaction-detail',
+                params: {
+                    id: params.id || '',
+                    transactionType: params.transactionType || type,
+                    title: params.title || '',
+                    category: title,
+                    subCategory: params.subCategory || '',
+                    expenseType: params.expenseType || '',
+                    date: params.date || '',
+                    description: params.description || '',
+                    amount: params.amount || '',
+                    createdAt: params.createdAt || '',
+                    updatedAt: params.updatedAt || '',
+                },
+            });
+            return;
+        }
+
         router.replace({
             pathname: '/add-transaction',
             params: { type, category: title },
@@ -125,6 +161,26 @@ export default function SelectCategoryScreen() {
                     }
                     : '/set-budget',
             );
+            return;
+        }
+
+        if (returnToTransactionDetail) {
+            router.replace({
+                pathname: '/transaction-detail',
+                params: {
+                    id: params.id || '',
+                    transactionType: params.transactionType || type,
+                    title: params.title || '',
+                    category: params.currentCategory || params.category || '',
+                    subCategory: params.subCategory || '',
+                    expenseType: params.expenseType || '',
+                    date: params.date || '',
+                    description: params.description || '',
+                    amount: params.amount || '',
+                    createdAt: params.createdAt || '',
+                    updatedAt: params.updatedAt || '',
+                },
+            });
             return;
         }
 
@@ -170,7 +226,9 @@ export default function SelectCategoryScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 <View className="flex-row flex-wrap -mx-2">
-                    {filtered.map((c) => (
+                    {loading ? (
+                        <CategoryGridSkeleton />
+                    ) : filtered.map((c) => (
                         <CategoryTile
                             key={c.title}
                             title={c.title}
@@ -178,7 +236,7 @@ export default function SelectCategoryScreen() {
                             onPress={() => select(c.title)}
                         />
                     ))}
-                    {filtered.length === 0 && (
+                    {!loading && filtered.length === 0 && (
                         <View style={styles.empty}>
                             <Icon name="search" size={32} color={Colors.textSubtle} />
                             <Text style={styles.emptyText}>No categories found</Text>
@@ -192,6 +250,22 @@ export default function SelectCategoryScreen() {
         </ScreenContainer>
     );
 }
+
+const CategoryGridSkeleton = () => (
+    <>
+        {Array.from({ length: 16 }).map((_, index) => (
+            <View key={index} className="basis-1/4 items-center mb-3 px-2">
+                <SkeletonBlock width="100%" height={78} radius={14} />
+                <SkeletonBlock
+                    width={index % 3 === 0 ? 54 : index % 3 === 1 ? 68 : 46}
+                    height={12}
+                    radius={6}
+                    style={skeletonStyles.tileLabel}
+                />
+            </View>
+        ))}
+    </>
+);
 
 const CategoryTile: React.FC<{
     title: string;
@@ -214,7 +288,7 @@ const CategoryTile: React.FC<{
                 className="w-full max-w-24 aspect-square items-center justify-center mb-1 bg-white rounded-[14px]"
                 style={styles.tileIcon}
             >
-                <CashioIcon name={icon.name} size={36} />
+                <WealthifyIcon name={icon.name} size={36} />
             </View>
             <AutoScrollLabel title={title} shouldFitOneLine={shouldFitOneLine} />
         </TouchableOpacity>
@@ -392,5 +466,12 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: space.xs,
         paddingHorizontal: space.xl,
+    },
+});
+
+const skeletonStyles = StyleSheet.create({
+    tileLabel: {
+        marginTop: 8,
+        alignSelf: 'center',
     },
 });

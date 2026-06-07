@@ -16,7 +16,7 @@ const NavMobileButtons = () => {
         <View style={styles.footer}>
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push('/incomes')}
+                onPress={() => router.push('/transactions')}
             >
                 <Icon name="currency-inr" size={24}  style={styles.icon} />
                 <Text style={[styles.label, isActive('Incomes') && styles.activeText]}>Income</Text>
@@ -24,7 +24,7 @@ const NavMobileButtons = () => {
 
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push('/expenses')}
+                onPress={() => router.push('/transactions')}
             >
                 <Icon name="chart-line" size={24}  style={styles.icon} />
                 <Text style={[styles.label, isActive('Expenses') && styles.activeText]}>Expenses</Text>
@@ -43,7 +43,7 @@ const NavMobileButtons = () => {
             <TouchableOpacity style={styles.button} />
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push('/budget-analysis')}
+                onPress={() => router.push('/analytics')}
             >
                 <Icon name="view-dashboard-outline" size={24}  style={styles.icon}/>
                 <Text style={[styles.label, isActive('Analysis') && styles.activeText]}>Analysis</Text>
@@ -51,7 +51,7 @@ const NavMobileButtons = () => {
 
             <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push('/profile')}
+                onPress={() => router.push('/account')}
             >
                 <Icon name="account" size={24}  style={styles.icon}  />
                 <Text style={[styles.label, isActive('Profile') && styles.activeText]}>Profile</Text>

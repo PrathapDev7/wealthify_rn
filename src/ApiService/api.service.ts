@@ -2,12 +2,17 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Replace with your actual API base URL
-const baseURL = 'https://wealthify-be.onrender.com/api/v1/';
+// const baseURL = 'https://wealthify-be.onrender.com/api/v1/';
 // const baseURL = 'http://localhost:5000/api/v1/';
+const fallbackBaseURL = 'https://fc50-2406-7400-54-ad1-5500-fc6a-76d8-bc19.ngrok-free.app/api/v1/';
+const normalizeBaseURL = (url: string) => url.endsWith('/') ? url : `${url}/`;
+const baseURL = normalizeBaseURL(process.env.EXPO_PUBLIC_API_BASE_URL || fallbackBaseURL);
 
 const getHeaders = async () => {
     const headers = {
-        'Content-Type': 'application/json', Authorization: ''
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+        Authorization: ''
 
     };
 
@@ -27,7 +32,7 @@ const request = async (method, path, body = null, query = null) => {
         method,
         url,
         headers,
-        ...(body && { data: body }),
+        ...(body !== null && body !== undefined && { data: body }),
         ...(query && { params: query }),
     };
 
@@ -89,7 +94,7 @@ export default class APIService {
     }
 
     getIncomes(query) {
-        return request("GET", "get-incomes", {}, query)
+        return request("GET", "get-incomes", null, query)
     }
 
     updateIncome(id,data) {
@@ -97,7 +102,7 @@ export default class APIService {
     }
 
     getExpenses(query) {
-        return request("GET", "get-expenses", {}, query)
+        return request("GET", "get-expenses", null, query)
     }
 
     deleteExpense(id) {
@@ -113,11 +118,19 @@ export default class APIService {
     }
 
     getCategories(type) {
-        return request("GET", `get-categories`, {}, {type})
+        return request("GET", `get-categories`, null, {type})
     }
 
     getRecentCategories(type) {
-        return request("GET", `get-recent-categories`, {}, {type})
+        return request("GET", `get-recent-categories`, null, {type})
+    }
+
+    addSubCategory(data) {
+        return request("POST", "add-sub-category", data)
+    }
+
+    getSubCategories(category) {
+        return request("GET", "get-sub-categories", null, {category})
     }
 
     addBudgets(data) {

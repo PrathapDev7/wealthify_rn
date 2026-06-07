@@ -1,6 +1,6 @@
 import { ViewStyle } from 'react-native';
 
-// Ink-tinted shadow presets matching cashio-ui-screens.css.
+// Ink-tinted shadow presets matching wealthify-ui-screens.css.
 // All shadows use rgba(28, 17, 64, *) to stay cohesive with the deep purple ink.
 
 const INK = '#1C1140';

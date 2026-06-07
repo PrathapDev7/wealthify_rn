@@ -49,15 +49,11 @@ const MySelectDropdown = ({ options = [], onSelect, placeholder = '', value='' }
         onSelect(null);
     };
 
-    // @ts-ignore
     return (
         <View>
             <SelectDropdown
                 data={localOptions}
                 onSelect={handleSelect}
-                defaultButtonText={placeholder}
-                buttonStyle={styles.dropdownButtonStyle}
-                buttonTextStyle={styles.dropdownButtonTxtStyle}
                 renderButton={(selectedItem, isOpened) => (
                     <View style={styles.dropdownButtonStyle}>
                         <Text style={styles.dropdownButtonTxtStyle}>

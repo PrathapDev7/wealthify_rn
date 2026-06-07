@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Colors, Fonts, Shadows, Typography, radius, space } from '@/src/styles/theme';
-import CashioIcon, { resolveCashioIconName } from './CashioIcon';
+import WealthifyIcon, { resolveWealthifyIconName } from './WealthifyIcon';
 
 interface Props {
     label: string;
@@ -23,7 +23,7 @@ const Chip: React.FC<Props> = ({
     onPress,
     style,
 }) => {
-    const cashioName = resolveCashioIconName(iconName);
+    const wealthifyName = resolveWealthifyIconName(iconName);
     return (
         <TouchableOpacity
             activeOpacity={onPress ? 0.85 : 1}
@@ -37,8 +37,8 @@ const Chip: React.FC<Props> = ({
         >
             {iconName ? (
                 <View style={[styles.iconWrap, { backgroundColor: `${iconColor}1A` }]}>
-                    {cashioName ? (
-                        <CashioIcon name={cashioName} size={18} />
+                    {wealthifyName ? (
+                        <WealthifyIcon name={wealthifyName} size={18} />
                     ) : (
                         <Icon name={iconName} size={16} color={iconColor} />
                     )}

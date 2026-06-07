@@ -28,7 +28,7 @@ const GradientBackground: React.FC<Props> = ({
     const { width } = useWindowDimensions();
     const reactId = React.useId();
     const glowId = React.useMemo(
-        () => `cashioTopGlow${reactId.replace(/[^A-Za-z0-9_-]/g, '')}`,
+        () => `wealthifyTopGlow${reactId.replace(/[^A-Za-z0-9_-]/g, '')}`,
         [reactId],
     );
 

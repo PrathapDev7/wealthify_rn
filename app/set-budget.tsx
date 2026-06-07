@@ -29,12 +29,14 @@ import {
     space,
 } from '@/src/styles/theme';
 import { formatNumberWithCommas } from '@/src/utils/helper';
+import { remoteImage } from '@/assets/Constants/remoteAssets';
+import SkeletonBlock from '@/src/components/skeletons/SkeletonBlock';
 
 const api = new APIService();
 const PRESET_AMOUNTS = [5000, 10000, 25000, 50000];
 const HEADER_SOLID = 'rgba(234, 224, 255, 1)';
 const HEADER_CLEAR = 'rgba(234, 224, 255, 0)';
-const budgetIcon = require('../assets/icons/budget.png');
+const budgetIcon = remoteImage('assets/icons/budget.png');
 
 export default function SetBudgetScreen() {
     const router = useRouter();
@@ -56,12 +58,11 @@ export default function SetBudgetScreen() {
     const [totalExpenses, setTotalExpenses] = useState(0);
     const [totalBalance, setTotalBalance] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [loadingData, setLoadingData] = useState(true);
     const [budgetDocId, setBudgetDocId] = useState<string | null>(null);
     const [existingBudgets, setExistingBudgets] = useState<Record<string, number>>({});
     const [savedBudgetsY, setSavedBudgetsY] = useState<number | null>(null);
     const [pendingListScroll, setPendingListScroll] = useState(false);
-    const selectedBudget = Number(amount) || 0;
-    const remainingBudget = selectedBudget - totalExpenses;
     const hasSavedBudgetForCurrentKey =
         typeof existingBudgets[budgetKey] === 'number' && existingBudgets[budgetKey] > 0;
     const submitLabel = `${hasSavedBudgetForCurrentKey ? 'Update' : 'Save'} ${budgetKey} Budget`;
@@ -91,12 +92,16 @@ export default function SetBudgetScreen() {
     );
 
     useEffect(() => {
-        loadBalance();
-        if (shouldResetAmount) {
-            loadBudgets(true);
-            return;
-        }
-        loadBudgets(true);
+        let active = true;
+        setLoadingData(true);
+        Promise.all([loadBalance(), loadBudgets(true)])
+            .finally(() => {
+                if (active) setLoadingData(false);
+            });
+
+        return () => {
+            active = false;
+        };
     }, [budgetKey, shouldResetAmount]);
 
     useEffect(() => {
@@ -121,7 +126,7 @@ export default function SetBudgetScreen() {
     }, [existingBudgetEntries.length, pendingListScroll, savedBudgetsY, scrollToListToken]);
 
     const loadBalance = () => {
-        api.getStats()
+        return api.getStats()
             .then((res) => {
                 const stats = res.data?.response;
                 if (stats) {
@@ -259,6 +264,10 @@ export default function SetBudgetScreen() {
                         { useNativeDriver: false },
                     )}
                 >
+                    {loadingData ? (
+                        <SetBudgetSkeleton />
+                    ) : (
+                        <>
                     <Card style={styles.balanceCard}>
                         <Image
                             source={budgetIcon}
@@ -344,25 +353,6 @@ export default function SetBudgetScreen() {
                         </View>
                     </View>
 
-                    <View style={styles.planStrip}>
-                        <View style={styles.planItem}>
-                            <Text style={styles.planLabel}>Limit</Text>
-                            <Text style={styles.planValue}>{formatMoney(selectedBudget)}</Text>
-                        </View>
-                        <View style={styles.planDivider} />
-                        <View style={styles.planItem}>
-                            <Text style={styles.planLabel}>Left</Text>
-                            <Text
-                                style={[
-                                    styles.planValue,
-                                    remainingBudget < 0 && styles.planValueNegative,
-                                ]}
-                            >
-                                {formatMoney(remainingBudget)}
-                            </Text>
-                        </View>
-                    </View>
-
                     {existingBudgetEntries.length > 0 && (
                         <View
                             onLayout={(event) => setSavedBudgetsY(event.nativeEvent.layout.y)}
@@ -408,6 +398,8 @@ export default function SetBudgetScreen() {
                             </Card>
                         </View>
                     )}
+                        </>
+                    )}
                 </Animated.ScrollView>
 
                 <View style={styles.footer}>
@@ -423,6 +415,76 @@ export default function SetBudgetScreen() {
         </ScreenContainer>
     );
 }
+
+const SetBudgetSkeleton = () => (
+    <>
+        <Card style={styles.balanceCard}>
+            <SkeletonBlock width={50} height={50} radius={14} />
+            <View style={styles.balanceBody}>
+                <SkeletonBlock width={104} height={14} radius={7} />
+                <SkeletonBlock width={132} height={20} radius={10} style={skeletonStyles.subline} />
+            </View>
+            <View style={styles.balanceMeta}>
+                <SkeletonBlock width={42} height={12} radius={6} />
+                <SkeletonBlock width={86} height={16} radius={8} style={skeletonStyles.subline} />
+            </View>
+        </Card>
+
+        <Card style={styles.amountCard}>
+            <View style={styles.scopeRow}>
+                <SkeletonBlock width={78} height={14} radius={7} />
+                <SkeletonBlock width={108} height={34} radius={17} />
+            </View>
+            <View style={styles.amountRow}>
+                <SkeletonBlock width={126} height={54} radius={16} />
+            </View>
+            <SkeletonBlock width={92} height={14} radius={7} style={skeletonStyles.centered} />
+            <View style={styles.quickSection}>
+                <SkeletonBlock width={72} height={14} radius={7} />
+                <View style={styles.presetGrid}>
+                    {Array.from({ length: 4 }).map((_, index) => (
+                        <SkeletonBlock
+                            key={index}
+                            width="48%"
+                            height={42}
+                            radius={21}
+                            style={skeletonStyles.preset}
+                        />
+                    ))}
+                </View>
+            </View>
+        </Card>
+
+        <View style={styles.statsRow}>
+            <View style={styles.statTile}>
+                <SkeletonBlock width={58} height={13} radius={7} />
+                <SkeletonBlock width={104} height={18} radius={9} style={skeletonStyles.subline} />
+            </View>
+            <View style={styles.statTile}>
+                <SkeletonBlock width={64} height={13} radius={7} />
+                <SkeletonBlock width={104} height={18} radius={9} style={skeletonStyles.subline} />
+            </View>
+        </View>
+
+        <Card style={styles.savedCard}>
+            <View style={styles.savedHeader}>
+                <SkeletonBlock width={112} height={18} radius={9} />
+                <SkeletonBlock width={24} height={24} radius={12} />
+            </View>
+            <View style={styles.savedList}>
+                {Array.from({ length: 3 }).map((_, index) => (
+                    <SkeletonBlock
+                        key={index}
+                        width="48%"
+                        height={64}
+                        radius={14}
+                        style={skeletonStyles.savedBudget}
+                    />
+                ))}
+            </View>
+        </Card>
+    </>
+);
 
 const styles = StyleSheet.create({
     flex: { flex: 1 },
@@ -516,24 +578,28 @@ const styles = StyleSheet.create({
     },
     amountRow: {
         flexDirection: 'row',
-        alignItems: 'flex-start',
+        alignItems: 'center',
+        minHeight: 62,
     },
     currency: {
         ...Typography.title,
         fontFamily: Fonts.semibold,
         color: Colors.textSubtle,
-        marginTop: 9,
         marginRight: 4,
+        lineHeight: 32,
+        includeFontPadding: false,
     },
     amountInput: {
         ...Typography.displayLg,
         fontFamily: Fonts.semibold,
         fontSize: 42,
+        lineHeight: 54,
         minWidth: 112,
         maxWidth: 260,
         textAlign: 'center',
         padding: 0,
         color: Colors.text,
+        includeFontPadding: false,
     },
     amountLabel: {
         ...Typography.bodySm,
@@ -601,36 +667,6 @@ const styles = StyleSheet.create({
     statValueNegative: {
         color: Colors.negative,
     },
-    planStrip: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        minHeight: 58,
-        paddingHorizontal: space.lg,
-        paddingVertical: space.md,
-        borderRadius: 18,
-        backgroundColor: Colors.deepPurple,
-    },
-    planItem: {
-        flex: 1,
-    },
-    planLabel: {
-        ...Typography.caption,
-        color: 'rgba(255, 255, 255, 0.72)',
-        marginBottom: 3,
-    },
-    planValue: {
-        ...Typography.moneySm,
-        color: Colors.textInverse,
-    },
-    planValueNegative: {
-        color: '#FFB6B6',
-    },
-    planDivider: {
-        width: 1,
-        alignSelf: 'stretch',
-        marginHorizontal: space.lg,
-        backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    },
     savedCard: {
         paddingVertical: space.lg,
     },
@@ -685,5 +721,21 @@ const styles = StyleSheet.create({
         paddingTop: space.sm,
         paddingBottom: space.md,
         backgroundColor: 'transparent',
+    },
+});
+
+const skeletonStyles = StyleSheet.create({
+    subline: {
+        marginTop: 6,
+    },
+    centered: {
+        alignSelf: 'center',
+    },
+    preset: {
+        flexGrow: 1,
+        flexBasis: '48%',
+    },
+    savedBudget: {
+        alignSelf: 'stretch',
     },
 });

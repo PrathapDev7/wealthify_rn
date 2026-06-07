@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Colors, Shadows } from '@/src/styles/theme';
-import CashioIcon, { resolveCashioIconName } from './CashioIcon';
+import WealthifyIcon, { resolveWealthifyIconName } from './WealthifyIcon';
 
 interface Props {
     name: string;
@@ -26,7 +26,7 @@ const CircleIconButton: React.FC<Props> = ({
     icon,
     style,
 }) => {
-    const cashioName = resolveCashioIconName(name);
+    const wealthifyName = resolveWealthifyIconName(name);
     return (
         <TouchableOpacity
             activeOpacity={0.85}
@@ -45,8 +45,8 @@ const CircleIconButton: React.FC<Props> = ({
         >
             {icon ? (
                 icon
-            ) : cashioName ? (
-                <CashioIcon name={cashioName} size={iconSize ?? Math.round(size * 0.54)} />
+            ) : wealthifyName ? (
+                <WealthifyIcon name={wealthifyName} size={iconSize ?? Math.round(size * 0.54)} />
             ) : (
                 <Icon name={name} size={iconSize ?? Math.round(size * 0.5)} color={color} />
             )}

@@ -8,20 +8,20 @@ import {useNavigation} from '@react-navigation/native';
 import {capitalize, formatNumberWithCommas} from '../utils/helper';
 // import AddIncomeModal from '../components/income/AddIncomeModal'; // You'll need to adapt this
 // import Confirmation from '../components/confirmation/Confirmation'; // You'll need to adapt this
-import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 import ScreenWithHeader from "../components/layout/ScreenWithHeader";
 import APIService from "../ApiService/api.service";
 import { Swipeable } from 'react-native-gesture-handler';
 import ConfirmationModal from "../components/common/ConfirmationModal";
 import AddIncomeModal from "../components/modals/AddIncomeModal";
 import { Typography } from "../styles/typography";
+import { IncomeItemSkeleton } from "../components/skeletons/IncomeItemSkeleton";
 
 
 const api = new APIService();
 
 const IncomeScreen = () => {
     const navigation = useNavigation();
-    const userData = useSelector((state) => state?.userData?.userData) || {};
+    const userData = useSelector((state: any) => state?.userData?.userData) || {};
     const [incomes, setIncomes] = useState([]);
     const [filterType, setFilterType] = useState(2); // 1: Today, 2: This month, 3: This year
     const [loading, setLoading] = useState(true);
@@ -43,7 +43,7 @@ const IncomeScreen = () => {
 
     const getIncomes = () => {
 
-        const data = {type: filterType};
+        const data: { type: number; start_date?: string; end_date?: string } = {type: filterType};
         const momentObj = moment();
 
         if (filterType === 2) {
@@ -222,11 +222,8 @@ const IncomeScreen = () => {
                 {/* Income List */}
                 {loading ? (
                     <ScrollView style={styles.listContainer}>
-                        {Array(1).fill(0).map((_, index) => (
-                            <SkeletonPlaceholder key={index} speed={600}>
-                                <SkeletonPlaceholder.Item width="100%" height={60} marginBottom={10}
-                                                          borderRadius={5}/>
-                            </SkeletonPlaceholder>
+                        {Array.from({length: 3}).map((_, index) => (
+                            <IncomeItemSkeleton key={index} styles={styles} index={index} />
                         ))}
                     </ScrollView>
                 ) : (
@@ -492,7 +489,7 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     confirmButton: {
-        backgroundColor: Colors.error,
+        backgroundColor: Colors.danger,
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 5,

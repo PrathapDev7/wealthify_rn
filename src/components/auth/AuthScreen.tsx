@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -8,7 +9,6 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
 import { useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
@@ -19,11 +19,11 @@ import {
     PillButton,
     ScreenContainer,
     TextField,
-    CashioIcon,
 } from '@/src/components/ui';
-import { Colors, Fonts, Shadows, Typography, radius, space } from '@/src/styles/theme';
+import { Colors, Fonts, Typography, space } from '@/src/styles/theme';
 
 const api = new APIService();
+const authLogoVariant = require('../../../assets/images/wealthify-auth-logo.png');
 
 type Mode = 'login' | 'register';
 
@@ -65,11 +65,39 @@ const AuthScreen = () => {
         })();
     }, []);
 
-    const updateLogin = (key: keyof LoginData, value: string) =>
+    const updateLogin = useCallback((key: keyof LoginData, value: string) => {
         setLoginData((prev) => ({ ...prev, [key]: value }));
+    }, []);
 
-    const updateRegister = (key: keyof RegisterData, value: string) =>
+    const updateRegister = useCallback((key: keyof RegisterData, value: string) => {
         setRegisterData((prev) => ({ ...prev, [key]: value }));
+    }, []);
+
+    const handleNameChange = useCallback((text: string) => {
+        updateRegister('username', text);
+    }, [updateRegister]);
+
+    const handleIdentifierChange = useCallback((text: string) => {
+        if (mode === 'register') {
+            updateRegister('mobile', text);
+            return;
+        }
+
+        updateLogin('mobile', text);
+    }, [mode, updateLogin, updateRegister]);
+
+    const handlePasswordChange = useCallback((text: string) => {
+        if (mode === 'register') {
+            updateRegister('password', text);
+            return;
+        }
+
+        updateLogin('password', text);
+    }, [mode, updateLogin, updateRegister]);
+
+    const handleConfirmPasswordChange = useCallback((text: string) => {
+        updateRegister('confirm_password', text);
+    }, [updateRegister]);
 
     const toast = (text1: string, type: 'error' | 'success' = 'error') =>
         Toast.show({ type, text1 });
@@ -113,7 +141,9 @@ const AuthScreen = () => {
         }
     };
 
-    const swapMode = () => setMode((m) => (m === 'login' ? 'register' : 'login'));
+    const swapMode = useCallback(() => {
+        setMode((m) => (m === 'login' ? 'register' : 'login'));
+    }, []);
 
     const isRegister = mode === 'register';
 
@@ -129,12 +159,16 @@ const AuthScreen = () => {
                     showsVerticalScrollIndicator={false}
                 >
                     <View style={styles.header}>
-                        <View style={styles.lockTile}>
-                            <CashioIcon name="auth_lock" size={30} />
+                        <View style={styles.logoTile}>
+                            <Image
+                                source={authLogoVariant}
+                                style={styles.logoImage}
+                                resizeMode="contain"
+                            />
                         </View>
                         <Text style={styles.title}>
                             {isRegister
-                                ? 'Get Started with Cashio'
+                                ? 'Get Started with\nWealthify'
                                 : 'Welcome back'}
                         </Text>
                         <Text style={styles.subtitle}>
@@ -150,35 +184,27 @@ const AuthScreen = () => {
                                 label="Full name"
                                 placeholder="Your name"
                                 value={registerData.username}
-                                onChangeText={(t) => updateRegister('username', t)}
+                                onChangeText={handleNameChange}
                                 autoCapitalize="words"
                                 leftIconName="person-outline"
                             />
                         )}
 
                         <TextField
-                            label={isRegister ? 'Email' : 'Mobile number'}
-                            placeholder={isRegister ? 'Enter email' : '10-digit mobile'}
+                            label="Mobile number"
+                            placeholder="10-digit mobile"
                             value={isRegister ? registerData.mobile : loginData.mobile}
-                            onChangeText={(t) =>
-                                isRegister
-                                    ? updateRegister('mobile', t)
-                                    : updateLogin('mobile', t)
-                            }
-                            keyboardType={isRegister ? 'email-address' : 'phone-pad'}
-                            leftIconName={isRegister ? undefined : 'call-outline'}
-                            maxLength={isRegister ? undefined : 15}
+                            onChangeText={handleIdentifierChange}
+                            keyboardType="phone-pad"
+                            leftIconName="call-outline"
+                            maxLength={15}
                         />
 
                         <TextField
                             label="Password"
                             placeholder="Enter password"
                             value={isRegister ? registerData.password : loginData.password}
-                            onChangeText={(t) =>
-                                isRegister
-                                    ? updateRegister('password', t)
-                                    : updateLogin('password', t)
-                            }
+                            onChangeText={handlePasswordChange}
                             secureTextEntry
                             leftIconName="lock-closed-outline"
                         />
@@ -188,7 +214,7 @@ const AuthScreen = () => {
                                 label="Confirm password"
                                 placeholder="Re-enter password"
                                 value={registerData.confirm_password}
-                                onChangeText={(t) => updateRegister('confirm_password', t)}
+                                onChangeText={handleConfirmPasswordChange}
                                 secureTextEntry
                                 leftIconName="lock-closed-outline"
                             />
@@ -201,26 +227,6 @@ const AuthScreen = () => {
                             size="lg"
                             style={styles.cta}
                         />
-
-                        {isRegister ? (
-                            <>
-                                <View style={styles.orRow}>
-                                    <View style={styles.orLine} />
-                                    <Text style={styles.orText}>Or</Text>
-                                    <View style={styles.orLine} />
-                                </View>
-                                <View style={styles.socialRow}>
-                                    <TouchableOpacity style={styles.socialButton} activeOpacity={0.85}>
-                                        <Icon name="logo-apple" size={16} color={Colors.text} />
-                                        <Text style={styles.socialText}>Apple</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.socialButton} activeOpacity={0.85}>
-                                        <Icon name="logo-google" size={16} color={Colors.text} />
-                                        <Text style={styles.socialText}>Google</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </>
-                        ) : null}
 
                         <View style={styles.swapRow}>
                             <Text style={styles.swapText}>
@@ -257,21 +263,26 @@ const styles = StyleSheet.create({
     },
     header: {
         alignItems: 'center',
-        marginTop: space.xl,
+        marginTop: 0,
         marginBottom: space['2xl'],
     },
-    lockTile: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.72)',
+    logoTile: {
+        width: 60,
+        height: 60,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: space.md,
+        marginBottom: space.lg,
+    },
+    logoImage: {
+        width: 60,
+        height: 60,
     },
     title: {
         ...Typography.titleLg,
+        fontFamily: Fonts.semibold,
         textAlign: 'center',
+        maxWidth: 320,
+        lineHeight: 32,
         marginBottom: space.xs,
     },
     subtitle: {
@@ -284,40 +295,6 @@ const styles = StyleSheet.create({
     },
     cta: {
         marginTop: space.sm,
-    },
-    orRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginVertical: space.lg,
-        gap: space.md,
-    },
-    orLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: Colors.divider,
-    },
-    orText: {
-        ...Typography.caption,
-        color: Colors.textSubtle,
-    },
-    socialRow: {
-        flexDirection: 'row',
-        gap: space.md,
-    },
-    socialButton: {
-        flex: 1,
-        minHeight: 46,
-        borderRadius: radius.md,
-        backgroundColor: Colors.surface,
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'row',
-        gap: space.sm,
-        ...Shadows.xs,
-    },
-    socialText: {
-        ...Typography.bodyMedium,
-        fontSize: 12,
     },
     swapRow: {
         flexDirection: 'row',

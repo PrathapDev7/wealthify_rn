@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import {
     Card,
-    CashioIcon,
+    WealthifyIcon,
     PillButton,
     ScreenContainer,
 } from '@/src/components/ui';
@@ -50,7 +50,7 @@ export default function InviteEarnScreen() {
                     {INVITE_ITEMS.map((item) => (
                         <Card key={item.title} style={styles.inviteCard}>
                             <View style={styles.inviteIcon}>
-                                <CashioIcon name={item.icon} size={28} />
+                                <WealthifyIcon name={item.icon} size={28} />
                             </View>
                             <View style={styles.inviteBody}>
                                 <Text style={styles.inviteTitle}>{item.title}</Text>

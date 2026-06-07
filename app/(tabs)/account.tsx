@@ -30,6 +30,7 @@ import {
     radius,
     space,
 } from '@/src/styles/theme';
+import SkeletonBlock from '@/src/components/skeletons/SkeletonBlock';
 
 const api = new APIService();
 
@@ -47,12 +48,15 @@ export default function AccountScreen() {
     const [draftName, setDraftName] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showLogout, setShowLogout] = useState(false);
+    const [showResetStorage, setShowResetStorage] = useState(false);
+    const [loadingProfile, setLoadingProfile] = useState(true);
 
     useEffect(() => {
         loadProfile();
     }, []);
 
     const loadProfile = async () => {
+        setLoadingProfile(true);
         try {
             const res = await api.getProfile();
             if (res.data?.data) {
@@ -66,6 +70,8 @@ export default function AccountScreen() {
             }
         } catch {
             Toast.show({ type: 'error', text1: 'Failed to fetch profile' });
+        } finally {
+            setLoadingProfile(false);
         }
     };
 
@@ -90,6 +96,17 @@ export default function AccountScreen() {
         router.replace('/');
     };
 
+    const resetLocalAppData = async () => {
+        await AsyncStorage.clear();
+        setShowResetStorage(false);
+        Toast.show({
+            type: 'success',
+            text1: 'Local app data reset',
+            text2: 'Saved session and cached preferences were cleared.',
+        });
+        router.replace('/');
+    };
+
     const initials = (userData.username || '?')
         .split(' ')
         .map((p) => p[0])
@@ -107,6 +124,10 @@ export default function AccountScreen() {
                     <Text style={styles.title}>Account</Text>
                 </View>
 
+                {loadingProfile ? (
+                    <AccountSkeleton />
+                ) : (
+                    <>
                 <Card style={styles.userCard}>
                     <LinearGradient
                         colors={Gradients.avatarWarm as any}
@@ -196,6 +217,13 @@ export default function AccountScreen() {
                     />
                     <Divider />
                     <SettingRow
+                        icon="trash-bin-outline"
+                        label="Reset local app data"
+                        danger
+                        onPress={() => setShowResetStorage(true)}
+                    />
+                    <Divider />
+                    <SettingRow
                         icon="help-circle-outline"
                         label="Help & Support"
                         onPress={() =>
@@ -224,6 +252,8 @@ export default function AccountScreen() {
                 />
 
                 <View style={styles.bottomSpacer} />
+                    </>
+                )}
             </ScrollView>
 
             <UpdatePasswordModal
@@ -239,24 +269,92 @@ export default function AccountScreen() {
                 confirmText="Log me out"
                 cancelText="Cancel"
             />
+            <ConfirmationModal
+                visible={showResetStorage}
+                onClose={() => setShowResetStorage(false)}
+                onConfirm={resetLocalAppData}
+                message="Reset local app data on this device? This clears saved login, onboarding, tour, and cached profile data."
+                confirmText="Reset data"
+                cancelText="Keep data"
+            />
         </ScreenContainer>
     );
 }
 
+const AccountSkeleton = () => (
+    <>
+        <Card style={styles.userCard}>
+            <SkeletonBlock width={54} height={54} radius={radius.md} />
+            <View style={styles.userBody}>
+                <SkeletonBlock width={146} height={18} radius={9} />
+                <SkeletonBlock width={112} height={14} radius={7} style={skeletonStyles.subline} />
+            </View>
+            <SkeletonBlock width={54} height={34} radius={17} />
+        </Card>
+
+        <View style={styles.premiumBanner}>
+            <SkeletonBlock width={36} height={36} radius={18} />
+            <View style={skeletonStyles.premiumBody}>
+                <SkeletonBlock width={142} height={18} radius={9} />
+                <SkeletonBlock width={126} height={13} radius={7} style={skeletonStyles.subline} />
+            </View>
+            <SkeletonBlock width={20} height={20} radius={10} />
+        </View>
+
+        <SkeletonBlock width={118} height={14} radius={7} style={skeletonStyles.sectionLabel} />
+        <Card padding={0} style={styles.groupCard}>
+            {Array.from({ length: 4 }).map((_, index) => (
+                <View key={index}>
+                    <SettingRowSkeleton width={index === 0 ? 152 : index === 1 ? 132 : 86} />
+                    {index < 3 ? <Divider /> : null}
+                </View>
+            ))}
+        </Card>
+
+        <SkeletonBlock width={68} height={14} radius={7} style={skeletonStyles.sectionLabel} />
+        <Card padding={0} style={styles.groupCard}>
+            {Array.from({ length: 4 }).map((_, index) => (
+                <View key={index}>
+                    <SettingRowSkeleton width={[98, 142, 116, 54][index]} />
+                    {index < 3 ? <Divider /> : null}
+                </View>
+            ))}
+        </Card>
+
+        <SkeletonBlock width="100%" height={48} radius={24} style={skeletonStyles.logout} />
+        <View style={styles.bottomSpacer} />
+    </>
+);
+
+const SettingRowSkeleton: React.FC<{ width: number }> = ({ width }) => (
+    <View style={settingStyles.row}>
+        <SkeletonBlock width={32} height={32} radius={16} />
+        <SkeletonBlock width={width} height={17} radius={8} style={skeletonStyles.settingLabel} />
+        <SkeletonBlock width={18} height={18} radius={9} />
+    </View>
+);
+
 const SettingRow: React.FC<{
     icon: string;
     label: string;
+    danger?: boolean;
     onPress?: () => void;
-}> = ({ icon, label, onPress }) => (
+}> = ({ icon, label, danger = false, onPress }) => (
     <TouchableOpacity
         activeOpacity={0.85}
         onPress={onPress}
         style={settingStyles.row}
     >
         <View style={settingStyles.iconWrap}>
-            <Icon name={icon} size={20} color={Colors.text} />
+            <Icon
+                name={icon}
+                size={20}
+                color={danger ? Colors.negative : Colors.text}
+            />
         </View>
-        <Text style={settingStyles.label}>{label}</Text>
+        <Text style={[settingStyles.label, danger && settingStyles.labelDanger]}>
+            {label}
+        </Text>
         <Icon name="chevron-forward" size={18} color={Colors.textSubtle} />
     </TouchableOpacity>
 );
@@ -375,9 +473,33 @@ const settingStyles = StyleSheet.create({
         marginLeft: space.sm,
         ...Typography.bodyMedium,
     },
+    labelDanger: {
+        color: Colors.negative,
+    },
     divider: {
         height: 1,
         backgroundColor: Colors.divider,
         marginLeft: 60,
+    },
+});
+
+const skeletonStyles = StyleSheet.create({
+    subline: {
+        marginTop: 6,
+    },
+    premiumBody: {
+        flex: 1,
+        marginLeft: space.md,
+    },
+    sectionLabel: {
+        marginTop: space['2xl'],
+        marginBottom: space.sm,
+    },
+    settingLabel: {
+        flex: 1,
+        marginLeft: space.sm,
+    },
+    logout: {
+        marginTop: space.xl,
     },
 });

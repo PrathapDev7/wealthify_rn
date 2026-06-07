@@ -174,7 +174,7 @@ const sizeLabelStyles: Record<Size, TextStyle> = {
 const variantStyles: Record<Variant, { container: ViewStyle; label: TextStyle }> = {
     primary: {
         container: {}, // unused — rendered as LinearGradient
-        label: { color: Colors.textInverse, fontFamily: Fonts.bold },
+        label: { color: Colors.textInverse, fontFamily: Fonts.semibold },
     },
     secondary: {
         container: {
@@ -183,20 +183,20 @@ const variantStyles: Record<Variant, { container: ViewStyle; label: TextStyle }>
             borderColor: Colors.border,
             ...Shadows.sm,
         },
-        label: { color: Colors.text, fontFamily: Fonts.bold },
+        label: { color: Colors.text, fontFamily: Fonts.semibold },
     },
     ghost: {
         container: {
             backgroundColor: 'transparent',
         },
-        label: { color: Colors.primary, fontFamily: Fonts.bold },
+        label: { color: Colors.primary, fontFamily: Fonts.semibold },
     },
     dark: {
         container: {
             backgroundColor: Colors.fab,
             ...Shadows.fab,
         },
-        label: { color: Colors.textInverse, fontFamily: Fonts.bold },
+        label: { color: Colors.textInverse, fontFamily: Fonts.semibold },
     },
 };
 

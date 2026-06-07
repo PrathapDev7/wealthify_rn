@@ -10,14 +10,14 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, {
-  Defs,
-  G,
-  Line,
-  LinearGradient as SvgLinearGradient,
-  Path,
-  Stop,
-} from "react-native-svg";
+import {
+  ChartNoAxesColumn,
+  FileText,
+  House,
+  Plus,
+  UserRound,
+  X,
+} from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
@@ -26,12 +26,9 @@ import type { AnimationObject } from "lottie-react-native/lib/typescript/types";
 import { Colors, Fonts, Typography, space } from "@/src/styles/theme";
 import AddActionSheet from "@/src/components/ui/AddActionSheet";
 
-const quickStartAccent = require("../../../assets/lottie/quick-start-accent.json");
-const chooseEntryAccent = require("../../../assets/lottie/second-tour-accent/animations/0cf9aa92-0b38-4505-9f72-12bddd1e9aa9.json");
-
 const ICONS: Record<string, { label: string }> = {
   dashboard: { label: "Home" },
-  transactions: { label: "Transaction" },
+  transactions: { label: "Transactions" },
   analytics: { label: "Analytics" },
   account: { label: "Account" },
 };
@@ -39,120 +36,53 @@ const ICONS: Record<string, { label: string }> = {
 const BAR_HEIGHT = 85;
 const FAB_SIZE = 60;
 const FAB_RING_SIZE = 76;
-const ICON_SIZE = 22;
+const ICON_SIZE = 20;
+const FAB_ICON_SIZE = 36;
 const INACTIVE_COLOR = "#6F7083";
 const HOME_INDICATOR_WIDTH = 116;
-const FAB_SLOT_WIDTH = 84;
-const ADD_TOUR_SEEN_KEY = "cashio_add_menu_tour_seen_v2";
+const FAB_SLOT_WIDTH = 64;
+const ADD_TOUR_SEEN_KEY = "wealthify_add_menu_tour_seen_v2";
 
 type TourStep = "fab" | "menu" | null;
 type TourAccentPlacement = "first" | "second";
 
 const TOUR_ACCENT_OFFSETS: Record<
   TourAccentPlacement,
-  { bottom: number; left: number }
+  {
+    attachToCoach?: boolean;
+    bottom: number;
+    left: number;
+    width: number;
+    height: number;
+    resizeMode: "cover" | "contain" | "center";
+  }
 > = {
-  first: { bottom: 144, left: 4 },
-  second: { bottom: 102, left: -16 },
+  first: {
+    attachToCoach: true,
+    bottom: 0,
+    left: 0,
+    width: 86,
+    height: 126,
+    resizeMode: "contain",
+  },
+  second: {
+    bottom: 128,
+    left: 12,
+    width: 116,
+    height: 116,
+    resizeMode: "contain",
+  },
 };
 
-const ActiveHomeIcon = () => (
-  <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 34 34">
-    <Defs>
-      <SvgLinearGradient id="activeHome" x1="5" y1="2" x2="27" y2="31">
-        <Stop offset="0" stopColor="#9B74FF" />
-        <Stop offset="0.52" stopColor="#7B3FF2" />
-        <Stop offset="1" stopColor="#5F35E8" />
-      </SvgLinearGradient>
-    </Defs>
-    <Path
-      d="M16.9 2.6c2 0 3.1.4 4.7 1.7l7 5.5c1.8 1.4 2.8 3.5 2.8 5.8v9.3c0 4-2.7 6.7-6.7 6.7H9.2c-4 0-6.7-2.7-6.7-6.7v-9.3c0-2.3 1-4.4 2.8-5.8l7-5.5c1.5-1.2 2.7-1.7 4.6-1.7z"
-      fill="url(#activeHome)"
-    />
-    <Path
-      d="M17 17.3c1.8 0 3.1 1 3.5 2.6.2.8.8 1.3 1.5 1.5.8.2 1.3.9 1.3 1.8 0 1.1-.8 1.9-1.9 1.9h-8.8c-1.1 0-1.9-.8-1.9-1.9 0-.9.5-1.6 1.3-1.8.7-.2 1.3-.7 1.5-1.5.4-1.6 1.7-2.6 3.5-2.6z"
-      fill="#FFFFFF"
-    />
-  </Svg>
-);
-
 const NavIcon = ({ name, focused }: { name: string; focused: boolean }) => {
-  if (focused && name === "dashboard") {
-    return <ActiveHomeIcon />;
-  }
+  const color = focused ? Colors.primary : INACTIVE_COLOR;
+  const strokeWidth = focused ? 2.7 : 2.35;
+  const props = { size: ICON_SIZE, color, strokeWidth };
 
-  const stroke = focused ? Colors.primary : INACTIVE_COLOR;
-
-  if (name === "transactions") {
-    return (
-      <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 28 28">
-        <G
-          fill="none"
-          stroke={stroke}
-          strokeWidth={2.2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <Path d="M7.5 4.5h8.2c2 0 3.3 1.3 3.3 3.3v9.4c0 2-1.3 3.3-3.3 3.3H7.5c-2 0-3.3-1.3-3.3-3.3V7.8c0-2 1.3-3.3 3.3-3.3z" />
-          <Path d="M8.4 9.3h6.2" />
-          <Path d="M8.4 13.4h4.1" />
-          <Path d="M19.1 14.1a5.2 5.2 0 1 1 0 10.4 5.2 5.2 0 0 1 0-10.4z" />
-          <Path d="M19.1 17v2.6l1.8 1.2" />
-        </G>
-      </Svg>
-    );
-  }
-
-  if (name === "analytics") {
-    return (
-      <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 28 28">
-        <G
-          fill="none"
-          stroke={stroke}
-          strokeWidth={2.2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <Path d="M7.8 4.8h12.4c1.7 0 3 1.3 3 3v12.4c0 1.7-1.3 3-3 3H7.8c-1.7 0-3-1.3-3-3V7.8c0-1.7 1.3-3 3-3z" />
-          <Path d="M10.2 17.8v-4" />
-          <Path d="M14 17.8V9.9" />
-          <Path d="M17.8 17.8v-6.2" />
-        </G>
-      </Svg>
-    );
-  }
-
-  if (name === "account") {
-    return (
-      <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 28 28">
-        <G
-          fill="none"
-          stroke={stroke}
-          strokeWidth={2.2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <Path d="M14 12.7a4.2 4.2 0 1 0 0-8.4 4.2 4.2 0 0 0 0 8.4z" />
-          <Path d="M6.6 23.2c.4-4 3.2-6.4 7.4-6.4s7 2.4 7.4 6.4c.1.7-.4 1.3-1.1 1.3H7.7c-.7 0-1.2-.6-1.1-1.3z" />
-        </G>
-      </Svg>
-    );
-  }
-
-  return (
-    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 34 34">
-      <G
-        fill="none"
-        stroke={stroke}
-        strokeWidth={2.4}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <Path d="M21 27v-8a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v8" />
-        <Path d="M5.5 14.7a2.8 2.8 0 0 1 1-2.1l8.7-7.5a2.8 2.8 0 0 1 3.6 0l8.7 7.5a2.8 2.8 0 0 1 1 2.1v9.8a2.8 2.8 0 0 1-2.8 2.8H8.3a2.8 2.8 0 0 1-2.8-2.8z" />
-      </G>
-    </Svg>
-  );
+  if (name === "transactions") return <FileText {...props} />;
+  if (name === "analytics") return <ChartNoAxesColumn {...props} />;
+  if (name === "account") return <UserRound {...props} />;
+  return <House {...props} />;
 };
 
 const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
@@ -312,7 +242,13 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
         style={styles.tab}
       >
         <NavIcon name={routeName} focused={focused} />
-        <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
+        <Text
+          adjustsFontSizeToFit
+          minimumFontScale={0.55}
+          maxFontSizeMultiplier={1}
+          numberOfLines={1}
+          style={[styles.tabLabel, focused && styles.tabLabelActive]}
+        >
           {config.label}
         </Text>
       </TouchableOpacity>
@@ -358,7 +294,6 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
           bottom={sheetBottom + 210}
           width={width}
           progress={coachAnim}
-          accentSource={chooseEntryAccent}
           accentPlacement="second"
           accentLoop
           onSkip={completeTour}
@@ -456,27 +391,19 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
           end={{ x: 0.86, y: 1 }}
           style={styles.fabGradient}
         >
-          <Svg width={36} height={36} viewBox="0 0 42 42">
-            {sheetOpen ? (
-              <G
-                stroke={Colors.textInverse}
-                strokeWidth={3.5}
-                strokeLinecap="round"
-              >
-                <Line x1="13" y1="13" x2="29" y2="29" />
-                <Line x1="29" y1="13" x2="13" y2="29" />
-              </G>
-            ) : (
-              <G
-                stroke={Colors.textInverse}
-                strokeWidth={3.5}
-                strokeLinecap="round"
-              >
-                <Line x1="21" y1="10" x2="21" y2="32" />
-                <Line x1="10" y1="21" x2="32" y2="21" />
-              </G>
-            )}
-          </Svg>
+          {sheetOpen ? (
+            <X
+              size={FAB_ICON_SIZE}
+              color={Colors.textInverse}
+              strokeWidth={2.8}
+            />
+          ) : (
+            <Plus
+              size={FAB_ICON_SIZE}
+              color={Colors.textInverse}
+              strokeWidth={2.8}
+            />
+          )}
         </LinearGradient>
       </TouchableOpacity>
 
@@ -487,7 +414,6 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
           bottom={fabBottom + FAB_SIZE + space.lg}
           width={width}
           progress={coachAnim}
-          accentSource={quickStartAccent}
           accentPlacement="first"
           onSkip={completeTour}
         />
@@ -530,10 +456,11 @@ const TourCoach = ({
   const accentOffsets =
     TOUR_ACCENT_OFFSETS[accentPlacement || "first"] ||
     TOUR_ACCENT_OFFSETS.first;
+  const attachAccentToCoach = !!accentOffsets.attachToCoach;
 
   return (
     <>
-      {accentSource ? (
+      {accentSource && !attachAccentToCoach ? (
         <Animated.View
           pointerEvents="none"
           style={[
@@ -541,6 +468,8 @@ const TourCoach = ({
             {
               bottom: bottom + accentOffsets.bottom,
               left: coachLeft + accentOffsets.left,
+              width: accentOffsets.width,
+              height: accentOffsets.height,
               opacity: progress,
               transform: [{ translateY }, { scale }],
             },
@@ -550,8 +479,14 @@ const TourCoach = ({
             source={accentSource}
             autoPlay
             loop={accentLoop}
-            resizeMode="cover"
-            style={styles.tourAccentLottie}
+            resizeMode={accentOffsets.resizeMode}
+            style={[
+              styles.tourAccentLottie,
+              {
+                width: accentOffsets.width,
+                height: accentOffsets.height,
+              },
+            ]}
           />
         </Animated.View>
       ) : null}
@@ -567,12 +502,32 @@ const TourCoach = ({
           },
         ]}
       >
+        {accentSource && attachAccentToCoach ? (
+          <View pointerEvents="none" style={styles.tourCoachAccentWrap}>
+            <LottieView
+              source={accentSource}
+              autoPlay
+              loop={accentLoop}
+              resizeMode={accentOffsets.resizeMode}
+              style={[
+                styles.tourCoachAccentLottie,
+                {
+                  width: accentOffsets.width,
+                  height: accentOffsets.height,
+                },
+              ]}
+            />
+          </View>
+        ) : null}
         <LinearGradient
           colors={["#FFFFFF", "#F8F4FF", "#FFFFFF"]}
           locations={[0, 0.55, 1]}
           start={{ x: 0.08, y: 0 }}
           end={{ x: 0.92, y: 1 }}
-          style={styles.tourGradient}
+          style={[
+            styles.tourGradient,
+            attachAccentToCoach && styles.tourGradientWithAccent,
+          ]}
         >
           <Text style={styles.tourTitle}>{title}</Text>
           <Text style={styles.tourBody}>{body}</Text>
@@ -622,22 +577,25 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     height: BAR_HEIGHT,
     paddingTop: 24,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
   },
   tab: {
     flex: 1,
     alignItems: "center",
     justifyContent: "flex-start",
     height: "100%",
+    minWidth: 0,
   },
   tabLabel: {
     ...Typography.body,
     fontFamily: Fonts.medium,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11.5,
+    lineHeight: 16,
     color: INACTIVE_COLOR,
     marginTop: 6,
+    width: "100%",
     textAlign: "center",
+    includeFontPadding: false,
   },
   tabLabelActive: {
     color: Colors.primary,
@@ -740,16 +698,30 @@ const styles = StyleSheet.create({
     paddingTop: space.lg,
     paddingBottom: space.md,
   },
-  tourAccentWrap: {
+  tourGradientWithAccent: {
+    paddingTop: space["2xl"],
+  },
+  tourCoachAccentWrap: {
     position: "absolute",
-    width: 122,
-    height: 122,
-    zIndex: 32,
+    left: 28,
+    top: -104,
+    zIndex: 3,
+    elevation: 3,
+  },
+  tourCoachAccentLottie: {
     backgroundColor: "transparent",
   },
+  tourAccentWrap: {
+    position: "absolute",
+    zIndex: 40,
+    elevation: 40,
+    backgroundColor: "transparent",
+    overflow: "visible",
+  },
   tourAccentLottie: {
-    width: 122,
-    height: 122,
+    position: "absolute",
+    left: 0,
+    top: 0,
     backgroundColor: "transparent",
   },
   tourTitle: {

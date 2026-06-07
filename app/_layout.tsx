@@ -2,10 +2,10 @@ import {Stack} from "expo-router";
 import "@/global.css";
 import {Provider} from "react-redux";
 import store from "@/src/redux/store";
-import React, {useEffect} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {StatusBar} from 'expo-status-bar';
 import {Colors} from "@/src/styles/colors";
-import {StyleSheet, Text, TextInput, View} from "react-native";
+import {Animated, Easing, ImageSourcePropType, StyleSheet, Text, TextInput, View} from "react-native";
 import {Fonts} from "@/src/styles/fonts";
 import {GestureHandlerRootView} from "react-native-gesture-handler";
 import {SafeAreaProvider} from "react-native-safe-area-context";
@@ -23,12 +23,17 @@ import {
     Poppins_700Bold,
     Poppins_800ExtraBold,
 } from '@expo-google-fonts/poppins';
+import {remoteImage} from "@/assets/Constants/remoteAssets";
+import {AppRefreshProvider} from "@/src/context/AppRefreshContext";
 
 export const unstable_settings = {
     initialRouteName: 'index',
 };
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+const animatedSplashIcon = remoteImage('assets/images/splash.png') as ImageSourcePropType;
+const animatedSplashBackground = '#250066';
 
 type TextComponentWithDefaults = typeof Text & {
     defaultProps?: {
@@ -65,7 +70,7 @@ const toastTone = {
     },
 } as const;
 
-const CashioToast = ({type, text1, text2}: ToastConfigParams<any>) => {
+const WealthifyToast = ({type, text1, text2}: ToastConfigParams<any>) => {
     const tone = toastTone[type as keyof typeof toastTone] || toastTone.info;
 
     return (
@@ -88,12 +93,86 @@ const CashioToast = ({type, text1, text2}: ToastConfigParams<any>) => {
 };
 
 const toastConfig = {
-    success: CashioToast,
-    error: CashioToast,
-    info: CashioToast,
+    success: WealthifyToast,
+    error: WealthifyToast,
+    info: WealthifyToast,
+};
+
+const AnimatedSplashOverlay = ({play, onFinish}: {play: boolean; onFinish: () => void}) => {
+    const overlayOpacity = useRef(new Animated.Value(1)).current;
+    const iconOpacity = useRef(new Animated.Value(0)).current;
+    const iconScale = useRef(new Animated.Value(0.92)).current;
+
+    useEffect(() => {
+        if (!play) {
+            return;
+        }
+
+        const animation = Animated.sequence([
+            Animated.parallel([
+                Animated.timing(iconOpacity, {
+                    toValue: 1,
+                    duration: 460,
+                    easing: Easing.out(Easing.cubic),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(iconScale, {
+                    toValue: 1,
+                    duration: 460,
+                    easing: Easing.out(Easing.cubic),
+                    useNativeDriver: true,
+                }),
+            ]),
+            Animated.delay(520),
+            Animated.parallel([
+                Animated.timing(overlayOpacity, {
+                    toValue: 0,
+                    duration: 520,
+                    easing: Easing.inOut(Easing.cubic),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(iconScale, {
+                    toValue: 1.05,
+                    duration: 520,
+                    easing: Easing.inOut(Easing.cubic),
+                    useNativeDriver: true,
+                }),
+            ]),
+        ]);
+
+        animation.start(({finished}) => {
+            if (finished) {
+                onFinish();
+            }
+        });
+
+        return () => animation.stop();
+    }, [iconOpacity, iconScale, onFinish, overlayOpacity, play]);
+
+    return (
+        <Animated.View
+            pointerEvents="none"
+            style={[styles.animatedSplash, {opacity: overlayOpacity}]}
+        >
+            <Animated.Image
+                source={animatedSplashIcon}
+                resizeMode="contain"
+                style={[
+                    styles.animatedSplashIcon,
+                    {
+                        opacity: iconOpacity,
+                        transform: [{scale: iconScale}],
+                    },
+                ]}
+            />
+        </Animated.View>
+    );
 };
 
 export default function RootLayout() {
+    const [playAnimatedSplash, setPlayAnimatedSplash] = useState(false);
+    const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
+    const [appRefreshKey, setAppRefreshKey] = useState(0);
     const [fontsLoaded, fontError] = useFonts({
         Poppins_200ExtraLight,
         Poppins_300Light,
@@ -106,7 +185,11 @@ export default function RootLayout() {
 
     useEffect(() => {
         if (fontsLoaded || fontError) {
-            SplashScreen.hideAsync().catch(() => {});
+            SplashScreen.hideAsync()
+                .catch(() => {})
+                .finally(() => {
+                    setPlayAnimatedSplash(true);
+                });
         }
     }, [fontsLoaded, fontError]);
 
@@ -119,14 +202,30 @@ export default function RootLayout() {
             <SafeAreaProvider>
                 <Provider store={store}>
                     <PaperProvider theme={DefaultTheme}>
-                        <StatusBar style="dark" />
-                        <Stack screenOptions={{headerShown: false, contentStyle: {backgroundColor: Colors.background}}}/>
+                        <StatusBar style={showAnimatedSplash ? "light" : "dark"} />
+                        <AppRefreshProvider
+                            requestAppRefresh={() => setAppRefreshKey((key) => key + 1)}
+                        >
+                            <Stack
+                                key={appRefreshKey}
+                                screenOptions={{
+                                    headerShown: false,
+                                    contentStyle: {backgroundColor: Colors.background},
+                                }}
+                            />
+                        </AppRefreshProvider>
                         <Toast
                             config={toastConfig}
                             position="bottom"
                             bottomOffset={64}
                             visibilityTime={2400}
                         />
+                        {showAnimatedSplash ? (
+                            <AnimatedSplashOverlay
+                                play={playAnimatedSplash}
+                                onFinish={() => setShowAnimatedSplash(false)}
+                            />
+                        ) : null}
                     </PaperProvider>
                 </Provider>
             </SafeAreaProvider>
@@ -137,6 +236,18 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    animatedSplash: {
+        ...StyleSheet.absoluteFillObject,
+        zIndex: 9999,
+        elevation: 9999,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: animatedSplashBackground,
+    },
+    animatedSplashIcon: {
+        width: 286,
+        height: 286,
     },
     toast: {
         width: '90%',

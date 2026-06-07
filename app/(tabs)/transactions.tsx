@@ -1,15 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-} from 'react-native';
-import { PieChart } from 'react-native-gifted-charts';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import Icon from 'react-native-vector-icons/Ionicons';
 import moment from 'moment';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import APIService from '@/src/ApiService/api.service';
 import {
     Card,
@@ -27,21 +21,35 @@ import {
 } from '@/src/styles/theme';
 import { formatNumberWithCommas } from '@/src/utils/helper';
 import { resolveCategoryIcon } from '@/src/utils/categoryIcon';
+import {
+    getTransactionDate,
+    readTransactionList,
+} from '@/src/utils/transactions';
+import SkeletonBlock from '@/src/components/skeletons/SkeletonBlock';
 
 const api = new APIService();
 
 interface Txn {
     _id?: string;
-    type?: 'income' | 'expense';
+    type?: 'income' | 'expense' | string;
     title?: string;
     category?: string;
     sub_category?: string;
     date?: string;
     createdAt?: string;
+    updatedAt?: string;
+    description?: string;
     amount?: number;
 }
 
-type RangeKey = 'today' | 'yesterday' | 'last3Days' | 'thisWeek' | 'thisMonth' | 'thisYear';
+type RangeKey =
+    | 'today'
+    | 'yesterday'
+    | 'last3Days'
+    | 'thisWeek'
+    | 'thisMonth'
+    | 'thisYear';
+type CashflowKey = 'income' | 'expense';
 
 const RANGE_OPTIONS: { key: RangeKey; label: string }[] = [
     { key: 'today', label: 'Today' },
@@ -89,23 +97,26 @@ const buildDateRange = (key: RangeKey) => {
     return { start, end, previousStart, previousEnd };
 };
 
-const readTransactions = (res: any, collectionKey: 'incomes' | 'expenses') =>
-    Array.isArray(res.data) ? res.data : res.data?.[collectionKey] || [];
-
 const getTxnSortTime = (txn: Txn) => {
-    const timestamp = moment(txn.createdAt || txn.date).valueOf();
+    const timestamp = moment(getTransactionDate(txn)).valueOf();
     return Number.isFinite(timestamp) ? timestamp : 0;
 };
 
 export default function TransactionsScreen() {
-    const [selectedRangeKey, setSelectedRangeKey] = useState<RangeKey>('thisMonth');
+    const router = useRouter();
+    const [selectedRangeKey, setSelectedRangeKey] =
+        useState<RangeKey>('thisMonth');
     const [rangeMenuOpen, setRangeMenuOpen] = useState(false);
-    const [selectedDonutIndex, setSelectedDonutIndex] = useState<number | null>(null);
+    const [selectedCashflowKey, setSelectedCashflowKey] =
+        useState<CashflowKey | null>(null);
     const [incomes, setIncomes] = useState<Txn[]>([]);
     const [expenses, setExpenses] = useState<Txn[]>([]);
+    const [loading, setLoading] = useState(true);
 
     const selectedRange = useMemo(
-        () => RANGE_OPTIONS.find((option) => option.key === selectedRangeKey) || RANGE_OPTIONS[5],
+        () =>
+            RANGE_OPTIONS.find((option) => option.key === selectedRangeKey) ||
+            RANGE_OPTIONS[5],
         [selectedRangeKey],
     );
     const sectionTitle = useMemo(
@@ -119,27 +130,39 @@ export default function TransactionsScreen() {
                 : selectedRange.label.toLowerCase(),
         [selectedRange.label, selectedRangeKey],
     );
-    const rangeConfig = useMemo(() => buildDateRange(selectedRangeKey), [selectedRangeKey]);
+    const rangeConfig = useMemo(
+        () => buildDateRange(selectedRangeKey),
+        [selectedRangeKey],
+    );
 
-    const load = useCallback(() => {
+    const load = useCallback(async () => {
         const currentRange = {
             start_date: rangeConfig.start.format('YYYY-MM-DD'),
             end_date: rangeConfig.end.format('YYYY-MM-DD'),
         };
-        api.getIncomes(currentRange)
-            .then((res) => {
-                const list = readTransactions(res, 'incomes');
-                setIncomes(list.map((t: Txn) => ({ ...t, type: 'income' })));
-            })
-            .catch(() => {});
-        api.getExpenses(currentRange)
-            .then((res) => {
-                const list = readTransactions(res, 'expenses');
-                setExpenses(list.map((t: Txn) => ({ ...t, type: 'expense' })));
-            })
-            .catch(() => {});
-    }, [rangeConfig]);
 
+        setLoading(true);
+        const [incomeResult, expenseResult] = await Promise.allSettled([
+            api.getIncomes(currentRange),
+            api.getExpenses(currentRange),
+        ]);
+
+        if (incomeResult.status === 'fulfilled') {
+            const list = readTransactionList(incomeResult.value, 'incomes');
+            setIncomes(list.map((t: Txn) => ({ ...t, type: 'income' })));
+        } else {
+            setIncomes([]);
+        }
+
+        if (expenseResult.status === 'fulfilled') {
+            const list = readTransactionList(expenseResult.value, 'expenses');
+            setExpenses(list.map((t: Txn) => ({ ...t, type: 'expense' })));
+        } else {
+            setExpenses([]);
+        }
+
+        setLoading(false);
+    }, [rangeConfig]);
 
     useEffect(() => {
         load();
@@ -152,7 +175,8 @@ export default function TransactionsScreen() {
     );
 
     const totals = useMemo(() => {
-        const sum = (list: Txn[]) => list.reduce((a, b) => a + Number(b.amount || 0), 0);
+        const sum = (list: Txn[]) =>
+            list.reduce((a, b) => a + Number(b.amount || 0), 0);
         const curIncome = sum(incomes);
         const curExpense = sum(expenses);
 
@@ -170,26 +194,31 @@ export default function TransactionsScreen() {
         [incomes, expenses],
     );
     const incomeExpenseTotals = useMemo(
-        () => [
-            {
-                value: totals.curIncome,
-                color: Colors.primary,
-                label: 'Income',
-            },
-            {
-                value: totals.curExpense,
-                color: Colors.accentDark,
-                label: 'Expense',
-            },
-        ].filter((item) => item.value > 0),
+        () =>
+            [
+                {
+                    key: 'income' as const,
+                    value: totals.curIncome,
+                    color: Colors.primary,
+                    label: 'Income',
+                },
+                {
+                    key: 'expense' as const,
+                    value: totals.curExpense,
+                    color: Colors.accentDark,
+                    label: 'Expense',
+                },
+            ].filter((item) => item.value > 0),
         [totals.curExpense, totals.curIncome],
     );
     const incomeExpenseBalance = totals.curIncome - totals.curExpense;
-    const selectedDonutItem =
-        selectedDonutIndex === null ? null : incomeExpenseTotals[selectedDonutIndex];
+    const selectedCashflowItem = selectedCashflowKey
+        ? incomeExpenseTotals.find((item) => item.key === selectedCashflowKey)
+        : null;
+    const hasCashflow = incomeExpenseTotals.length > 0;
 
     useEffect(() => {
-        setSelectedDonutIndex(null);
+        setSelectedCashflowKey(null);
     }, [incomeExpenseTotals]);
 
     return (
@@ -199,138 +228,455 @@ export default function TransactionsScreen() {
                 contentContainerStyle={styles.scroll}
                 onTouchStart={() => {
                     if (rangeMenuOpen) setRangeMenuOpen(false);
-                    setSelectedDonutIndex(null);
+                    setSelectedCashflowKey(null);
                 }}
             >
                 <View style={styles.headerRow}>
                     <Text style={styles.title}>Transactions</Text>
                 </View>
 
-                <Card style={styles.donutCard}>
-                    <View style={[styles.chartHeader, rangeMenuOpen && styles.chartHeaderMenuOpen]}>
-                        <View
-                            style={styles.rangeControl}
-                            onTouchStart={(event) => event.stopPropagation()}
-                        >
-                            <Pressable
-                                accessibilityRole="button"
-                                onPress={() => setRangeMenuOpen((open) => !open)}
-                                style={styles.rangePill}
-                            >
-                                <Text style={styles.rangeText}>{selectedRange.label}</Text>
-                                <Icon
-                                    name={rangeMenuOpen ? 'chevron-up' : 'chevron-down'}
-                                    size={14}
-                                    color={Colors.text}
-                                />
-                            </Pressable>
-                            {rangeMenuOpen ? (
-                                <View style={styles.rangeMenu}>
-                                    {RANGE_OPTIONS.map((option) => {
-                                        const active = option.key === selectedRangeKey;
-                                        return (
-                                            <Pressable
-                                                key={option.key}
-                                                accessibilityRole="button"
-                                                onPress={() => {
-                                                    setSelectedRangeKey(option.key);
-                                                    setRangeMenuOpen(false);
-                                                }}
-                                                style={[
-                                                    styles.rangeOption,
-                                                    active && styles.rangeOptionActive,
-                                                ]}
-                                            >
-                                                <Text
-                                                    style={[
-                                                        styles.rangeOptionText,
-                                                        active && styles.rangeOptionTextActive,
-                                                    ]}
-                                                >
-                                                    {option.label}
-                                                </Text>
-                                            </Pressable>
-                                        );
-                                    })}
-                                </View>
-                            ) : null}
-                        </View>
-                    </View>
-                    <View style={styles.donutWrap}>
-                        {incomeExpenseTotals.length > 0 ? (
-                            <>
-                                <PieChart
-                                    donut
-                                    data={incomeExpenseTotals as any}
-                                    radius={86}
-                                    innerRadius={62}
-                                    innerCircleColor={Colors.surface}
-                                    paddingHorizontal={72}
-                                    onPress={(_item: unknown, index: number) => {
-                                        setRangeMenuOpen(false);
-                                        setSelectedDonutIndex(index);
-                                    }}
-                                    centerLabelComponent={() => (
-                                        <View style={styles.donutCenter}>
-                                            <Text style={styles.donutCenterSmall}>Balance</Text>
-                                            <Text style={styles.donutCenterBig}>
-                                                {incomeExpenseBalance < 0 ? '-' : ''}₹{formatNumberWithCommas(
-                                                    Math.abs(incomeExpenseBalance).toFixed(0),
-                                                )}
-                                            </Text>
-                                        </View>
-                                    )}
-                                />
-                                {selectedDonutItem ? (
-                                    <View pointerEvents="none" style={styles.donutTooltipOverlay}>
-                                        <View style={styles.donutTooltip}>
-                                            <Text style={styles.donutTooltipLabel}>
-                                                {selectedDonutItem.label}
-                                            </Text>
-                                            <Text style={styles.donutTooltipValue}>
-                                                ₹{formatNumberWithCommas(
-                                                    selectedDonutItem.value.toFixed(0),
-                                                )}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                ) : null}
-                            </>
-                        ) : (
-                            <EmptyDonutState rangeLabel={emptyRangeLabel} />
-                        )}
-                    </View>
-                    {incomeExpenseTotals.length > 0 ? (
-                        <View style={styles.donutLegendRow}>
-                            <Legend dot={Colors.primary} label="Income" />
-                            <Legend dot={Colors.accentDark} label="Expense" />
-                        </View>
-                    ) : null}
-                </Card>
-
-                <SectionHeader title={sectionTitle} />
-
-                {all.length === 0 ? (
-                    <EmptyTransactionsState />
+                {loading ? (
+                    <TransactionsSkeleton />
                 ) : (
-                    <View style={styles.txnList}>
-                        {all.map((t, idx) => (
-                            <TxnRow key={t._id || idx} txn={t} isFirst={idx === 0} />
-                        ))}
-                    </View>
-                )}
+                    <>
+                        <Card style={styles.donutCard}>
+                            <View
+                                style={[
+                                    styles.chartHeader,
+                                    rangeMenuOpen && styles.chartHeaderMenuOpen,
+                                ]}
+                            >
+                                <View
+                                    style={styles.rangeControl}
+                                    onTouchStart={(event) =>
+                                        event.stopPropagation()
+                                    }
+                                >
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        onPress={() =>
+                                            setRangeMenuOpen((open) => !open)
+                                        }
+                                        style={styles.rangePill}
+                                    >
+                                        <Text style={styles.rangeText}>
+                                            {selectedRange.label}
+                                        </Text>
+                                        <Icon
+                                            name={
+                                                rangeMenuOpen
+                                                    ? 'chevron-up'
+                                                    : 'chevron-down'
+                                            }
+                                            size={14}
+                                            color={Colors.text}
+                                        />
+                                    </Pressable>
+                                    {rangeMenuOpen ? (
+                                        <View style={styles.rangeMenu}>
+                                            {RANGE_OPTIONS.map((option) => {
+                                                const active =
+                                                    option.key ===
+                                                    selectedRangeKey;
+                                                return (
+                                                    <Pressable
+                                                        key={option.key}
+                                                        accessibilityRole="button"
+                                                        onPress={() => {
+                                                            setSelectedRangeKey(
+                                                                option.key,
+                                                            );
+                                                            setRangeMenuOpen(
+                                                                false,
+                                                            );
+                                                        }}
+                                                        style={[
+                                                            styles.rangeOption,
+                                                            active &&
+                                                                styles.rangeOptionActive,
+                                                        ]}
+                                                    >
+                                                        <Text
+                                                            style={[
+                                                                styles.rangeOptionText,
+                                                                active &&
+                                                                    styles.rangeOptionTextActive,
+                                                            ]}
+                                                        >
+                                                            {option.label}
+                                                        </Text>
+                                                    </Pressable>
+                                                );
+                                            })}
+                                        </View>
+                                    ) : null}
+                                </View>
+                            </View>
+                            <View style={styles.donutWrap}>
+                                {hasCashflow ? (
+                                    <CashflowArcMeter
+                                        income={totals.curIncome}
+                                        expense={totals.curExpense}
+                                        balance={incomeExpenseBalance}
+                                        selectedKey={selectedCashflowKey}
+                                        selectedItem={selectedCashflowItem}
+                                        onSelect={(key) => {
+                                            setRangeMenuOpen(false);
+                                            setSelectedCashflowKey((current) =>
+                                                current === key ? null : key,
+                                            );
+                                        }}
+                                    />
+                                ) : (
+                                    <EmptyDonutState
+                                        rangeLabel={emptyRangeLabel}
+                                    />
+                                )}
+                            </View>
+                        </Card>
 
-                <View style={styles.bottomSpacer} />
+                        <SectionHeader title={sectionTitle} />
+
+                        {all.length === 0 ? (
+                            <EmptyTransactionsState />
+                        ) : (
+                            <View style={styles.txnList}>
+                                {all.map((t, idx) => (
+                                    <TxnRow
+                                        key={t._id || idx}
+                                        txn={t}
+                                        isFirst={idx === 0}
+                                        onPress={() =>
+                                            router.push({
+                                                pathname: '/transaction-detail',
+                                                params: getTransactionRouteParams(t),
+                                            })
+                                        }
+                                    />
+                                ))}
+                            </View>
+                        )}
+
+                        <View style={styles.bottomSpacer} />
+                    </>
+                )}
             </ScrollView>
         </ScreenContainer>
     );
 }
 
-const Legend: React.FC<{ dot: string; label: string }> = ({ dot, label }) => (
+const TransactionsSkeleton = () => (
+    <>
+        <Card style={styles.donutCard}>
+            <View style={styles.chartHeader}>
+                <SkeletonBlock width={96} height={32} radius={16} />
+            </View>
+            <View style={styles.donutWrap}>
+                <SkeletonBlock width={172} height={172} radius={86} />
+                <View style={skeletonStyles.donutHole}>
+                    <SkeletonBlock
+                        width={66}
+                        height={12}
+                        radius={6}
+                        style={skeletonStyles.centered}
+                    />
+                    <SkeletonBlock
+                        width={92}
+                        height={22}
+                        radius={11}
+                        style={skeletonStyles.donutCenterValue}
+                    />
+                </View>
+            </View>
+            <View style={styles.donutLegendRow}>
+                <LegendSkeleton />
+                <LegendSkeleton />
+            </View>
+        </Card>
+
+        <View style={skeletonStyles.sectionHeader}>
+            <SkeletonBlock width={214} height={20} radius={10} />
+        </View>
+
+        <View style={styles.txnList}>
+            {Array.from({ length: 6 }).map((_, index) => (
+                <View
+                    key={index}
+                    style={[txnStyles.row, index > 0 && txnStyles.rowDivider]}
+                >
+                    <SkeletonBlock width={42} height={42} radius={10} />
+                    <View style={txnStyles.middle}>
+                        <SkeletonBlock
+                            width={index % 2 ? 148 : 108}
+                            height={17}
+                            radius={8}
+                        />
+                        <SkeletonBlock
+                            width={86}
+                            height={13}
+                            radius={6}
+                            style={skeletonStyles.txnSubline}
+                        />
+                    </View>
+                    <View style={txnStyles.right}>
+                        <SkeletonBlock width={82} height={17} radius={8} />
+                        <SkeletonBlock
+                            width={15}
+                            height={15}
+                            radius={8}
+                            style={skeletonStyles.chevron}
+                        />
+                    </View>
+                </View>
+            ))}
+        </View>
+
+        <View style={styles.bottomSpacer} />
+    </>
+);
+
+const LegendSkeleton = () => (
     <View style={legendStyles.row}>
-        <View style={[legendStyles.dot, { backgroundColor: dot }]} />
-        <Text style={legendStyles.label}>{label}</Text>
+        <SkeletonBlock width={8} height={8} radius={4} />
+        <SkeletonBlock
+            width={52}
+            height={12}
+            radius={6}
+            style={skeletonStyles.legendLabel}
+        />
     </View>
+);
+
+const ARC_SIZE = 214;
+const ARC_CENTER = ARC_SIZE / 2;
+const METER_SWEEP = 0.76;
+const METER_ROTATION = 132;
+
+const arcDash = (radiusValue: number, progress: number) => {
+    const circumference = 2 * Math.PI * radiusValue;
+    const visibleProgress = Math.min(Math.max(progress, 0), 1) * METER_SWEEP;
+
+    return {
+        circumference,
+        dash: `${visibleProgress * circumference} ${circumference}`,
+    };
+};
+
+const CashflowArcMeter: React.FC<{
+    income: number;
+    expense: number;
+    balance: number;
+    selectedKey: CashflowKey | null;
+    selectedItem?: { label: string; value: number } | null;
+    onSelect: (key: CashflowKey) => void;
+}> = ({ income, expense, balance, selectedKey, selectedItem, onSelect }) => {
+    const maxValue = Math.max(income, expense, 1);
+    const incomeArc = arcDash(88, income / maxValue);
+    const expenseArc = arcDash(66, expense / maxValue);
+    const safeBalance = Math.max(balance, 0);
+    const savedPercent =
+        income > 0 ? Math.round((safeBalance / income) * 100) : 0;
+    const spentPercent =
+        income > 0 ? Math.min(Math.round((expense / income) * 100), 999) : 0;
+    const balanceIsNegative = balance < 0;
+    const signalColor = balanceIsNegative ? Colors.negative : Colors.accentDark;
+    const signalBg = balanceIsNegative
+        ? Colors.negativeSoft
+        : Colors.accentSoft;
+    const signalLabel = balanceIsNegative ? 'Over by' : 'Saved';
+    const signalValue = balanceIsNegative
+        ? `₹${formatNumberWithCommas(Math.abs(balance).toFixed(0))}`
+        : `${savedPercent}%`;
+    const balanceAmount = formatNumberWithCommas(Math.abs(balance).toFixed(0));
+
+    return (
+        <View style={styles.cashflowMeter}>
+            <View style={styles.arcStage}>
+                <Svg
+                    width={ARC_SIZE}
+                    height={ARC_SIZE}
+                    viewBox={`0 0 ${ARC_SIZE} ${ARC_SIZE}`}
+                >
+                    <Defs>
+                        <LinearGradient
+                            id="incomeArcGradient"
+                            x1="0"
+                            y1="0"
+                            x2="1"
+                            y2="1"
+                        >
+                            <Stop
+                                offset="0"
+                                stopColor={Colors.primaryGradientStart}
+                            />
+                            <Stop offset="1" stopColor={Colors.primaryDarker} />
+                        </LinearGradient>
+                        <LinearGradient
+                            id="expenseArcGradient"
+                            x1="0"
+                            y1="0"
+                            x2="1"
+                            y2="1"
+                        >
+                            <Stop offset="0" stopColor={Colors.accent} />
+                            <Stop offset="1" stopColor={Colors.accentDark} />
+                        </LinearGradient>
+                    </Defs>
+                    <Circle
+                        cx={ARC_CENTER}
+                        cy={ARC_CENTER}
+                        r={88}
+                        fill="transparent"
+                        stroke={Colors.primarySoft}
+                        strokeWidth={18}
+                        strokeLinecap="round"
+                        strokeDasharray={arcDash(88, 1).dash}
+                        transform={`rotate(${METER_ROTATION} ${ARC_CENTER} ${ARC_CENTER})`}
+                    />
+                    <Circle
+                        cx={ARC_CENTER}
+                        cy={ARC_CENTER}
+                        r={66}
+                        fill="transparent"
+                        stroke={Colors.accentSoft}
+                        strokeWidth={16}
+                        strokeLinecap="round"
+                        strokeDasharray={arcDash(66, 1).dash}
+                        transform={`rotate(${METER_ROTATION} ${ARC_CENTER} ${ARC_CENTER})`}
+                    />
+                    <Circle
+                        cx={ARC_CENTER}
+                        cy={ARC_CENTER}
+                        r={88}
+                        fill="transparent"
+                        stroke="url(#incomeArcGradient)"
+                        strokeWidth={18}
+                        strokeLinecap="round"
+                        strokeDasharray={incomeArc.dash}
+                        strokeDashoffset={0}
+                        transform={`rotate(${METER_ROTATION} ${ARC_CENTER} ${ARC_CENTER})`}
+                        opacity={selectedKey === 'expense' ? 0.48 : 1}
+                        onPress={() => onSelect('income')}
+                    />
+                    <Circle
+                        cx={ARC_CENTER}
+                        cy={ARC_CENTER}
+                        r={66}
+                        fill="transparent"
+                        stroke="url(#expenseArcGradient)"
+                        strokeWidth={16}
+                        strokeLinecap="round"
+                        strokeDasharray={expenseArc.dash}
+                        strokeDashoffset={0}
+                        transform={`rotate(${METER_ROTATION} ${ARC_CENTER} ${ARC_CENTER})`}
+                        opacity={selectedKey === 'income' ? 0.48 : 1}
+                        onPress={() => onSelect('expense')}
+                    />
+                </Svg>
+                <View pointerEvents="none" style={styles.arcCenter}>
+                    <Text style={styles.arcCenterLabel}>Balance</Text>
+                    <Text
+                        style={[
+                            styles.arcCenterValue,
+                            balanceIsNegative && styles.arcCenterValueNegative,
+                        ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                    >
+                        {balanceIsNegative ? '-' : ''}₹{balanceAmount}
+                    </Text>
+                    <View
+                        style={[
+                            styles.arcSignal,
+                            { backgroundColor: signalBg },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.arcSignalText,
+                                { color: signalColor },
+                            ]}
+                        >
+                            {signalLabel} {signalValue}
+                        </Text>
+                    </View>
+                </View>
+            </View>
+
+            {selectedItem ? (
+                <View pointerEvents="none" style={styles.cashflowTooltip}>
+                    <Text style={styles.cashflowTooltipLabel}>
+                        {selectedItem.label}
+                    </Text>
+                    <Text style={styles.cashflowTooltipValue}>
+                        ₹{formatNumberWithCommas(selectedItem.value.toFixed(0))}
+                    </Text>
+                </View>
+            ) : null}
+
+            <View style={styles.flowMetricRow}>
+                <CashflowMetric
+                    keyName="income"
+                    icon="arrow-down"
+                    label="Income"
+                    value={income}
+                    color={Colors.primary}
+                    active={selectedKey === 'income'}
+                    onPress={onSelect}
+                />
+                <CashflowMetric
+                    keyName="expense"
+                    icon="arrow-up"
+                    label="Expense"
+                    value={expense}
+                    color={Colors.accentDark}
+                    active={selectedKey === 'expense'}
+                    caption={`${spentPercent}% spent`}
+                    onPress={onSelect}
+                />
+            </View>
+        </View>
+    );
+};
+
+const CashflowMetric: React.FC<{
+    keyName: CashflowKey;
+    icon: string;
+    label: string;
+    value: number;
+    color: string;
+    active: boolean;
+    caption?: string;
+    onPress: (key: CashflowKey) => void;
+}> = ({ keyName, icon, label, value, color, active, caption, onPress }) => (
+    <Pressable
+        accessibilityRole="button"
+        onPress={() => onPress(keyName)}
+        style={[
+            styles.flowMetric,
+            keyName === 'expense' && styles.flowMetricOffset,
+            active && styles.flowMetricActive,
+        ]}
+    >
+        <View
+            style={[styles.flowMetricIcon, { backgroundColor: `${color}1A` }]}
+        >
+            <Icon name={icon} size={14} color={color} />
+        </View>
+        <View style={styles.flowMetricCopy}>
+            <Text style={styles.flowMetricLabel}>{label}</Text>
+            <Text
+                style={styles.flowMetricValue}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+            >
+                ₹{formatNumberWithCommas(value.toFixed(0))}
+            </Text>
+            {caption ? (
+                <Text style={styles.flowMetricCaption}>{caption}</Text>
+            ) : null}
+        </View>
+    </Pressable>
 );
 
 const EmptyDonutState: React.FC<{ rangeLabel: string }> = ({ rangeLabel }) => (
@@ -338,7 +684,11 @@ const EmptyDonutState: React.FC<{ rangeLabel: string }> = ({ rangeLabel }) => (
         <View style={styles.emptyChartGraphic}>
             <View style={styles.emptyRingOuter}>
                 <View style={styles.emptyRingInner}>
-                    <Icon name="pie-chart-outline" size={28} color={Colors.primary} />
+                    <Icon
+                        name="pie-chart-outline"
+                        size={28}
+                        color={Colors.primary}
+                    />
                 </View>
             </View>
             <View style={[styles.emptySpark, styles.emptySparkIncome]} />
@@ -346,15 +696,26 @@ const EmptyDonutState: React.FC<{ rangeLabel: string }> = ({ rangeLabel }) => (
         </View>
         <Text style={styles.emptyTitle}>Nothing to chart yet</Text>
         <Text style={styles.emptySubText}>
-            Add income or expenses for {rangeLabel} and your balance breakdown will appear here.
+            Add income or expenses for {rangeLabel} and your balance breakdown
+            will appear here.
         </Text>
         <View style={styles.emptyMetricRow}>
             <View style={styles.emptyMetric}>
-                <View style={[styles.emptyMetricDot, { backgroundColor: Colors.primary }]} />
+                <View
+                    style={[
+                        styles.emptyMetricDot,
+                        { backgroundColor: Colors.primary },
+                    ]}
+                />
                 <Text style={styles.emptyMetricText}>Income ₹0</Text>
             </View>
             <View style={styles.emptyMetric}>
-                <View style={[styles.emptyMetricDot, { backgroundColor: Colors.accentDark }]} />
+                <View
+                    style={[
+                        styles.emptyMetricDot,
+                        { backgroundColor: Colors.accentDark },
+                    ]}
+                />
                 <Text style={styles.emptyMetricText}>Expense ₹0</Text>
             </View>
         </View>
@@ -368,20 +729,61 @@ const EmptyTransactionsState = () => (
         </View>
         <View style={styles.emptyListCopy}>
             <Text style={styles.emptyListTitle}>No transactions yet</Text>
-            <Text style={styles.emptyListSubText}>New entries for this period will show here.</Text>
+            <Text style={styles.emptyListSubText}>
+                New entries for this period will show here.
+            </Text>
         </View>
     </Card>
 );
 
-const TxnRow: React.FC<{ txn: Txn; isFirst?: boolean }> = ({ txn, isFirst }) => {
+const getTransactionKind = (txn: Txn) =>
+    txn.type === 'income' ? 'income' : 'expense';
+
+const getTransactionRouteParams = (txn: Txn) => {
+    const transactionType = getTransactionKind(txn);
+
+    return {
+        id: txn._id || '',
+        transactionType,
+        title: txn.title || '',
+        category: txn.category || '',
+        subCategory: txn.sub_category || '',
+        expenseType:
+            transactionType === 'expense' && txn.type !== 'expense'
+                ? txn.type || 'self'
+                : 'self',
+        date: txn.date || '',
+        description: txn.description || '',
+        amount: String(txn.amount || 0),
+        createdAt: txn.createdAt || '',
+        updatedAt: txn.updatedAt || '',
+    };
+};
+
+const TxnRow: React.FC<{
+    txn: Txn;
+    isFirst?: boolean;
+    onPress?: () => void;
+}> = ({
+    txn,
+    isFirst,
+    onPress,
+}) => {
     const isIncome = txn.type === 'income';
     const sign = isIncome ? '+' : '-';
     const amountColor = isIncome ? Colors.accentDark : Colors.negative;
     const label = txn.title || txn.category || 'Untitled';
-    const icon = resolveCategoryIcon(txn.category, txn.type);
+    const icon = resolveCategoryIcon(txn.category, isIncome ? 'income' : 'expense');
 
     return (
-        <View style={[txnStyles.row, !isFirst && txnStyles.rowDivider]}>
+        <Pressable
+            accessibilityRole="button"
+            onPress={onPress}
+            style={[
+                txnStyles.row,
+                !isFirst && txnStyles.rowDivider,
+            ]}
+        >
             <IconBadge
                 name={icon.name}
                 color={icon.color}
@@ -400,13 +802,18 @@ const TxnRow: React.FC<{ txn: Txn; isFirst?: boolean }> = ({ txn, isFirst }) => 
             </View>
             <View style={txnStyles.right}>
                 <Text style={[txnStyles.amount, { color: amountColor }]}>
-                    {sign}₹{formatNumberWithCommas(Number(txn.amount || 0).toFixed(2))}
+                    {sign}₹
+                    {formatNumberWithCommas(Number(txn.amount || 0).toFixed(2))}
                 </Text>
                 <View style={txnStyles.chevronBox}>
-                    <Icon name="chevron-forward" size={15} color={Colors.textSubtle} />
+                    <Icon
+                        name="chevron-forward"
+                        size={15}
+                        color={Colors.textSubtle}
+                    />
                 </View>
             </View>
-        </View>
+        </Pressable>
     );
 };
 
@@ -507,13 +914,135 @@ const styles = StyleSheet.create({
         paddingBottom: space.lg,
     },
     donutWrap: {
-        minHeight: 230,
+        minHeight: 314,
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: space.lg,
-        paddingTop: space.md,
-        paddingBottom: space.sm,
+        paddingTop: space.sm,
+        paddingBottom: 0,
         position: 'relative',
+    },
+    cashflowMeter: {
+        width: '100%',
+        alignItems: 'center',
+    },
+    arcStage: {
+        width: ARC_SIZE,
+        height: ARC_SIZE,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    arcCenter: {
+        position: 'absolute',
+        width: 128,
+        minHeight: 92,
+        borderRadius: 64,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: space.sm,
+        backgroundColor: Colors.surface,
+    },
+    arcCenterLabel: {
+        ...Typography.caption,
+        fontFamily: Fonts.semibold,
+        color: Colors.textSubtle,
+    },
+    arcCenterValue: {
+        ...Typography.title,
+        marginTop: 2,
+        color: Colors.text,
+        maxWidth: 124,
+    },
+    arcCenterValueNegative: {
+        color: Colors.negative,
+    },
+    arcSignal: {
+        minHeight: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: space.sm,
+        marginTop: 8,
+        borderRadius: radius.pill,
+    },
+    arcSignalText: {
+        ...Typography.caption,
+        fontFamily: Fonts.semibold,
+    },
+    cashflowTooltip: {
+        minWidth: 132,
+        minHeight: 54,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: space.md,
+        paddingVertical: 6,
+        marginTop: -space.sm,
+        marginBottom: space.sm,
+        backgroundColor: Colors.text,
+        borderRadius: radius.xs,
+        ...Shadows.md,
+    },
+    cashflowTooltipLabel: {
+        ...Typography.caption,
+        color: Colors.textInverse,
+        fontFamily: Fonts.medium,
+    },
+    cashflowTooltipValue: {
+        ...Typography.bodySm,
+        color: Colors.textInverse,
+        fontFamily: Fonts.semibold,
+        marginTop: 2,
+    },
+    flowMetricRow: {
+        width: '100%',
+        flexDirection: 'row',
+        alignItems: 'stretch',
+        justifyContent: 'space-between',
+        marginTop: space.sm,
+    },
+    flowMetric: {
+        flex: 1,
+        minHeight: 76,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: space.sm,
+        paddingVertical: space.sm,
+        backgroundColor: Colors.surfaceSoft,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: radius.sm,
+    },
+    flowMetricActive: {
+        backgroundColor: Colors.primarySoft,
+        borderColor: Colors.primarySoftStrong,
+    },
+    flowMetricOffset: {
+        marginLeft: space.sm,
+    },
+    flowMetricIcon: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: space.sm,
+    },
+    flowMetricCopy: {
+        flex: 1,
+        minWidth: 0,
+    },
+    flowMetricLabel: {
+        ...Typography.caption,
+        fontFamily: Fonts.semibold,
+        color: Colors.textSubtle,
+    },
+    flowMetricValue: {
+        ...Typography.bodyStrong,
+        marginTop: 1,
+    },
+    flowMetricCaption: {
+        ...Typography.caption,
+        marginTop: 1,
+        color: Colors.textSubtle,
     },
     emptyChartState: {
         width: '100%',
@@ -720,5 +1249,37 @@ const txnStyles = StyleSheet.create({
     },
     chevronBox: {
         marginLeft: space.sm,
+    },
+});
+
+const skeletonStyles = StyleSheet.create({
+    centered: {
+        alignSelf: 'center',
+    },
+    donutHole: {
+        position: 'absolute',
+        width: 124,
+        height: 124,
+        borderRadius: 62,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: Colors.surface,
+    },
+    donutCenterValue: {
+        alignSelf: 'center',
+        marginTop: 8,
+    },
+    sectionHeader: {
+        marginTop: space.sm,
+        marginBottom: space.sm,
+    },
+    txnSubline: {
+        marginTop: 6,
+    },
+    chevron: {
+        marginLeft: space.sm,
+    },
+    legendLabel: {
+        marginLeft: 4,
     },
 });

@@ -30,6 +30,8 @@ import {
 } from "@/src/styles/theme";
 import { formatNumberWithCommas } from "@/src/utils/helper";
 import { resolveCategoryIcon } from "@/src/utils/categoryIcon";
+import { getTransactionDate, readTransactionList } from "@/src/utils/transactions";
+import SkeletonBlock from "@/src/components/skeletons/SkeletonBlock";
 
 const api = new APIService();
 
@@ -38,6 +40,8 @@ interface Txn {
   title?: string;
   category?: string;
   date?: string;
+  createdAt?: string;
+  updatedAt?: string;
   amount?: number;
 }
 
@@ -63,44 +67,29 @@ const buildDateRange = (key: RangeKey) => {
   const today = moment();
   let start = today.clone().startOf("day");
   let end = today.clone().endOf("day");
-  let previousStart = start.clone().subtract(1, "day");
-  let previousEnd = end.clone().subtract(1, "day");
 
   if (key === "yesterday") {
     start = today.clone().subtract(1, "day").startOf("day");
     end = today.clone().subtract(1, "day").endOf("day");
-    previousStart = start.clone().subtract(1, "day");
-    previousEnd = end.clone().subtract(1, "day");
   } else if (key === "last3Days") {
     start = today.clone().subtract(2, "days").startOf("day");
     end = today.clone().endOf("day");
-    previousStart = start.clone().subtract(3, "days");
-    previousEnd = end.clone().subtract(3, "days");
   } else if (key === "thisWeek") {
     start = today.clone().startOf("isoWeek");
     end = today.clone().endOf("isoWeek");
-    previousStart = start.clone().subtract(1, "week");
-    previousEnd = end.clone().subtract(1, "week");
   } else if (key === "thisMonth") {
     start = today.clone().startOf("month");
     end = today.clone().endOf("month");
-    previousStart = start.clone().subtract(1, "month").startOf("month");
-    previousEnd = start.clone().subtract(1, "month").endOf("month");
   } else if (key === "thisYear") {
     start = today.clone().startOf("year");
     end = today.clone().endOf("year");
-    previousStart = start.clone().subtract(1, "year");
-    previousEnd = end.clone().subtract(1, "year");
   }
 
-  return { start, end, previousStart, previousEnd };
+  return { start, end };
 };
 
-const readTransactions = (res: any, collectionKey: "incomes" | "expenses") =>
-  Array.isArray(res.data) ? res.data : res.data?.[collectionKey] || [];
-
 const isTxnInRange = (txn: Txn, start: moment.Moment, end: moment.Moment) => {
-  const date = moment(txn.date);
+  const date = moment(getTransactionDate(txn));
   return date.isValid() && date.isBetween(start, end, undefined, "[]");
 };
 
@@ -118,8 +107,7 @@ export default function AnalyticsScreen() {
   const [selectedChartItem, setSelectedChartItem] = useState<any | null>(null);
   const [incomes, setIncomes] = useState<Txn[]>([]);
   const [expenses, setExpenses] = useState<Txn[]>([]);
-  const [previousIncomes, setPreviousIncomes] = useState<Txn[]>([]);
-  const [previousExpenses, setPreviousExpenses] = useState<Txn[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const selectedRange = useMemo(
     () =>
@@ -139,44 +127,33 @@ export default function AnalyticsScreen() {
     [selectedRangeKey],
   );
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     const range = {
       start_date: rangeConfig.start.format("YYYY-MM-DD"),
       end_date: rangeConfig.end.format("YYYY-MM-DD"),
     };
-    const previousRange = {
-      start_date: rangeConfig.previousStart.format("YYYY-MM-DD"),
-      end_date: rangeConfig.previousEnd.format("YYYY-MM-DD"),
-    };
 
-    api
-      .getIncomes(range)
-      .then((res) => {
-        const list = readTransactions(res, "incomes");
-        setIncomes(list.map((t: Txn) => ({ ...t, type: "income" })));
-      })
-      .catch(() => {});
-    api
-      .getExpenses(range)
-      .then((res) => {
-        const list = readTransactions(res, "expenses");
-        setExpenses(list.map((t: Txn) => ({ ...t, type: "expense" })));
-      })
-      .catch(() => {});
-    api
-      .getIncomes(previousRange)
-      .then((res) => {
-        const list = readTransactions(res, "incomes");
-        setPreviousIncomes(list.map((t: Txn) => ({ ...t, type: "income" })));
-      })
-      .catch(() => {});
-    api
-      .getExpenses(previousRange)
-      .then((res) => {
-        const list = readTransactions(res, "expenses");
-        setPreviousExpenses(list.map((t: Txn) => ({ ...t, type: "expense" })));
-      })
-      .catch(() => {});
+    setLoading(true);
+    const [incomeResult, expenseResult] = await Promise.allSettled([
+      api.getIncomes(range),
+      api.getExpenses(range),
+    ]);
+
+    if (incomeResult.status === "fulfilled") {
+      const list = readTransactionList(incomeResult.value, "incomes");
+      setIncomes(list.map((t: Txn) => ({ ...t, type: "income" })));
+    } else {
+      setIncomes([]);
+    }
+
+    if (expenseResult.status === "fulfilled") {
+      const list = readTransactionList(expenseResult.value, "expenses");
+      setExpenses(list.map((t: Txn) => ({ ...t, type: "expense" })));
+    } else {
+      setExpenses([]);
+    }
+
+    setLoading(false);
   }, [rangeConfig]);
 
   useFocusEffect(
@@ -247,7 +224,6 @@ export default function AnalyticsScreen() {
     selectedRangeKey === "thisYear" ||
     chartBucketCount >= 6;
   const chartYAxisLabelWidth = 44;
-  const chartPlotWidth = chartWidth - chartYAxisLabelWidth;
   const chartLabelWidth =
     selectedRangeKey === "thisMonth"
       ? 56
@@ -257,12 +233,16 @@ export default function AnalyticsScreen() {
           ? 48
           : 40;
   const chartGroupWidth = chartBarWidth * 2 + 2;
+  const singleBucketInitialSpacing = Math.max(
+    8,
+    (chartWidth - chartGroupWidth) / 4,
+  );
   const chartEdgeSpacing = Math.max(8, (chartLabelWidth - chartGroupWidth) / 2);
   const distributedGroupSpacing =
     chartBucketCount > 1 && chartBucketCount <= 3
       ? Math.max(
           14,
-          (chartPlotWidth -
+          (chartWidth -
             chartEdgeSpacing * 2 -
             chartGroupWidth * chartBucketCount) /
             (chartBucketCount - 1),
@@ -276,7 +256,7 @@ export default function AnalyticsScreen() {
             : 14;
   const chartInitialSpacing =
     chartBucketCount === 1
-      ? Math.max(10, (chartPlotWidth - chartGroupWidth) / 2)
+      ? singleBucketInitialSpacing
       : chartBucketCount <= 3
         ? chartEdgeSpacing
         : 10;
@@ -295,31 +275,17 @@ export default function AnalyticsScreen() {
       ),
     [expenses, rangeConfig],
   );
-  const comparisonIncomes = useMemo(
-    () =>
-      previousIncomes.filter((txn) =>
-        isTxnInRange(txn, rangeConfig.previousStart, rangeConfig.previousEnd),
-      ),
-    [previousIncomes, rangeConfig],
-  );
-  const comparisonExpenses = useMemo(
-    () =>
-      previousExpenses.filter((txn) =>
-        isTxnInRange(txn, rangeConfig.previousStart, rangeConfig.previousEnd),
-      ),
-    [previousExpenses, rangeConfig],
-  );
 
   const barData = useMemo(() => {
-    const getBucketKey = (date?: string) => {
-      const m = moment(date);
+    const getBucketKey = (txn: Txn) => {
+      const m = moment(getTransactionDate(txn));
       if (!m.isValid()) return "";
       if (selectedRangeKey === "thisYear") return m.format("YYYY-MM");
       return m.format("YYYY-MM-DD");
     };
     const sumByBucket = (list: Txn[]) =>
       list.reduce<Record<string, number>>((acc, t) => {
-        const k = getBucketKey(t.date);
+        const k = getBucketKey(t);
         if (!k) return acc;
         acc[k] = (acc[k] || 0) + Number(t.amount || 0);
         return acc;
@@ -375,17 +341,9 @@ export default function AnalyticsScreen() {
     () => sumTransactions(currentIncomes),
     [currentIncomes],
   );
-  const previousIncome = useMemo(
-    () => sumTransactions(comparisonIncomes),
-    [comparisonIncomes],
-  );
   const totalExpense = useMemo(
     () => sumTransactions(currentExpenses),
     [currentExpenses],
-  );
-  const previousExpense = useMemo(
-    () => sumTransactions(comparisonExpenses),
-    [comparisonExpenses],
   );
   const historyBalance = totalIncome - totalExpense;
   const historySign = historyBalance >= 0 ? "+" : "-";
@@ -409,15 +367,15 @@ export default function AnalyticsScreen() {
   }, [currentExpenses]);
 
   const trendRows = useMemo(() => {
-    const getBucketKey = (date?: string) => {
-      const m = moment(date);
+    const getBucketKey = (txn: Txn) => {
+      const m = moment(getTransactionDate(txn));
       if (!m.isValid()) return "";
       if (selectedRangeKey === "thisYear") return m.format("YYYY-MM");
       return m.format("YYYY-MM-DD");
     };
     const sumByBucket = (list: Txn[]) =>
       list.reduce<Record<string, number>>((acc, t) => {
-        const k = getBucketKey(t.date);
+        const k = getBucketKey(t);
         if (!k) return acc;
         acc[k] = (acc[k] || 0) + Number(t.amount || 0);
         return acc;
@@ -543,6 +501,10 @@ export default function AnalyticsScreen() {
           </Pressable>
         </View>
 
+        {loading ? (
+          <AnalyticsSkeleton selectedTab={selectedTab} />
+        ) : (
+          <>
         <Card style={styles.chartCard}>
           <View
             style={[
@@ -691,10 +653,6 @@ export default function AnalyticsScreen() {
                 />
                 <View style={styles.statBody}>
                   <Text style={styles.statLabel}>Income</Text>
-                  <DeltaText
-                    delta={totalIncome - previousIncome}
-                    positiveGood
-                  />
                 </View>
               </View>
               <Text style={styles.statAmount}>
@@ -714,10 +672,6 @@ export default function AnalyticsScreen() {
                 />
                 <View style={styles.statBody}>
                   <Text style={styles.statLabel}>Expense</Text>
-                  <DeltaText
-                    delta={totalExpense - previousExpense}
-                    positiveGood={false}
-                  />
                 </View>
               </View>
               <Text style={styles.statAmount}>
@@ -863,6 +817,8 @@ export default function AnalyticsScreen() {
         )}
 
         <View style={styles.bottomSpacer} />
+          </>
+        )}
       </ScrollView>
     </ScreenContainer>
   );
@@ -872,6 +828,162 @@ const Legend: React.FC<{ dot: string; label: string }> = ({ dot, label }) => (
   <View style={legendStyles.row}>
     <View style={[legendStyles.dot, { backgroundColor: dot }]} />
     <Text style={legendStyles.label}>{label}</Text>
+  </View>
+);
+
+const AnalyticsSkeleton: React.FC<{ selectedTab: AnalyticsTab }> = ({
+  selectedTab,
+}) => (
+  <>
+    <Card style={styles.chartCard}>
+      <View style={styles.chartHeader}>
+        <SkeletonBlock width={96} height={32} radius={16} />
+        <View style={styles.legendRow}>
+          <LegendSkeleton />
+          <LegendSkeleton />
+        </View>
+      </View>
+      <View style={styles.chartWrap}>
+        <View style={skeletonStyles.chartFrame}>
+          {Array.from({ length: 4 }).map((_, index) => (
+            <SkeletonBlock
+              key={index}
+              width="100%"
+              height={1}
+              radius={1}
+              style={[skeletonStyles.chartRule, { top: 24 + index * 42 }]}
+            />
+          ))}
+          <View style={skeletonStyles.barRow}>
+            {[92, 136, 72, 164, 110, 142].map((height, index) => (
+              <View key={index} style={skeletonStyles.barPair}>
+                <SkeletonBlock width={10} height={height} radius={8} />
+                <SkeletonBlock
+                  width={10}
+                  height={Math.max(54, height - 34)}
+                  radius={8}
+                />
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    </Card>
+
+    {selectedTab === "overview" ? (
+      <>
+        <StatRowSkeleton />
+        <StatRowSkeleton />
+        <View style={skeletonStyles.sectionHeader}>
+          <SkeletonBlock width={72} height={20} radius={10} />
+        </View>
+        <Card padding={0} style={styles.historyCard}>
+          <View style={styles.historyHeader}>
+            <SkeletonBlock width={86} height={18} radius={9} />
+            <SkeletonBlock width={92} height={20} radius={10} />
+          </View>
+          {Array.from({ length: 4 }).map((_, index) => (
+            <View key={index} style={styles.historyRow}>
+              <SkeletonBlock width={38} height={38} radius={19} />
+              <View style={styles.catBody}>
+                <SkeletonBlock
+                  width={index % 2 ? 116 : 84}
+                  height={16}
+                  radius={8}
+                />
+                <SkeletonBlock
+                  width={72}
+                  height={12}
+                  radius={6}
+                  style={skeletonStyles.subline}
+                />
+              </View>
+              <SkeletonBlock width={68} height={16} radius={8} />
+            </View>
+          ))}
+        </Card>
+      </>
+    ) : (
+      <>
+        <Card style={styles.trendSummaryCard}>
+          <View style={styles.trendSummaryHeader}>
+            <SkeletonBlock width={42} height={42} radius={21} />
+            <View style={styles.trendSummaryBody}>
+              <SkeletonBlock width={102} height={14} radius={7} />
+              <SkeletonBlock
+                width={98}
+                height={24}
+                radius={12}
+                style={skeletonStyles.subline}
+              />
+            </View>
+          </View>
+          <SkeletonBlock
+            width="100%"
+            height={16}
+            radius={8}
+            style={skeletonStyles.trendMetric}
+          />
+          <SkeletonBlock
+            width="86%"
+            height={16}
+            radius={8}
+            style={skeletonStyles.trendMetric}
+          />
+        </Card>
+        <View style={skeletonStyles.sectionHeader}>
+          <SkeletonBlock width={104} height={20} radius={10} />
+        </View>
+        <Card padding={0} style={styles.trendListCard}>
+          {Array.from({ length: 3 }).map((_, index) => (
+            <View key={index} style={styles.trendRow}>
+              <View style={styles.trendRowHeader}>
+                <SkeletonBlock width={92} height={16} radius={8} />
+                <SkeletonBlock width={78} height={16} radius={8} />
+              </View>
+              <SkeletonBlock
+                width="100%"
+                height={8}
+                radius={4}
+                style={skeletonStyles.trendBar}
+              />
+              <SkeletonBlock
+                width="74%"
+                height={8}
+                radius={4}
+                style={skeletonStyles.trendBar}
+              />
+            </View>
+          ))}
+        </Card>
+      </>
+    )}
+
+    <View style={styles.bottomSpacer} />
+  </>
+);
+
+const StatRowSkeleton = () => (
+  <Card style={styles.statRow}>
+    <View style={styles.statLeft}>
+      <SkeletonBlock width={40} height={40} radius={20} />
+      <View style={styles.statBody}>
+        <SkeletonBlock width={72} height={16} radius={8} />
+      </View>
+    </View>
+    <SkeletonBlock width={98} height={18} radius={9} />
+  </Card>
+);
+
+const LegendSkeleton = () => (
+  <View style={legendStyles.row}>
+    <SkeletonBlock width={8} height={8} radius={4} />
+    <SkeletonBlock
+      width={52}
+      height={12}
+      radius={6}
+      style={skeletonStyles.legendLabel}
+    />
   </View>
 );
 
@@ -976,28 +1088,6 @@ const TrendBar: React.FC<{
         ₹{formatNumberWithCommas(value.toFixed(0))}
       </Text>
     </View>
-  );
-};
-
-const DeltaText: React.FC<{ delta: number; positiveGood: boolean }> = ({
-  delta,
-  positiveGood,
-}) => {
-  if (delta === 0) {
-    return <Text style={Typography.caption}>same as previous period</Text>;
-  }
-  const isPositive = delta > 0;
-  const isGood = isPositive === positiveGood;
-  return (
-    <Text
-      style={[
-        Typography.caption,
-        { color: isGood ? Colors.accentDark : Colors.negative },
-      ]}
-    >
-      {isPositive ? "+" : ""}₹
-      {formatNumberWithCommas(Math.abs(delta).toFixed(2))} vs previous period
-    </Text>
   );
 };
 
@@ -1508,5 +1598,49 @@ const legendStyles = StyleSheet.create({
   },
   label: {
     ...Typography.caption,
+  },
+});
+
+const skeletonStyles = StyleSheet.create({
+  chartFrame: {
+    width: "100%",
+    height: 210,
+    justifyContent: "flex-end",
+    paddingHorizontal: space.lg,
+    paddingBottom: space.md,
+    position: "relative",
+  },
+  chartRule: {
+    position: "absolute",
+    left: space.lg,
+    right: space.lg,
+  },
+  barRow: {
+    height: 172,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    paddingLeft: 44,
+  },
+  barPair: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 2,
+  },
+  sectionHeader: {
+    marginTop: space.sm,
+    marginBottom: space.sm,
+  },
+  subline: {
+    marginTop: 6,
+  },
+  trendMetric: {
+    marginTop: space.sm,
+  },
+  trendBar: {
+    marginTop: 8,
+  },
+  legendLabel: {
+    marginLeft: 4,
   },
 });

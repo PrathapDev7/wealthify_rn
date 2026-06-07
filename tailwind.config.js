@@ -8,7 +8,7 @@ module.exports = {
     theme: {
         extend: {
             colors: {
-                cashio: {
+                wealthify: {
                     primary: '#7B3FF2',
                     background: '#F8F6FE',
                     text: '#130B3D',

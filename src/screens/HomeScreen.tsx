@@ -16,7 +16,7 @@ import ScreenWithHeader from "../components/layout/ScreenWithHeader";
 const api = new APIService();
 
 function HomeScreen({navigation}) {
-    const userData = useSelector((state) => state?.userData?.userData) || {};
+    const userData = useSelector((state: any) => state?.userData?.userData) || {};
     useLayoutEffect(() => {
         navigation.setOptions({
             headerShown: false, // Hide the default header
@@ -43,7 +43,7 @@ function HomeScreen({navigation}) {
     }, []);
 
     const getIncomes = () => {
-        const data = {};
+        const data: { start_date?: string; end_date?: string } = {};
         const momentObj = moment();
         data.start_date = momentObj.startOf('month').format("YYYY-MM-DD");
         data.end_date = momentObj.endOf('month').format("YYYY-MM-DD");
@@ -56,7 +56,7 @@ function HomeScreen({navigation}) {
     };
 
     const getExpenses = () => {
-        const data = {};
+        const data: { start_date?: string; end_date?: string } = {};
         const momentObj = moment();
         data.start_date = momentObj.startOf('month').format("YYYY-MM-DD");
         data.end_date = momentObj.endOf('month').format("YYYY-MM-DD");

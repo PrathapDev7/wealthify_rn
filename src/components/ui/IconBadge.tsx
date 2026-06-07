@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Colors, Shadows, radius } from '@/src/styles/theme';
-import CashioIcon, { resolveCashioIconName } from './CashioIcon';
+import WealthifyIcon, { resolveWealthifyIconName } from './WealthifyIcon';
 
 interface Props {
     name: string;
@@ -28,7 +28,7 @@ const IconBadge: React.FC<Props> = ({
     style,
 }) => {
     const computedRadius = rounded === 'circle' ? size / 2 : radius.md;
-    const cashioName = resolveCashioIconName(name);
+    const wealthifyName = resolveWealthifyIconName(name);
     return (
         <View
             style={[
@@ -43,8 +43,8 @@ const IconBadge: React.FC<Props> = ({
                 style,
             ]}
         >
-            {cashioName ? (
-                <CashioIcon name={cashioName} size={iconSize ?? Math.round(size * 0.52)} />
+            {wealthifyName ? (
+                <WealthifyIcon name={wealthifyName} size={iconSize ?? Math.round(size * 0.52)} />
             ) : (
                 <Icon name={name} size={iconSize ?? Math.round(size * 0.5)} color={color} />
             )}

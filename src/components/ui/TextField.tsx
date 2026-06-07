@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
     KeyboardTypeOptions,
+    Pressable,
     StyleSheet,
     Text,
     TextInput,
@@ -9,7 +10,7 @@ import {
     ViewStyle,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Colors, Typography, focusRing, noWebOutline, radius, space } from '@/src/styles/theme';
+import { Colors, Typography, noWebOutline, radius, space } from '@/src/styles/theme';
 
 interface Props {
     label?: string;
@@ -44,14 +45,21 @@ const TextField: React.FC<Props> = ({
     maxLength,
     editable = true,
 }) => {
+    const inputRef = useRef<TextInput>(null);
     const [reveal, setReveal] = useState(false);
     const [focused, setFocused] = useState(false);
     const isSecure = !!secureTextEntry && !reveal;
+    const focusInput = () => inputRef.current?.focus();
+    const toggleReveal = () => {
+        setReveal((v) => !v);
+        focusInput();
+    };
 
     return (
         <View style={[styles.wrap, style]}>
             {label ? <Text style={styles.label}>{label}</Text> : null}
-            <View
+            <Pressable
+                onPress={focusInput}
                 style={[
                     styles.field,
                     focused && styles.fieldFocused,
@@ -68,6 +76,7 @@ const TextField: React.FC<Props> = ({
                     />
                 ) : null}
                 <TextInput
+                    ref={inputRef}
                     placeholder={placeholder}
                     placeholderTextColor={Colors.textSubtle}
                     value={value}
@@ -83,7 +92,11 @@ const TextField: React.FC<Props> = ({
                     style={[styles.input, noWebOutline]}
                 />
                 {secureTextEntry ? (
-                    <TouchableOpacity onPress={() => setReveal((v) => !v)} hitSlop={10}>
+                    <TouchableOpacity
+                        onPress={toggleReveal}
+                        hitSlop={10}
+                        focusable={false}
+                    >
                         <Icon
                             name={reveal ? 'eye-outline' : 'eye-off-outline'}
                             size={20}
@@ -92,7 +105,7 @@ const TextField: React.FC<Props> = ({
                     </TouchableOpacity>
                 ) : null}
                 {rightSlot}
-            </View>
+            </Pressable>
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
     );
@@ -111,15 +124,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: Colors.surface,
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderColor: Colors.border,
         borderRadius: radius.md,
         paddingHorizontal: space.lg,
         height: 52,
     },
     fieldFocused: {
-        ...focusRing,
-        borderWidth: 1.5,
+        borderColor: Colors.primary,
     },
     fieldError: {
         borderColor: Colors.negative,

@@ -9,5 +9,5 @@ export { default as CircleIconButton } from './CircleIconButton';
 export { default as FAB } from './FAB';
 export { default as ScreenContainer } from './ScreenContainer';
 export { default as AddActionSheet } from './AddActionSheet';
-export { default as CashioIcon } from './CashioIcon';
+export { default as WealthifyIcon } from './WealthifyIcon';
 export { default as NumericKeypad } from './NumericKeypad';

@@ -30,6 +30,7 @@ import {
     space,
 } from '@/src/styles/theme';
 import { resolveCategoryIcon } from '@/src/utils/categoryIcon';
+import SkeletonBlock from '@/src/components/skeletons/SkeletonBlock';
 
 type TxnType = 'expense' | 'income';
 
@@ -55,6 +56,7 @@ export default function AddTransactionScreen() {
     const [categories, setCategories] = useState<CategoryOpt[]>([]);
     const [recentCategories, setRecentCategories] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
+    const [categoriesLoading, setCategoriesLoading] = useState(true);
 
     useEffect(() => {
         loadCategories(type);
@@ -85,6 +87,7 @@ export default function AddTransactionScreen() {
     };
 
     const loadCategories = (t: TxnType) => {
+        setCategoriesLoading(true);
         Promise.all([
             api.getCategories(t),
             api.getRecentCategories(t),
@@ -98,6 +101,9 @@ export default function AddTransactionScreen() {
             .catch(() => {
                 setCategories([]);
                 setRecentCategories([]);
+            })
+            .finally(() => {
+                setCategoriesLoading(false);
             });
     };
 
@@ -253,7 +259,9 @@ export default function AddTransactionScreen() {
                             showsHorizontalScrollIndicator={false}
                             contentContainerStyle={styles.chipsRow}
                         >
-                            {popularCategories.map((c) => {
+                            {categoriesLoading ? (
+                                <ChipRowSkeleton />
+                            ) : popularCategories.map((c) => {
                                 const icon = resolveCategoryIcon(c.title, type);
                                 return (
                                     <Chip
@@ -267,14 +275,14 @@ export default function AddTransactionScreen() {
                                     />
                                 );
                             })}
-                            <Chip
+                            {!categoriesLoading && <Chip
                                 label={category && !popularCategories.find(c => c.title === category) ? category : 'More'}
                                 iconName={catIcon?.name || 'ellipsis-horizontal'}
                                 iconColor={catIcon?.color || Colors.primary}
                                 selected={!!category && !popularCategories.find(c => c.title === category)}
                                 onPress={goToCategoryPicker}
                                 style={styles.chip}
-                            />
+                            />}
                         </ScrollView>
                     </View>
                 </ScrollView>
@@ -292,6 +300,20 @@ export default function AddTransactionScreen() {
         </ScreenContainer>
     );
 }
+
+const ChipRowSkeleton = () => (
+    <>
+        {[86, 96, 78, 104, 72, 68].map((width, index) => (
+            <SkeletonBlock
+                key={index}
+                width={width}
+                height={36}
+                radius={18}
+                style={styles.chip}
+            />
+        ))}
+    </>
+);
 
 const styles = StyleSheet.create({
     flex: { flex: 1 },
@@ -347,22 +369,26 @@ const styles = StyleSheet.create({
     },
     amountRow: {
         flexDirection: 'row',
-        alignItems: 'flex-start',
+        alignItems: 'center',
+        minHeight: 64,
     },
     currency: {
         ...Typography.title,
         color: Colors.textMuted,
-        marginTop: 10,
         marginRight: 4,
+        lineHeight: 32,
+        includeFontPadding: false,
     },
     amountInput: {
         ...Typography.displayLg,
         fontFamily: Fonts.semibold,
         fontSize: 44,
+        lineHeight: 56,
         maxWidth: 260,
         textAlign: 'center',
         padding: 0,
         color: Colors.text,
+        includeFontPadding: false,
     },
     amountLabel: {
         ...Typography.bodySm,
