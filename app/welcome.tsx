@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
     Image,
     NativeScrollEvent,
@@ -18,7 +18,7 @@ import {
     ScreenContainer,
     IconBadge,
 } from '@/src/components/ui';
-import { Colors, Shadows, Typography, space, radius } from '@/src/styles/theme';
+import { Colors, Shadows, Typography, space, radius, useColors, type ColorPalette } from '@/src/styles/theme';
 
 interface Slide {
     title: string;
@@ -62,6 +62,7 @@ const ImageIcon = ({
 );
 
 const FloatingIcons = ({ screenWidth }: { screenWidth: number }) => {
+    const colors = useColors();
     const stageWidth = Math.min(screenWidth - space.xl * 4, 320);
     const center = stageWidth / 2;
     const chip = 52;
@@ -76,7 +77,7 @@ const FloatingIcons = ({ screenWidth }: { screenWidth: number }) => {
                 uri={EXTERNAL_ICONS.megaphone}
                 size={chip}
                 imageSize={42}
-                bg={Colors.surface}
+                bg={colors.surface}
                 elevated
                 style={[illoStyles.float, { top: 68, left: stageWidth * 0.82 - halfChip }]}
             />
@@ -85,8 +86,8 @@ const FloatingIcons = ({ screenWidth }: { screenWidth: number }) => {
             <IconBadge name="airplane" color={Colors.cat.travel} size={chip} iconSize={30} style={[illoStyles.float, { top: 232, left: center - halfChip }]} />
             <IconBadge
                 name="wallet"
-                color={Colors.primary}
-                bg={Colors.primarySoft}
+                color={colors.primary}
+                bg={colors.primarySoft}
                 size={hero}
                 iconSize={42}
                 rounded="circle"
@@ -96,33 +97,39 @@ const FloatingIcons = ({ screenWidth }: { screenWidth: number }) => {
     );
 };
 
-const PieIcon = () => (
-    <View style={illoStyles.miniOrbitStage}>
-        <IconBadge
-            name="pie-chart"
-            color={Colors.primary}
-            bg={Colors.primarySoft}
-            size={120}
-            iconSize={64}
-            rounded="circle"
-            style={[illoStyles.float, illoStyles.miniHero]}
-        />
-    </View>
-);
+const PieIcon = () => {
+    const colors = useColors();
+    return (
+        <View style={illoStyles.miniOrbitStage}>
+            <IconBadge
+                name="pie-chart"
+                color={colors.primary}
+                bg={colors.primarySoft}
+                size={120}
+                iconSize={64}
+                rounded="circle"
+                style={[illoStyles.float, illoStyles.miniHero]}
+            />
+        </View>
+    );
+};
 
-const InsightIcon = () => (
-    <View style={illoStyles.miniOrbitStage}>
-        <IconBadge
-            name="bar-chart"
-            color={Colors.primary}
-            bg={Colors.primarySoft}
-            size={120}
-            iconSize={64}
-            rounded="circle"
-            style={[illoStyles.float, illoStyles.miniHero]}
-        />
-    </View>
-);
+const InsightIcon = () => {
+    const colors = useColors();
+    return (
+        <View style={illoStyles.miniOrbitStage}>
+            <IconBadge
+                name="bar-chart"
+                color={colors.primary}
+                bg={colors.primarySoft}
+                size={120}
+                iconSize={64}
+                rounded="circle"
+                style={[illoStyles.float, illoStyles.miniHero]}
+            />
+        </View>
+    );
+};
 
 const SLIDES: Slide[] = [
     {
@@ -144,6 +151,8 @@ const SLIDES: Slide[] = [
 
 export default function WelcomeScreen() {
     const router = useRouter();
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const { width: screenWidth } = useWindowDimensions();
     const scrollRef = useRef<ScrollView>(null);
     const [page, setPage] = useState(0);
@@ -232,7 +241,7 @@ export default function WelcomeScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     flex: { flex: 1 },
     skipRow: {
         flexDirection: 'row',
@@ -243,7 +252,7 @@ const styles = StyleSheet.create({
     },
     skip: {
         ...Typography.bodyMedium,
-        color: Colors.textMuted,
+        color: colors.textMuted,
     },
     slide: {
         flex: 1,
@@ -259,12 +268,13 @@ const styles = StyleSheet.create({
     },
     title: {
         ...Typography.titleLg,
+        color: colors.text,
         textAlign: 'center',
         marginBottom: space.md,
     },
     body: {
         ...Typography.body,
-        color: Colors.textMuted,
+        color: colors.textMuted,
         textAlign: 'center',
         lineHeight: 22,
     },
@@ -282,12 +292,12 @@ const styles = StyleSheet.create({
         width: 8,
         height: 8,
         borderRadius: radius.pill,
-        backgroundColor: Colors.borderStrong,
+        backgroundColor: colors.borderStrong,
         marginHorizontal: 4,
     },
     dotActive: {
         width: 22,
-        backgroundColor: Colors.primary,
+        backgroundColor: colors.primary,
     },
 });
 

@@ -22,12 +22,13 @@ import {
     ScreenContainer,
 } from '@/src/components/ui';
 import {
-    Colors,
     Fonts,
     Shadows,
     Typography,
     radius,
     space,
+    useColors,
+    type ColorPalette,
 } from '@/src/styles/theme';
 import { resolveCategoryIcon } from '@/src/utils/categoryIcon';
 import SkeletonBlock from '@/src/components/skeletons/SkeletonBlock';
@@ -42,6 +43,8 @@ interface CategoryOpt {
 
 export default function AddTransactionScreen() {
     const router = useRouter();
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const params = useLocalSearchParams<{
         type?: TxnType;
         category?: string;
@@ -57,6 +60,8 @@ export default function AddTransactionScreen() {
     const [recentCategories, setRecentCategories] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [categoriesLoading, setCategoriesLoading] = useState(true);
+    const [wallets, setWallets] = useState<{ _id: string; name: string }[]>([]);
+    const [account, setAccount] = useState<string>('');
 
     useEffect(() => {
         loadCategories(type);
@@ -77,6 +82,12 @@ export default function AddTransactionScreen() {
             setCategory(params.category);
         }
     }, [params.category]);
+
+    useEffect(() => {
+        api.getWallets()
+            .then((res) => setWallets(res.data?.data || []))
+            .catch(() => {});
+    }, []);
 
     const changeType = (nextType: TxnType) => {
         if (nextType === type) return;
@@ -141,6 +152,9 @@ export default function AddTransactionScreen() {
         } else {
             // BE addIncome requires `title`; use the selected category.
             payload.title = category;
+        }
+        if (account) {
+            payload.account = account;
         }
 
         setLoading(true);
@@ -278,13 +292,47 @@ export default function AddTransactionScreen() {
                             {!categoriesLoading && <Chip
                                 label={category && !popularCategories.find(c => c.title === category) ? category : 'More'}
                                 iconName={catIcon?.name || 'ellipsis-horizontal'}
-                                iconColor={catIcon?.color || Colors.primary}
+                                iconColor={catIcon?.color || colors.primary}
                                 selected={!!category && !popularCategories.find(c => c.title === category)}
                                 onPress={goToCategoryPicker}
                                 style={styles.chip}
                             />}
                         </ScrollView>
                     </View>
+
+                    {wallets.length > 0 && (
+                        <View style={styles.walletBlock}>
+                            <Text style={styles.walletLabel}>Wallet</Text>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.chipsRow}
+                            >
+                                <TouchableOpacity
+                                    onPress={() => setAccount('')}
+                                    style={[styles.walletChip, !account && styles.walletChipActive]}
+                                >
+                                    <Text style={[styles.walletChipText, !account && styles.walletChipTextActive]}>
+                                        None
+                                    </Text>
+                                </TouchableOpacity>
+                                {wallets.map((w) => {
+                                    const selected = account === w._id;
+                                    return (
+                                        <TouchableOpacity
+                                            key={w._id}
+                                            onPress={() => setAccount(w._id)}
+                                            style={[styles.walletChip, selected && styles.walletChipActive]}
+                                        >
+                                            <Text style={[styles.walletChipText, selected && styles.walletChipTextActive]}>
+                                                {w.name}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </ScrollView>
+                        </View>
+                    )}
                 </ScrollView>
 
                 <View style={styles.footer}>
@@ -301,7 +349,10 @@ export default function AddTransactionScreen() {
     );
 }
 
-const ChipRowSkeleton = () => (
+const ChipRowSkeleton = () => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
+    return (
     <>
         {[86, 96, 78, 104, 72, 68].map((width, index) => (
             <SkeletonBlock
@@ -313,9 +364,10 @@ const ChipRowSkeleton = () => (
             />
         ))}
     </>
-);
+    );
+};
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     flex: { flex: 1 },
     headerRow: {
         flexDirection: 'row',
@@ -326,12 +378,13 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         ...Typography.screenTitle,
+        color: colors.text,
     },
     segmentWrap: {
         flexDirection: 'row',
         marginHorizontal: space.xl,
         marginTop: space.lg,
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
         padding: 4,
         borderRadius: radius.pill,
         ...Shadows.xs,
@@ -344,14 +397,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     segmentActive: {
-        backgroundColor: Colors.primary,
+        backgroundColor: colors.primary,
     },
     segmentText: {
         ...Typography.bodyMedium,
-        color: Colors.textMuted,
+        color: colors.textMuted,
     },
     segmentTextActive: {
-        color: Colors.textInverse,
+        color: colors.textInverse,
     },
     formScroll: {
         flex: 1,
@@ -374,7 +427,7 @@ const styles = StyleSheet.create({
     },
     currency: {
         ...Typography.title,
-        color: Colors.textMuted,
+        color: colors.textMuted,
         marginRight: 4,
         lineHeight: 32,
         includeFontPadding: false,
@@ -387,11 +440,12 @@ const styles = StyleSheet.create({
         maxWidth: 260,
         textAlign: 'center',
         padding: 0,
-        color: Colors.text,
+        color: colors.text,
         includeFontPadding: false,
     },
     amountLabel: {
         ...Typography.bodySm,
+        color: colors.textSubtle,
         marginTop: 12,
     },
     chipsBlock: {
@@ -404,6 +458,34 @@ const styles = StyleSheet.create({
     },
     chip: {
         marginRight: space.xs,
+    },
+    walletBlock: {
+        marginTop: space.lg,
+    },
+    walletLabel: {
+        ...Typography.label,
+        color: colors.textSubtle,
+        marginBottom: space.sm,
+    },
+    walletChip: {
+        paddingHorizontal: space.md,
+        paddingVertical: 8,
+        borderRadius: radius.pill,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+        marginRight: space.xs,
+    },
+    walletChipActive: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    walletChipText: {
+        ...Typography.bodySm,
+        color: colors.textMuted,
+    },
+    walletChipTextActive: {
+        color: colors.textInverse,
     },
     footer: {
         paddingHorizontal: space.xl,

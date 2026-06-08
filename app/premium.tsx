@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
@@ -9,7 +9,7 @@ import {
     PillButton,
     ScreenContainer,
 } from '@/src/components/ui';
-import { Colors, Shadows, Typography, radius, space } from '@/src/styles/theme';
+import { Shadows, Typography, radius, space, useColors, type ColorPalette } from '@/src/styles/theme';
 
 const INVITE_ITEMS = [
     {
@@ -31,13 +31,15 @@ const INVITE_ITEMS = [
 
 export default function InviteEarnScreen() {
     const router = useRouter();
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const start = () => Toast.show({ type: 'info', text1: 'Invite flow coming soon' });
 
     return (
         <ScreenContainer variant="wash" extendUnderStatusBar>
             <View style={styles.headerRow}>
                 <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
-                    <Icon name="chevron-back" size={20} color={Colors.text} />
+                    <Icon name="chevron-back" size={20} color={colors.text} />
                 </TouchableOpacity>
                 <View style={styles.headerSpacer} />
             </View>
@@ -73,7 +75,7 @@ export default function InviteEarnScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -85,7 +87,7 @@ const styles = StyleSheet.create({
         width: 38,
         height: 38,
         borderRadius: 19,
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
         ...Shadows.xs,
@@ -114,7 +116,7 @@ const styles = StyleSheet.create({
         width: 42,
         height: 42,
         borderRadius: radius.sm,
-        backgroundColor: Colors.surfaceSoft,
+        backgroundColor: colors.surfaceSoft,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: space.md,
@@ -124,11 +126,12 @@ const styles = StyleSheet.create({
     },
     inviteTitle: {
         ...Typography.bodyStrong,
+        color: colors.text,
         marginBottom: 2,
     },
     inviteText: {
         ...Typography.caption,
-        color: Colors.textMuted,
+        color: colors.textMuted,
     },
     copy: {
         alignItems: 'center',
@@ -137,12 +140,13 @@ const styles = StyleSheet.create({
     },
     title: {
         ...Typography.title,
+        color: colors.text,
         textAlign: 'center',
         marginBottom: space.sm,
     },
     body: {
         ...Typography.bodySm,
-        color: Colors.textMuted,
+        color: colors.textMuted,
         textAlign: 'center',
     },
 });

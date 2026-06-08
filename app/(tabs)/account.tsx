@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     ScrollView,
     StyleSheet,
@@ -22,13 +22,14 @@ import {
     ScreenContainer,
 } from '@/src/components/ui';
 import {
-    Colors,
     Fonts,
     Gradients,
     Shadows,
     Typography,
     radius,
     space,
+    useColors,
+    type ColorPalette,
 } from '@/src/styles/theme';
 import SkeletonBlock from '@/src/components/skeletons/SkeletonBlock';
 
@@ -42,6 +43,8 @@ interface UserData {
 export default function AccountScreen() {
     const router = useRouter();
     const dispatch: any = useDispatch();
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
 
     const [userData, setUserData] = useState<UserData>({ username: '', mobile: '' });
     const [editing, setEditing] = useState(false);
@@ -165,15 +168,63 @@ export default function AccountScreen() {
                         style={styles.premiumBanner}
                     >
                         <View style={styles.premiumIcon}>
-                            <Icon name="diamond" size={20} color={Colors.textInverse} />
+                            <Icon name="diamond" size={20} color={colors.textInverse} />
                         </View>
                         <View style={{ flex: 1, marginLeft: space.md }}>
                             <Text style={styles.premiumTitle}>Premium Account</Text>
                             <Text style={styles.premiumSub}>Unlock advanced insights</Text>
                         </View>
-                        <Icon name="chevron-forward" size={20} color={Colors.textInverse} />
+                        <Icon name="chevron-forward" size={20} color={colors.textInverse} />
                     </LinearGradient>
                 </TouchableOpacity>
+
+                <Text style={styles.sectionLabel}>Money</Text>
+                <Card padding={0} style={styles.groupCard}>
+                    <SettingRow
+                        icon="pie-chart-outline"
+                        label="Budgets"
+                        onPress={() => router.push('/budgets')}
+                    />
+                    <Divider />
+                    <SettingRow
+                        icon="pricetags-outline"
+                        label="Manage Categories"
+                        onPress={() => router.push('/manage-categories')}
+                    />
+                    <Divider />
+                    <SettingRow
+                        icon="repeat-outline"
+                        label="Recurring"
+                        onPress={() => router.push('/recurring')}
+                    />
+                    <Divider />
+                    <SettingRow
+                        icon="flag-outline"
+                        label="Savings Goals"
+                        onPress={() => router.push('/goals')}
+                    />
+                    <Divider />
+                    <SettingRow
+                        icon="wallet-outline"
+                        label="Wallets"
+                        onPress={() => router.push('/wallets')}
+                    />
+                </Card>
+
+                <Text style={styles.sectionLabel}>Reports & Insights</Text>
+                <Card padding={0} style={styles.groupCard}>
+                    <SettingRow
+                        icon="bar-chart-outline"
+                        label="Insights"
+                        onPress={() => router.push('/insights')}
+                    />
+                    <Divider />
+                    <SettingRow
+                        icon="document-text-outline"
+                        label="Reports & Export"
+                        onPress={() => router.push('/reports')}
+                    />
+                </Card>
 
                 <Text style={styles.sectionLabel}>Account Settings</Text>
                 <Card padding={0} style={styles.groupCard}>
@@ -211,9 +262,19 @@ export default function AccountScreen() {
                     <SettingRow
                         icon="settings-outline"
                         label="Preferences"
-                        onPress={() =>
-                            Toast.show({ type: 'info', text1: 'Coming soon' })
-                        }
+                        onPress={() => router.push('/preferences')}
+                    />
+                    <Divider />
+                    <SettingRow
+                        icon="notifications-outline"
+                        label="Reminders"
+                        onPress={() => router.push('/notifications')}
+                    />
+                    <Divider />
+                    <SettingRow
+                        icon="lock-closed-outline"
+                        label="App Lock"
+                        onPress={() => router.push('/security')}
                     />
                     <Divider />
                     <SettingRow
@@ -245,9 +306,9 @@ export default function AccountScreen() {
                     variant="secondary"
                     onPress={() => setShowLogout(true)}
                     leftIcon={
-                        <Icon name="log-out-outline" size={18} color={Colors.negative} />
+                        <Icon name="log-out-outline" size={18} color={colors.negative} />
                     }
-                    textStyle={{ color: Colors.negative }}
+                    textStyle={{ color: colors.negative }}
                     style={styles.logoutBtn}
                 />
 
@@ -281,27 +342,31 @@ export default function AccountScreen() {
     );
 }
 
-const AccountSkeleton = () => (
+const AccountSkeleton = () => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
+    const s = useMemo(() => makeSkeletonStyles(colors), [colors]);
+    return (
     <>
         <Card style={styles.userCard}>
             <SkeletonBlock width={54} height={54} radius={radius.md} />
             <View style={styles.userBody}>
                 <SkeletonBlock width={146} height={18} radius={9} />
-                <SkeletonBlock width={112} height={14} radius={7} style={skeletonStyles.subline} />
+                <SkeletonBlock width={112} height={14} radius={7} style={s.subline} />
             </View>
             <SkeletonBlock width={54} height={34} radius={17} />
         </Card>
 
         <View style={styles.premiumBanner}>
             <SkeletonBlock width={36} height={36} radius={18} />
-            <View style={skeletonStyles.premiumBody}>
+            <View style={s.premiumBody}>
                 <SkeletonBlock width={142} height={18} radius={9} />
-                <SkeletonBlock width={126} height={13} radius={7} style={skeletonStyles.subline} />
+                <SkeletonBlock width={126} height={13} radius={7} style={s.subline} />
             </View>
             <SkeletonBlock width={20} height={20} radius={10} />
         </View>
 
-        <SkeletonBlock width={118} height={14} radius={7} style={skeletonStyles.sectionLabel} />
+        <SkeletonBlock width={118} height={14} radius={7} style={s.sectionLabel} />
         <Card padding={0} style={styles.groupCard}>
             {Array.from({ length: 4 }).map((_, index) => (
                 <View key={index}>
@@ -311,7 +376,7 @@ const AccountSkeleton = () => (
             ))}
         </Card>
 
-        <SkeletonBlock width={68} height={14} radius={7} style={skeletonStyles.sectionLabel} />
+        <SkeletonBlock width={68} height={14} radius={7} style={s.sectionLabel} />
         <Card padding={0} style={styles.groupCard}>
             {Array.from({ length: 4 }).map((_, index) => (
                 <View key={index}>
@@ -321,25 +386,34 @@ const AccountSkeleton = () => (
             ))}
         </Card>
 
-        <SkeletonBlock width="100%" height={48} radius={24} style={skeletonStyles.logout} />
+        <SkeletonBlock width="100%" height={48} radius={24} style={s.logout} />
         <View style={styles.bottomSpacer} />
     </>
-);
+    );
+};
 
-const SettingRowSkeleton: React.FC<{ width: number }> = ({ width }) => (
+const SettingRowSkeleton: React.FC<{ width: number }> = ({ width }) => {
+    const colors = useColors();
+    const settingStyles = useMemo(() => makeSettingStyles(colors), [colors]);
+    const s = useMemo(() => makeSkeletonStyles(colors), [colors]);
+    return (
     <View style={settingStyles.row}>
         <SkeletonBlock width={32} height={32} radius={16} />
-        <SkeletonBlock width={width} height={17} radius={8} style={skeletonStyles.settingLabel} />
+        <SkeletonBlock width={width} height={17} radius={8} style={s.settingLabel} />
         <SkeletonBlock width={18} height={18} radius={9} />
     </View>
-);
+    );
+};
 
 const SettingRow: React.FC<{
     icon: string;
     label: string;
     danger?: boolean;
     onPress?: () => void;
-}> = ({ icon, label, danger = false, onPress }) => (
+}> = ({ icon, label, danger = false, onPress }) => {
+    const colors = useColors();
+    const settingStyles = useMemo(() => makeSettingStyles(colors), [colors]);
+    return (
     <TouchableOpacity
         activeOpacity={0.85}
         onPress={onPress}
@@ -349,19 +423,24 @@ const SettingRow: React.FC<{
             <Icon
                 name={icon}
                 size={20}
-                color={danger ? Colors.negative : Colors.text}
+                color={danger ? colors.negative : colors.text}
             />
         </View>
         <Text style={[settingStyles.label, danger && settingStyles.labelDanger]}>
             {label}
         </Text>
-        <Icon name="chevron-forward" size={18} color={Colors.textSubtle} />
+        <Icon name="chevron-forward" size={18} color={colors.textSubtle} />
     </TouchableOpacity>
-);
+    );
+};
 
-const Divider = () => <View style={settingStyles.divider} />;
+const Divider = () => {
+    const colors = useColors();
+    const settingStyles = useMemo(() => makeSettingStyles(colors), [colors]);
+    return <View style={settingStyles.divider} />;
+};
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     scroll: {
         paddingHorizontal: space.xl,
         paddingTop: space.lg,
@@ -375,6 +454,7 @@ const styles = StyleSheet.create({
     },
     title: {
         ...Typography.screenTitle,
+        color: colors.text,
     },
     userCard: {
         flexDirection: 'row',
@@ -391,7 +471,7 @@ const styles = StyleSheet.create({
     avatarText: {
         ...Typography.titleLg,
         fontSize: 22,
-        color: Colors.deepPurple,
+        color: colors.deepPurple,
     },
     userBody: {
         flex: 1,
@@ -399,20 +479,22 @@ const styles = StyleSheet.create({
     },
     userName: {
         ...Typography.bodyMedium,
+        color: colors.text,
     },
     userSub: {
         ...Typography.bodySm,
+        color: colors.textSubtle,
     },
     editBtn: {
         paddingHorizontal: space.md,
         paddingVertical: 8,
         borderRadius: radius.pill,
-        backgroundColor: Colors.primarySoft,
+        backgroundColor: colors.primarySoft,
     },
     editText: {
         ...Typography.bodySm,
         fontFamily: Fonts.semibold,
-        color: Colors.primary,
+        color: colors.primary,
     },
     premiumBanner: {
         flexDirection: 'row',
@@ -432,7 +514,7 @@ const styles = StyleSheet.create({
     },
     premiumTitle: {
         ...Typography.subtitle,
-        color: Colors.textInverse,
+        color: colors.textInverse,
     },
     premiumSub: {
         ...Typography.caption,
@@ -440,6 +522,7 @@ const styles = StyleSheet.create({
     },
     sectionLabel: {
         ...Typography.label,
+        color: colors.text,
         marginTop: space['2xl'],
         marginBottom: space.sm,
     },
@@ -448,14 +531,14 @@ const styles = StyleSheet.create({
     },
     logoutBtn: {
         marginTop: space.xl,
-        borderColor: Colors.negativeSoft,
+        borderColor: colors.negativeSoft,
     },
     bottomSpacer: {
         height: 104,
     },
 });
 
-const settingStyles = StyleSheet.create({
+const makeSettingStyles = (colors: ColorPalette) => StyleSheet.create({
     row: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -472,18 +555,19 @@ const settingStyles = StyleSheet.create({
         flex: 1,
         marginLeft: space.sm,
         ...Typography.bodyMedium,
+        color: colors.text,
     },
     labelDanger: {
-        color: Colors.negative,
+        color: colors.negative,
     },
     divider: {
         height: 1,
-        backgroundColor: Colors.divider,
+        backgroundColor: colors.divider,
         marginLeft: 60,
     },
 });
 
-const skeletonStyles = StyleSheet.create({
+const makeSkeletonStyles = (colors: ColorPalette) => StyleSheet.create({
     subline: {
         marginTop: 6,
     },

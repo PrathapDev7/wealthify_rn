@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, ImageStyle, StyleSheet } from 'react-native';
 import Svg, { Circle, Ellipse, G, Path } from 'react-native-svg';
-import { Colors } from '@/src/styles/theme';
+import { useColors } from '@/src/styles/theme';
 import { remoteImage } from '@/assets/Constants/remoteAssets';
 
 export type WealthifyIconName =
@@ -190,7 +190,9 @@ const WealthifyIcon: React.FC<Props> = ({ name, size = 24, style }) => {
 const ExpenseReceiptIcon: React.FC<{ size: number; style?: ImageStyle | ImageStyle[] }> = ({
     size,
     style,
-}) => (
+}) => {
+    const colors = useColors();
+    return (
     <Svg
         width={size}
         height={size}
@@ -198,30 +200,32 @@ const ExpenseReceiptIcon: React.FC<{ size: number; style?: ImageStyle | ImageSty
         style={[styles.icon, style as any]}
     >
         <Path
-            fill={Colors.negative}
+            fill={colors.negative}
             d="M23.65625,1H8.34375C6.4970703,1,5,2.4970093,5,4.34375V31l4.1571655-3.9344482L12.7000122,31L16,27.0655518 L19.2999878,31l3.5428467-3.9344482L27,31V4.34375C27,2.4970093,25.5029297,1,23.65625,1z"
         />
         <Path
-            fill={Colors.negativeDark}
+            fill={colors.negativeDark}
             opacity={0.32}
             d="M23.65625,1H8.34375C6.4970703,1,5,2.4970093,5,4.34375v2.6875C5,5.1845093,6.4970703,3.6875,8.34375,3.6875 h15.3125C25.5029297,3.6875,27,5.1845093,27,7.03125v-2.6875C27,2.4970093,25.5029297,1,23.65625,1z"
         />
         <Path
-            fill={Colors.textInverse}
+            fill={colors.textInverse}
             d="M9.265625,7.0390625h11.1679688c0.5527344,0,1,0.4477539,1,1s-0.4472656,1-1,1H9.265625 c-0.5527344,0-1-0.4477539-1-1S8.7128906,7.0390625,9.265625,7.0390625z M9.265625,10.5546875h5.5839844 c0.5527344,0,1,0.4477539,1,1s-0.4472656,1-1,1H9.265625c-0.5527344,0-1-0.4477539-1-1 S8.7128906,10.5546875,9.265625,10.5546875z M22.734375,23.734375H9.265625c-0.5527344,0-1-0.4477539-1-1s0.4472656-1,1-1 h13.46875c0.5527344,0,1,0.4477539,1,1S23.2871094,23.734375,22.734375,23.734375z M22.734375,20.59375H9.265625 c-0.5527344,0-1-0.4477539-1-1s0.4472656-1,1-1h13.46875c0.5527344,0,1,0.4477539,1,1 S23.2871094,20.59375,22.734375,20.59375z M22.734375,17H9.265625c-0.5527344,0-1-0.4477539-1-1s0.4472656-1,1-1h13.46875 c0.5527344,0,1,0.4477539,1,1S23.2871094,17,22.734375,17z"
         />
     </Svg>
-);
+    );
+};
 
 const IncomePiggyIcon: React.FC<{ size: number; style?: ImageStyle | ImageStyle[] }> = ({
     size,
     style,
 }) => {
-    const outline = Colors.deepPurple;
-    const body = Colors.primary;
-    const highlight = Colors.primarySoft;
-    const income = Colors.accentDark;
-    const shade = Colors.primaryDarker;
+    const colors = useColors();
+    const outline = colors.deepPurple;
+    const body = colors.primary;
+    const highlight = colors.primarySoft;
+    const income = colors.accentDark;
+    const shade = colors.primaryDarker;
 
     return (
         <Svg
@@ -232,7 +236,7 @@ const IncomePiggyIcon: React.FC<{ size: number; style?: ImageStyle | ImageStyle[
         >
             <Ellipse
                 opacity={0.28}
-                fill={Colors.primarySoftStrong}
+                fill={colors.primarySoftStrong}
                 cx="249.553"
                 cy="424.928"
                 rx="190.7"

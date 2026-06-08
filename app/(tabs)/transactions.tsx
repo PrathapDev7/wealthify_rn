@@ -1,5 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import Icon from 'react-native-vector-icons/Ionicons';
 import moment from 'moment';
@@ -7,24 +15,30 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import APIService from '@/src/ApiService/api.service';
 import {
     Card,
+    CircleIconButton,
     IconBadge,
+    PillButton,
     ScreenContainer,
     SectionHeader,
+    TextField,
 } from '@/src/components/ui';
 import {
-    Colors,
     Fonts,
     Shadows,
     Typography,
     radius,
     space,
+    useColors,
+    type ColorPalette,
 } from '@/src/styles/theme';
+import { usePreferences } from '@/src/context/PreferencesContext';
 import { formatNumberWithCommas } from '@/src/utils/helper';
 import { resolveCategoryIcon } from '@/src/utils/categoryIcon';
 import {
     getTransactionDate,
     readTransactionList,
 } from '@/src/utils/transactions';
+import CustomDatePicker from '@/src/components/common/CustomDatePicker';
 import SkeletonBlock from '@/src/components/skeletons/SkeletonBlock';
 
 const api = new APIService();
@@ -50,6 +64,31 @@ type RangeKey =
     | 'thisMonth'
     | 'thisYear';
 type CashflowKey = 'income' | 'expense';
+type TypeFilter = 'all' | 'expense' | 'income';
+
+interface Filters {
+    typeFilter: TypeFilter;
+    category: string;
+    minAmount: string;
+    maxAmount: string;
+    startDate: string;
+    endDate: string;
+}
+
+const EMPTY_FILTERS: Filters = {
+    typeFilter: 'all',
+    category: '',
+    minAmount: '',
+    maxAmount: '',
+    startDate: '',
+    endDate: '',
+};
+
+const TYPE_FILTER_OPTIONS: { value: TypeFilter; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'expense', label: 'Expense' },
+    { value: 'income', label: 'Income' },
+];
 
 const RANGE_OPTIONS: { key: RangeKey; label: string }[] = [
     { key: 'today', label: 'Today' },
@@ -104,6 +143,9 @@ const getTxnSortTime = (txn: Txn) => {
 
 export default function TransactionsScreen() {
     const router = useRouter();
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
+    const { formatCurrency } = usePreferences();
     const [selectedRangeKey, setSelectedRangeKey] =
         useState<RangeKey>('thisMonth');
     const [rangeMenuOpen, setRangeMenuOpen] = useState(false);
@@ -112,6 +154,25 @@ export default function TransactionsScreen() {
     const [incomes, setIncomes] = useState<Txn[]>([]);
     const [expenses, setExpenses] = useState<Txn[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Search + filters
+    const [keyword, setKeyword] = useState('');
+    const [appliedKeyword, setAppliedKeyword] = useState('');
+    const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+    const [draftFilters, setDraftFilters] = useState<Filters>(EMPTY_FILTERS);
+    const [filtersOpen, setFiltersOpen] = useState(false);
+
+    const hasActiveFilters = useMemo(
+        () =>
+            filters.typeFilter !== 'all' ||
+            filters.category.trim() !== '' ||
+            filters.minAmount.trim() !== '' ||
+            filters.maxAmount.trim() !== '' ||
+            filters.startDate !== '' ||
+            filters.endDate !== '' ||
+            appliedKeyword.trim() !== '',
+        [filters, appliedKeyword],
+    );
 
     const selectedRange = useMemo(
         () =>
@@ -136,25 +197,44 @@ export default function TransactionsScreen() {
     );
 
     const load = useCallback(async () => {
-        const currentRange = {
-            start_date: rangeConfig.start.format('YYYY-MM-DD'),
-            end_date: rangeConfig.end.format('YYYY-MM-DD'),
+        // Explicit date filters override the quick range selector.
+        const startDate = filters.startDate || rangeConfig.start.format('YYYY-MM-DD');
+        const endDate = filters.endDate || rangeConfig.end.format('YYYY-MM-DD');
+
+        const baseQuery: Record<string, string> = {
+            start_date: startDate,
+            end_date: endDate,
         };
+        const trimmedKeyword = appliedKeyword.trim();
+        if (trimmedKeyword) baseQuery.keyword = trimmedKeyword;
+        const trimmedCategory = filters.category.trim();
+        if (trimmedCategory) baseQuery.category = trimmedCategory;
+        if (filters.minAmount.trim()) baseQuery.min_amount = filters.minAmount.trim();
+        if (filters.maxAmount.trim()) baseQuery.max_amount = filters.maxAmount.trim();
+
+        const wantIncomes = filters.typeFilter !== 'expense';
+        const wantExpenses = filters.typeFilter !== 'income';
 
         setLoading(true);
         const [incomeResult, expenseResult] = await Promise.allSettled([
-            api.getIncomes(currentRange),
-            api.getExpenses(currentRange),
+            wantIncomes ? api.getIncomes({ ...baseQuery }) : Promise.resolve(null),
+            // NOTE: don't pass `type: 'expense'` — the Expense model's `type`
+            // field defaults to 'self', so that filter would exclude every
+            // normal expense. The get-expenses endpoint already returns only
+            // expenses; wantExpenses controls whether we call it at all.
+            wantExpenses
+                ? api.getExpenses({ ...baseQuery })
+                : Promise.resolve(null),
         ]);
 
-        if (incomeResult.status === 'fulfilled') {
+        if (wantIncomes && incomeResult.status === 'fulfilled' && incomeResult.value) {
             const list = readTransactionList(incomeResult.value, 'incomes');
             setIncomes(list.map((t: Txn) => ({ ...t, type: 'income' })));
         } else {
             setIncomes([]);
         }
 
-        if (expenseResult.status === 'fulfilled') {
+        if (wantExpenses && expenseResult.status === 'fulfilled' && expenseResult.value) {
             const list = readTransactionList(expenseResult.value, 'expenses');
             setExpenses(list.map((t: Txn) => ({ ...t, type: 'expense' })));
         } else {
@@ -162,7 +242,7 @@ export default function TransactionsScreen() {
         }
 
         setLoading(false);
-    }, [rangeConfig]);
+    }, [rangeConfig, appliedKeyword, filters]);
 
     useEffect(() => {
         load();
@@ -199,17 +279,17 @@ export default function TransactionsScreen() {
                 {
                     key: 'income' as const,
                     value: totals.curIncome,
-                    color: Colors.primary,
+                    color: colors.primary,
                     label: 'Income',
                 },
                 {
                     key: 'expense' as const,
                     value: totals.curExpense,
-                    color: Colors.accentDark,
+                    color: colors.accentDark,
                     label: 'Expense',
                 },
             ].filter((item) => item.value > 0),
-        [totals.curExpense, totals.curIncome],
+        [totals.curExpense, totals.curIncome, colors],
     );
     const incomeExpenseBalance = totals.curIncome - totals.curExpense;
     const selectedCashflowItem = selectedCashflowKey
@@ -220,6 +300,29 @@ export default function TransactionsScreen() {
     useEffect(() => {
         setSelectedCashflowKey(null);
     }, [incomeExpenseTotals]);
+
+    const submitSearch = useCallback(() => {
+        setAppliedKeyword(keyword);
+    }, [keyword]);
+
+    const openFilters = useCallback(() => {
+        setRangeMenuOpen(false);
+        setDraftFilters(filters);
+        setFiltersOpen(true);
+    }, [filters]);
+
+    const applyFilters = useCallback(() => {
+        setFilters(draftFilters);
+        setFiltersOpen(false);
+    }, [draftFilters]);
+
+    const clearFilters = useCallback(() => {
+        setDraftFilters(EMPTY_FILTERS);
+        setFilters(EMPTY_FILTERS);
+        setKeyword('');
+        setAppliedKeyword('');
+        setFiltersOpen(false);
+    }, []);
 
     return (
         <ScreenContainer variant="wash" extendUnderStatusBar>
@@ -233,6 +336,54 @@ export default function TransactionsScreen() {
             >
                 <View style={styles.headerRow}>
                     <Text style={styles.title}>Transactions</Text>
+                </View>
+
+                <View
+                    style={styles.searchRow}
+                    onTouchStart={(event) => event.stopPropagation()}
+                >
+                    <View style={styles.searchField}>
+                        <Icon
+                            name="search"
+                            size={18}
+                            color={colors.textSubtle}
+                            style={styles.searchIcon}
+                        />
+                        <TextInput
+                            placeholder="Search transactions"
+                            placeholderTextColor={colors.textSubtle}
+                            value={keyword}
+                            onChangeText={setKeyword}
+                            onSubmitEditing={submitSearch}
+                            returnKeyType="search"
+                            style={styles.searchInput}
+                        />
+                        {keyword.length > 0 ? (
+                            <Pressable
+                                accessibilityRole="button"
+                                hitSlop={8}
+                                onPress={() => {
+                                    setKeyword('');
+                                    setAppliedKeyword('');
+                                }}
+                            >
+                                <Icon
+                                    name="close-circle"
+                                    size={18}
+                                    color={colors.textSubtle}
+                                />
+                            </Pressable>
+                        ) : null}
+                    </View>
+                    <View>
+                        <CircleIconButton
+                            name="options-outline"
+                            onPress={openFilters}
+                        />
+                        {hasActiveFilters ? (
+                            <View style={styles.filterDot} />
+                        ) : null}
+                    </View>
                 </View>
 
                 {loading ? (
@@ -269,7 +420,7 @@ export default function TransactionsScreen() {
                                                     : 'chevron-down'
                                             }
                                             size={14}
-                                            color={Colors.text}
+                                            color={colors.text}
                                         />
                                     </Pressable>
                                     {rangeMenuOpen ? (
@@ -361,91 +512,266 @@ export default function TransactionsScreen() {
                     </>
                 )}
             </ScrollView>
+
+            <FiltersSheet
+                visible={filtersOpen}
+                draft={draftFilters}
+                onChange={setDraftFilters}
+                onApply={applyFilters}
+                onClear={clearFilters}
+                onClose={() => setFiltersOpen(false)}
+                formatCurrency={formatCurrency}
+            />
         </ScreenContainer>
     );
 }
 
-const TransactionsSkeleton = () => (
-    <>
-        <Card style={styles.donutCard}>
-            <View style={styles.chartHeader}>
-                <SkeletonBlock width={96} height={32} radius={16} />
-            </View>
-            <View style={styles.donutWrap}>
-                <SkeletonBlock width={172} height={172} radius={86} />
-                <View style={skeletonStyles.donutHole}>
-                    <SkeletonBlock
-                        width={66}
-                        height={12}
-                        radius={6}
-                        style={skeletonStyles.centered}
-                    />
-                    <SkeletonBlock
-                        width={92}
-                        height={22}
-                        radius={11}
-                        style={skeletonStyles.donutCenterValue}
-                    />
+const FiltersSheet: React.FC<{
+    visible: boolean;
+    draft: Filters;
+    onChange: (next: Filters) => void;
+    onApply: () => void;
+    onClear: () => void;
+    onClose: () => void;
+    formatCurrency: (value: number | string | null | undefined) => string;
+}> = ({ visible, draft, onChange, onApply, onClear, onClose, formatCurrency }) => {
+    const colors = useColors();
+    const styles = useMemo(() => makeFilterStyles(colors), [colors]);
+
+    const patch = (partial: Partial<Filters>) =>
+        onChange({ ...draft, ...partial });
+
+    const minNum = Number(draft.minAmount);
+    const maxNum = Number(draft.maxAmount);
+    const amountPreview =
+        draft.minAmount.trim() && draft.maxAmount.trim()
+            ? `${formatCurrency(minNum)} – ${formatCurrency(maxNum)}`
+            : draft.minAmount.trim()
+              ? `From ${formatCurrency(minNum)}`
+              : draft.maxAmount.trim()
+                ? `Up to ${formatCurrency(maxNum)}`
+                : '';
+
+    return (
+        <Modal
+            visible={visible}
+            transparent
+            animationType="slide"
+            onRequestClose={onClose}
+        >
+            <Pressable style={styles.backdrop} onPress={onClose} />
+            <View style={styles.sheet}>
+                <View style={styles.sheetHandle} />
+                <View style={styles.sheetHeader}>
+                    <Text style={styles.sheetTitle}>Filters</Text>
+                    <Pressable
+                        accessibilityRole="button"
+                        hitSlop={10}
+                        onPress={onClose}
+                    >
+                        <Icon name="close" size={22} color={colors.textSubtle} />
+                    </Pressable>
                 </View>
-            </View>
-            <View style={styles.donutLegendRow}>
-                <LegendSkeleton />
-                <LegendSkeleton />
-            </View>
-        </Card>
 
-        <View style={skeletonStyles.sectionHeader}>
-            <SkeletonBlock width={214} height={20} radius={10} />
-        </View>
-
-        <View style={styles.txnList}>
-            {Array.from({ length: 6 }).map((_, index) => (
-                <View
-                    key={index}
-                    style={[txnStyles.row, index > 0 && txnStyles.rowDivider]}
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={styles.sheetBody}
                 >
-                    <SkeletonBlock width={42} height={42} radius={10} />
-                    <View style={txnStyles.middle}>
-                        <SkeletonBlock
-                            width={index % 2 ? 148 : 108}
-                            height={17}
-                            radius={8}
-                        />
-                        <SkeletonBlock
-                            width={86}
-                            height={13}
-                            radius={6}
-                            style={skeletonStyles.txnSubline}
-                        />
+                    <Text style={styles.fieldLabel}>Type</Text>
+                    <View style={styles.segment}>
+                        {TYPE_FILTER_OPTIONS.map((opt) => {
+                            const active = opt.value === draft.typeFilter;
+                            return (
+                                <Pressable
+                                    key={opt.value}
+                                    onPress={() => patch({ typeFilter: opt.value })}
+                                    style={[
+                                        styles.segmentItem,
+                                        active && styles.segmentItemActive,
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.segmentLabel,
+                                            {
+                                                color: active
+                                                    ? colors.textInverse
+                                                    : colors.textSubtle,
+                                            },
+                                        ]}
+                                    >
+                                        {opt.label}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
                     </View>
-                    <View style={txnStyles.right}>
-                        <SkeletonBlock width={82} height={17} radius={8} />
+
+                    <TextField
+                        label="Category"
+                        placeholder="e.g. Groceries"
+                        value={draft.category}
+                        onChangeText={(text) => patch({ category: text })}
+                        autoCapitalize="words"
+                        leftIconName="pricetag-outline"
+                    />
+
+                    <Text style={styles.fieldLabel}>Amount</Text>
+                    <View style={styles.amountRow}>
+                        <View style={styles.amountField}>
+                            <TextField
+                                placeholder="Min"
+                                value={draft.minAmount}
+                                onChangeText={(text) =>
+                                    patch({ minAmount: text.replace(/[^0-9.]/g, '') })
+                                }
+                                keyboardType="numeric"
+                            />
+                        </View>
+                        <View style={styles.amountField}>
+                            <TextField
+                                placeholder="Max"
+                                value={draft.maxAmount}
+                                onChangeText={(text) =>
+                                    patch({ maxAmount: text.replace(/[^0-9.]/g, '') })
+                                }
+                                keyboardType="numeric"
+                            />
+                        </View>
+                    </View>
+                    {amountPreview ? (
+                        <Text style={styles.amountPreview}>{amountPreview}</Text>
+                    ) : null}
+
+                    <Text style={styles.fieldLabel}>Date range</Text>
+                    <View style={styles.dateRow}>
+                        <View style={styles.dateField}>
+                            <CustomDatePicker
+                                value={draft.startDate}
+                                placeholder="Start date"
+                                onChange={(date) => patch({ startDate: date })}
+                            />
+                        </View>
+                        <View style={styles.dateField}>
+                            <CustomDatePicker
+                                value={draft.endDate}
+                                placeholder="End date"
+                                onChange={(date) => patch({ endDate: date })}
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.actionsRow}>
+                        <View style={styles.actionItem}>
+                            <PillButton
+                                label="Clear"
+                                variant="secondary"
+                                onPress={onClear}
+                            />
+                        </View>
+                        <View style={styles.actionItem}>
+                            <PillButton label="Apply" onPress={onApply} />
+                        </View>
+                    </View>
+                </ScrollView>
+            </View>
+        </Modal>
+    );
+};
+
+const TransactionsSkeleton = () => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
+    const txnStyles = useMemo(() => makeTxnStyles(colors), [colors]);
+    const skeletonStyles = useMemo(() => makeSkeletonStyles(colors), [colors]);
+    return (
+        <>
+            <Card style={styles.donutCard}>
+                <View style={styles.chartHeader}>
+                    <SkeletonBlock width={96} height={32} radius={16} />
+                </View>
+                <View style={styles.donutWrap}>
+                    <SkeletonBlock width={172} height={172} radius={86} />
+                    <View style={skeletonStyles.donutHole}>
                         <SkeletonBlock
-                            width={15}
-                            height={15}
-                            radius={8}
-                            style={skeletonStyles.chevron}
+                            width={66}
+                            height={12}
+                            radius={6}
+                            style={skeletonStyles.centered}
+                        />
+                        <SkeletonBlock
+                            width={92}
+                            height={22}
+                            radius={11}
+                            style={skeletonStyles.donutCenterValue}
                         />
                     </View>
                 </View>
-            ))}
+                <View style={styles.donutLegendRow}>
+                    <LegendSkeleton />
+                    <LegendSkeleton />
+                </View>
+            </Card>
+
+            <View style={skeletonStyles.sectionHeader}>
+                <SkeletonBlock width={214} height={20} radius={10} />
+            </View>
+
+            <View style={styles.txnList}>
+                {Array.from({ length: 6 }).map((_, index) => (
+                    <View
+                        key={index}
+                        style={[txnStyles.row, index > 0 && txnStyles.rowDivider]}
+                    >
+                        <SkeletonBlock width={42} height={42} radius={10} />
+                        <View style={txnStyles.middle}>
+                            <SkeletonBlock
+                                width={index % 2 ? 148 : 108}
+                                height={17}
+                                radius={8}
+                            />
+                            <SkeletonBlock
+                                width={86}
+                                height={13}
+                                radius={6}
+                                style={skeletonStyles.txnSubline}
+                            />
+                        </View>
+                        <View style={txnStyles.right}>
+                            <SkeletonBlock width={82} height={17} radius={8} />
+                            <SkeletonBlock
+                                width={15}
+                                height={15}
+                                radius={8}
+                                style={skeletonStyles.chevron}
+                            />
+                        </View>
+                    </View>
+                ))}
+            </View>
+
+            <View style={styles.bottomSpacer} />
+        </>
+    );
+};
+
+const LegendSkeleton = () => {
+    const colors = useColors();
+    const legendStyles = useMemo(() => makeLegendStyles(colors), [colors]);
+    const skeletonStyles = useMemo(() => makeSkeletonStyles(colors), [colors]);
+    return (
+        <View style={legendStyles.row}>
+            <SkeletonBlock width={8} height={8} radius={4} />
+            <SkeletonBlock
+                width={52}
+                height={12}
+                radius={6}
+                style={skeletonStyles.legendLabel}
+            />
         </View>
-
-        <View style={styles.bottomSpacer} />
-    </>
-);
-
-const LegendSkeleton = () => (
-    <View style={legendStyles.row}>
-        <SkeletonBlock width={8} height={8} radius={4} />
-        <SkeletonBlock
-            width={52}
-            height={12}
-            radius={6}
-            style={skeletonStyles.legendLabel}
-        />
-    </View>
-);
+    );
+};
 
 const ARC_SIZE = 214;
 const ARC_CENTER = ARC_SIZE / 2;
@@ -470,6 +796,8 @@ const CashflowArcMeter: React.FC<{
     selectedItem?: { label: string; value: number } | null;
     onSelect: (key: CashflowKey) => void;
 }> = ({ income, expense, balance, selectedKey, selectedItem, onSelect }) => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const maxValue = Math.max(income, expense, 1);
     const incomeArc = arcDash(88, income / maxValue);
     const expenseArc = arcDash(66, expense / maxValue);
@@ -479,10 +807,10 @@ const CashflowArcMeter: React.FC<{
     const spentPercent =
         income > 0 ? Math.min(Math.round((expense / income) * 100), 999) : 0;
     const balanceIsNegative = balance < 0;
-    const signalColor = balanceIsNegative ? Colors.negative : Colors.accentDark;
+    const signalColor = balanceIsNegative ? colors.negative : colors.accentDark;
     const signalBg = balanceIsNegative
-        ? Colors.negativeSoft
-        : Colors.accentSoft;
+        ? colors.negativeSoft
+        : colors.accentSoft;
     const signalLabel = balanceIsNegative ? 'Over by' : 'Saved';
     const signalValue = balanceIsNegative
         ? `₹${formatNumberWithCommas(Math.abs(balance).toFixed(0))}`
@@ -507,9 +835,9 @@ const CashflowArcMeter: React.FC<{
                         >
                             <Stop
                                 offset="0"
-                                stopColor={Colors.primaryGradientStart}
+                                stopColor={colors.primaryGradientStart}
                             />
-                            <Stop offset="1" stopColor={Colors.primaryDarker} />
+                            <Stop offset="1" stopColor={colors.primaryDarker} />
                         </LinearGradient>
                         <LinearGradient
                             id="expenseArcGradient"
@@ -518,8 +846,8 @@ const CashflowArcMeter: React.FC<{
                             x2="1"
                             y2="1"
                         >
-                            <Stop offset="0" stopColor={Colors.accent} />
-                            <Stop offset="1" stopColor={Colors.accentDark} />
+                            <Stop offset="0" stopColor={colors.accent} />
+                            <Stop offset="1" stopColor={colors.accentDark} />
                         </LinearGradient>
                     </Defs>
                     <Circle
@@ -527,7 +855,7 @@ const CashflowArcMeter: React.FC<{
                         cy={ARC_CENTER}
                         r={88}
                         fill="transparent"
-                        stroke={Colors.primarySoft}
+                        stroke={colors.primarySoft}
                         strokeWidth={18}
                         strokeLinecap="round"
                         strokeDasharray={arcDash(88, 1).dash}
@@ -538,7 +866,7 @@ const CashflowArcMeter: React.FC<{
                         cy={ARC_CENTER}
                         r={66}
                         fill="transparent"
-                        stroke={Colors.accentSoft}
+                        stroke={colors.accentSoft}
                         strokeWidth={16}
                         strokeLinecap="round"
                         strokeDasharray={arcDash(66, 1).dash}
@@ -620,7 +948,7 @@ const CashflowArcMeter: React.FC<{
                     icon="arrow-down"
                     label="Income"
                     value={income}
-                    color={Colors.primary}
+                    color={colors.primary}
                     active={selectedKey === 'income'}
                     onPress={onSelect}
                 />
@@ -629,7 +957,7 @@ const CashflowArcMeter: React.FC<{
                     icon="arrow-up"
                     label="Expense"
                     value={expense}
-                    color={Colors.accentDark}
+                    color={colors.accentDark}
                     active={selectedKey === 'expense'}
                     caption={`${spentPercent}% spent`}
                     onPress={onSelect}
@@ -648,93 +976,109 @@ const CashflowMetric: React.FC<{
     active: boolean;
     caption?: string;
     onPress: (key: CashflowKey) => void;
-}> = ({ keyName, icon, label, value, color, active, caption, onPress }) => (
-    <Pressable
-        accessibilityRole="button"
-        onPress={() => onPress(keyName)}
-        style={[
-            styles.flowMetric,
-            keyName === 'expense' && styles.flowMetricOffset,
-            active && styles.flowMetricActive,
-        ]}
-    >
-        <View
-            style={[styles.flowMetricIcon, { backgroundColor: `${color}1A` }]}
+}> = ({ keyName, icon, label, value, color, active, caption, onPress }) => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
+    return (
+        <Pressable
+            accessibilityRole="button"
+            onPress={() => onPress(keyName)}
+            style={[
+                styles.flowMetric,
+                keyName === 'expense' && styles.flowMetricOffset,
+                active && styles.flowMetricActive,
+            ]}
         >
-            <Icon name={icon} size={14} color={color} />
-        </View>
-        <View style={styles.flowMetricCopy}>
-            <Text style={styles.flowMetricLabel}>{label}</Text>
-            <Text
-                style={styles.flowMetricValue}
-                numberOfLines={1}
-                adjustsFontSizeToFit
+            <View
+                style={[styles.flowMetricIcon, { backgroundColor: `${color}1A` }]}
             >
-                ₹{formatNumberWithCommas(value.toFixed(0))}
-            </Text>
-            {caption ? (
-                <Text style={styles.flowMetricCaption}>{caption}</Text>
-            ) : null}
-        </View>
-    </Pressable>
-);
+                <Icon name={icon} size={14} color={color} />
+            </View>
+            <View style={styles.flowMetricCopy}>
+                <Text style={styles.flowMetricLabel}>{label}</Text>
+                <Text
+                    style={styles.flowMetricValue}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                >
+                    ₹{formatNumberWithCommas(value.toFixed(0))}
+                </Text>
+                {caption ? (
+                    <Text style={styles.flowMetricCaption}>{caption}</Text>
+                ) : null}
+            </View>
+        </Pressable>
+    );
+};
 
-const EmptyDonutState: React.FC<{ rangeLabel: string }> = ({ rangeLabel }) => (
-    <View style={styles.emptyChartState}>
-        <View style={styles.emptyChartGraphic}>
-            <View style={styles.emptyRingOuter}>
-                <View style={styles.emptyRingInner}>
-                    <Icon
-                        name="pie-chart-outline"
-                        size={28}
-                        color={Colors.primary}
+const EmptyDonutState: React.FC<{ rangeLabel: string }> = ({ rangeLabel }) => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
+    return (
+        <View style={styles.emptyChartState}>
+            <View style={styles.emptyChartGraphic}>
+                <View style={styles.emptyRingOuter}>
+                    <View style={styles.emptyRingInner}>
+                        <Icon
+                            name="pie-chart-outline"
+                            size={28}
+                            color={colors.primary}
+                        />
+                    </View>
+                </View>
+                <View style={[styles.emptySpark, styles.emptySparkIncome]} />
+                <View style={[styles.emptySpark, styles.emptySparkExpense]} />
+            </View>
+            <Text style={styles.emptyTitle}>Nothing to chart yet</Text>
+            <Text style={styles.emptySubText}>
+                Add income or expenses for {rangeLabel} and your balance
+                breakdown will appear here.
+            </Text>
+            <View style={styles.emptyMetricRow}>
+                <View style={styles.emptyMetric}>
+                    <View
+                        style={[
+                            styles.emptyMetricDot,
+                            { backgroundColor: colors.primary },
+                        ]}
                     />
+                    <Text style={styles.emptyMetricText}>Income ₹0</Text>
+                </View>
+                <View style={styles.emptyMetric}>
+                    <View
+                        style={[
+                            styles.emptyMetricDot,
+                            { backgroundColor: colors.accentDark },
+                        ]}
+                    />
+                    <Text style={styles.emptyMetricText}>Expense ₹0</Text>
                 </View>
             </View>
-            <View style={[styles.emptySpark, styles.emptySparkIncome]} />
-            <View style={[styles.emptySpark, styles.emptySparkExpense]} />
         </View>
-        <Text style={styles.emptyTitle}>Nothing to chart yet</Text>
-        <Text style={styles.emptySubText}>
-            Add income or expenses for {rangeLabel} and your balance breakdown
-            will appear here.
-        </Text>
-        <View style={styles.emptyMetricRow}>
-            <View style={styles.emptyMetric}>
-                <View
-                    style={[
-                        styles.emptyMetricDot,
-                        { backgroundColor: Colors.primary },
-                    ]}
-                />
-                <Text style={styles.emptyMetricText}>Income ₹0</Text>
-            </View>
-            <View style={styles.emptyMetric}>
-                <View
-                    style={[
-                        styles.emptyMetricDot,
-                        { backgroundColor: Colors.accentDark },
-                    ]}
-                />
-                <Text style={styles.emptyMetricText}>Expense ₹0</Text>
-            </View>
-        </View>
-    </View>
-);
+    );
+};
 
-const EmptyTransactionsState = () => (
-    <Card style={styles.emptyListCard}>
-        <View style={styles.emptyListIcon}>
-            <Icon name="receipt-outline" size={28} color={Colors.textSubtle} />
-        </View>
-        <View style={styles.emptyListCopy}>
-            <Text style={styles.emptyListTitle}>No transactions yet</Text>
-            <Text style={styles.emptyListSubText}>
-                New entries for this period will show here.
-            </Text>
-        </View>
-    </Card>
-);
+const EmptyTransactionsState = () => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
+    return (
+        <Card style={styles.emptyListCard}>
+            <View style={styles.emptyListIcon}>
+                <Icon
+                    name="receipt-outline"
+                    size={28}
+                    color={colors.textSubtle}
+                />
+            </View>
+            <View style={styles.emptyListCopy}>
+                <Text style={styles.emptyListTitle}>No transactions yet</Text>
+                <Text style={styles.emptyListSubText}>
+                    New entries for this period will show here.
+                </Text>
+            </View>
+        </Card>
+    );
+};
 
 const getTransactionKind = (txn: Txn) =>
     txn.type === 'income' ? 'income' : 'expense';
@@ -769,9 +1113,11 @@ const TxnRow: React.FC<{
     isFirst,
     onPress,
 }) => {
+    const colors = useColors();
+    const txnStyles = useMemo(() => makeTxnStyles(colors), [colors]);
     const isIncome = txn.type === 'income';
     const sign = isIncome ? '+' : '-';
-    const amountColor = isIncome ? Colors.accentDark : Colors.negative;
+    const amountColor = isIncome ? colors.accentDark : colors.negative;
     const label = txn.title || txn.category || 'Untitled';
     const icon = resolveCategoryIcon(txn.category, isIncome ? 'income' : 'expense');
 
@@ -809,7 +1155,7 @@ const TxnRow: React.FC<{
                     <Icon
                         name="chevron-forward"
                         size={15}
-                        color={Colors.textSubtle}
+                        color={colors.textSubtle}
                     />
                 </View>
             </View>
@@ -817,7 +1163,7 @@ const TxnRow: React.FC<{
     );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     scroll: {
         paddingHorizontal: space.xl,
         paddingTop: space.lg,
@@ -831,6 +1177,45 @@ const styles = StyleSheet.create({
     },
     title: {
         ...Typography.screenTitle,
+        color: colors.text,
+    },
+    searchRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: space.lg,
+        gap: space.sm,
+    },
+    searchField: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: radius.pill,
+        paddingHorizontal: space.md,
+        height: 44,
+        ...Shadows.sm,
+    },
+    searchIcon: {
+        marginRight: space.sm,
+    },
+    searchInput: {
+        flex: 1,
+        ...Typography.bodySm,
+        color: colors.text,
+        paddingVertical: 0,
+    },
+    filterDot: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: colors.primary,
+        borderWidth: 2,
+        borderColor: colors.background,
     },
     chartHeader: {
         flexDirection: 'row',
@@ -853,9 +1238,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: space.md,
         paddingVertical: 6,
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: Colors.border,
+        borderColor: colors.border,
         borderRadius: radius.pill,
     },
     rangeMenu: {
@@ -864,9 +1249,9 @@ const styles = StyleSheet.create({
         left: 0,
         width: 164,
         paddingVertical: space.xs,
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: Colors.border,
+        borderColor: colors.border,
         borderRadius: radius.sm,
         ...Shadows.md,
         zIndex: 12,
@@ -877,22 +1262,22 @@ const styles = StyleSheet.create({
         paddingVertical: space.sm,
     },
     rangeOptionActive: {
-        backgroundColor: Colors.primarySoft,
+        backgroundColor: colors.primarySoft,
     },
     rangeOptionText: {
         ...Typography.bodySm,
         fontFamily: Fonts.medium,
-        color: Colors.textBody,
+        color: colors.textBody,
     },
     rangeOptionTextActive: {
-        color: Colors.primary,
+        color: colors.primary,
         fontFamily: Fonts.semibold,
     },
     rangeText: {
         ...Typography.bodySm,
         fontFamily: Fonts.medium,
         marginRight: 4,
-        color: Colors.text,
+        color: colors.text,
     },
     donutLegendRow: {
         flexDirection: 'row',
@@ -903,7 +1288,7 @@ const styles = StyleSheet.create({
         marginLeft: -space.md,
     },
     txnList: {
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: radius.md,
         paddingHorizontal: space.lg,
         ...Shadows.sm,
@@ -940,21 +1325,21 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: space.sm,
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
     },
     arcCenterLabel: {
         ...Typography.caption,
         fontFamily: Fonts.semibold,
-        color: Colors.textSubtle,
+        color: colors.textSubtle,
     },
     arcCenterValue: {
         ...Typography.title,
         marginTop: 2,
-        color: Colors.text,
+        color: colors.text,
         maxWidth: 124,
     },
     arcCenterValueNegative: {
-        color: Colors.negative,
+        color: colors.negative,
     },
     arcSignal: {
         minHeight: 24,
@@ -977,18 +1362,18 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         marginTop: -space.sm,
         marginBottom: space.sm,
-        backgroundColor: Colors.text,
+        backgroundColor: colors.text,
         borderRadius: radius.xs,
         ...Shadows.md,
     },
     cashflowTooltipLabel: {
         ...Typography.caption,
-        color: Colors.textInverse,
+        color: colors.surface,
         fontFamily: Fonts.medium,
     },
     cashflowTooltipValue: {
         ...Typography.bodySm,
-        color: Colors.textInverse,
+        color: colors.surface,
         fontFamily: Fonts.semibold,
         marginTop: 2,
     },
@@ -1006,14 +1391,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: space.sm,
         paddingVertical: space.sm,
-        backgroundColor: Colors.surfaceSoft,
+        backgroundColor: colors.surfaceSoft,
         borderWidth: 1,
-        borderColor: Colors.border,
+        borderColor: colors.border,
         borderRadius: radius.sm,
     },
     flowMetricActive: {
-        backgroundColor: Colors.primarySoft,
-        borderColor: Colors.primarySoftStrong,
+        backgroundColor: colors.primarySoft,
+        borderColor: colors.primarySoftStrong,
     },
     flowMetricOffset: {
         marginLeft: space.sm,
@@ -1033,16 +1418,17 @@ const styles = StyleSheet.create({
     flowMetricLabel: {
         ...Typography.caption,
         fontFamily: Fonts.semibold,
-        color: Colors.textSubtle,
+        color: colors.textSubtle,
     },
     flowMetricValue: {
         ...Typography.bodyStrong,
         marginTop: 1,
+        color: colors.text,
     },
     flowMetricCaption: {
         ...Typography.caption,
         marginTop: 1,
-        color: Colors.textSubtle,
+        color: colors.textSubtle,
     },
     emptyChartState: {
         width: '100%',
@@ -1062,10 +1448,10 @@ const styles = StyleSheet.create({
         height: 92,
         borderRadius: 46,
         borderWidth: 12,
-        borderColor: Colors.primarySoft,
+        borderColor: colors.primarySoft,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
     },
     emptyRingInner: {
         width: 52,
@@ -1073,7 +1459,7 @@ const styles = StyleSheet.create({
         borderRadius: 26,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: Colors.primarySoft,
+        backgroundColor: colors.primarySoft,
     },
     emptySpark: {
         position: 'absolute',
@@ -1081,27 +1467,29 @@ const styles = StyleSheet.create({
         height: 18,
         borderRadius: 9,
         borderWidth: 4,
-        borderColor: Colors.surface,
+        borderColor: colors.surface,
     },
     emptySparkIncome: {
         top: 10,
         right: 12,
-        backgroundColor: Colors.primary,
+        backgroundColor: colors.primary,
     },
     emptySparkExpense: {
         left: 14,
         bottom: 14,
-        backgroundColor: Colors.accentDark,
+        backgroundColor: colors.accentDark,
     },
     emptyTitle: {
         ...Typography.bodyStrong,
         textAlign: 'center',
+        color: colors.text,
     },
     emptySubText: {
         ...Typography.bodySm,
         maxWidth: 270,
         marginTop: space.xs,
         textAlign: 'center',
+        color: colors.textSubtle,
     },
     emptyMetricRow: {
         flexDirection: 'row',
@@ -1117,7 +1505,7 @@ const styles = StyleSheet.create({
         paddingVertical: 7,
         marginHorizontal: space.xs,
         marginBottom: space.xs,
-        backgroundColor: Colors.surfaceSoft,
+        backgroundColor: colors.surfaceSoft,
         borderRadius: radius.pill,
     },
     emptyMetricDot: {
@@ -1128,7 +1516,7 @@ const styles = StyleSheet.create({
     },
     emptyMetricText: {
         ...Typography.caption,
-        color: Colors.textBody,
+        color: colors.textBody,
     },
     emptyListCard: {
         flexDirection: 'row',
@@ -1142,7 +1530,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: space.md,
-        backgroundColor: Colors.surfaceSoft,
+        backgroundColor: colors.surfaceSoft,
     },
     emptyListCopy: {
         flex: 1,
@@ -1150,10 +1538,12 @@ const styles = StyleSheet.create({
     },
     emptyListTitle: {
         ...Typography.bodyStrong,
+        color: colors.text,
     },
     emptyListSubText: {
         ...Typography.bodySm,
         marginTop: 2,
+        color: colors.textSubtle,
     },
     donutTooltipOverlay: {
         position: 'absolute',
@@ -1169,7 +1559,7 @@ const styles = StyleSheet.create({
         minHeight: 56,
         paddingHorizontal: space.sm,
         paddingVertical: 6,
-        backgroundColor: Colors.text,
+        backgroundColor: colors.text,
         borderRadius: radius.xs,
         alignItems: 'center',
         justifyContent: 'center',
@@ -1177,12 +1567,12 @@ const styles = StyleSheet.create({
     },
     donutTooltipLabel: {
         ...Typography.caption,
-        color: Colors.textInverse,
+        color: colors.surface,
         fontFamily: Fonts.medium,
     },
     donutTooltipValue: {
         ...Typography.bodySm,
-        color: Colors.textInverse,
+        color: colors.surface,
         fontFamily: Fonts.semibold,
         marginTop: 2,
     },
@@ -1191,16 +1581,18 @@ const styles = StyleSheet.create({
     },
     donutCenterSmall: {
         ...Typography.caption,
+        color: colors.textSubtle,
     },
     donutCenterBig: {
         ...Typography.title,
+        color: colors.text,
     },
     bottomSpacer: {
         height: 104,
     },
 });
 
-const legendStyles = StyleSheet.create({
+const makeLegendStyles = (colors: ColorPalette) => StyleSheet.create({
     row: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -1214,10 +1606,11 @@ const legendStyles = StyleSheet.create({
     },
     label: {
         ...Typography.caption,
+        color: colors.textSubtle,
     },
 });
 
-const txnStyles = StyleSheet.create({
+const makeTxnStyles = (colors: ColorPalette) => StyleSheet.create({
     row: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -1225,7 +1618,7 @@ const txnStyles = StyleSheet.create({
     },
     rowDivider: {
         borderTopWidth: 1,
-        borderTopColor: Colors.divider,
+        borderTopColor: colors.divider,
     },
     middle: {
         flex: 1,
@@ -1234,9 +1627,11 @@ const txnStyles = StyleSheet.create({
     title: {
         ...Typography.bodyStrong,
         marginBottom: 2,
+        color: colors.text,
     },
     date: {
         ...Typography.caption,
+        color: colors.textSubtle,
     },
     amount: {
         ...Typography.moneySm,
@@ -1252,7 +1647,7 @@ const txnStyles = StyleSheet.create({
     },
 });
 
-const skeletonStyles = StyleSheet.create({
+const makeSkeletonStyles = (colors: ColorPalette) => StyleSheet.create({
     centered: {
         alignSelf: 'center',
     },
@@ -1263,7 +1658,7 @@ const skeletonStyles = StyleSheet.create({
         borderRadius: 62,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
     },
     donutCenterValue: {
         alignSelf: 'center',
@@ -1281,5 +1676,98 @@ const skeletonStyles = StyleSheet.create({
     },
     legendLabel: {
         marginLeft: 4,
+    },
+});
+
+const makeFilterStyles = (colors: ColorPalette) => StyleSheet.create({
+    backdrop: {
+        flex: 1,
+        backgroundColor: colors.overlay,
+    },
+    sheet: {
+        backgroundColor: colors.background,
+        borderTopLeftRadius: radius.lg,
+        borderTopRightRadius: radius.lg,
+        paddingHorizontal: space.xl,
+        paddingTop: space.sm,
+        paddingBottom: space.xl,
+        maxHeight: '88%',
+    },
+    sheetHandle: {
+        alignSelf: 'center',
+        width: 40,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: colors.borderStrong,
+        marginBottom: space.md,
+    },
+    sheetHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: space.md,
+    },
+    sheetTitle: {
+        ...Typography.subtitle,
+        color: colors.text,
+    },
+    sheetBody: {
+        paddingBottom: space.lg,
+    },
+    fieldLabel: {
+        ...Typography.label,
+        color: colors.textSubtle,
+        marginBottom: space.sm,
+    },
+    segment: {
+        flexDirection: 'row',
+        backgroundColor: colors.surfaceMuted,
+        borderRadius: radius.sm,
+        padding: 4,
+        gap: 4,
+        marginBottom: space.lg,
+    },
+    segmentItem: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        borderRadius: radius.xs,
+    },
+    segmentItemActive: {
+        backgroundColor: colors.primary,
+    },
+    segmentLabel: {
+        ...Typography.bodySm,
+        fontFamily: Fonts.medium,
+    },
+    amountRow: {
+        flexDirection: 'row',
+        gap: space.md,
+    },
+    amountField: {
+        flex: 1,
+    },
+    amountPreview: {
+        ...Typography.caption,
+        color: colors.textSubtle,
+        marginTop: -space.sm,
+        marginBottom: space.lg,
+    },
+    dateRow: {
+        flexDirection: 'row',
+        gap: space.md,
+    },
+    dateField: {
+        flex: 1,
+    },
+    actionsRow: {
+        flexDirection: 'row',
+        gap: space.md,
+        marginTop: space.md,
+    },
+    actionItem: {
+        flex: 1,
     },
 });

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
-import { Colors, Fonts, Typography, space } from '@/src/styles/theme';
+import { Fonts, Typography, space, useColors, type ColorPalette } from '@/src/styles/theme';
 
 interface Props {
     title: string;
@@ -15,18 +15,22 @@ const SectionHeader: React.FC<Props> = ({
     actionLabel,
     onActionPress,
     style,
-}) => (
-    <View style={[styles.row, style]}>
-        <Text style={styles.title}>{title}</Text>
-        {actionLabel ? (
-            <TouchableOpacity onPress={onActionPress} hitSlop={10}>
-                <Text style={styles.action}>{actionLabel}</Text>
-            </TouchableOpacity>
-        ) : null}
-    </View>
-);
+}) => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
+    return (
+        <View style={[styles.row, style]}>
+            <Text style={styles.title}>{title}</Text>
+            {actionLabel ? (
+                <TouchableOpacity onPress={onActionPress} hitSlop={10}>
+                    <Text style={styles.action}>{actionLabel}</Text>
+                </TouchableOpacity>
+            ) : null}
+        </View>
+    );
+};
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     row: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -37,11 +41,12 @@ const styles = StyleSheet.create({
     title: {
         ...Typography.subtitle,
         fontFamily: Fonts.semibold,
+        color: colors.text,
     },
     action: {
         ...Typography.bodyMedium,
         fontFamily: Fonts.medium,
-        color: Colors.primaryGradientStart,
+        color: colors.primaryGradientStart,
     },
 });
 

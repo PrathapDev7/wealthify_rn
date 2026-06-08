@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Colors, Shadows } from '@/src/styles/theme';
+import { Shadows, useColors } from '@/src/styles/theme';
 
 interface Props {
     onPress?: () => void;
@@ -17,10 +17,14 @@ const FAB: React.FC<Props> = ({
     onPress,
     iconName = 'add',
     size = 60,
-    bg = Colors.fab,
-    color = Colors.textInverse,
+    bg,
+    color,
     style,
-}) => (
+}) => {
+    const colors = useColors();
+    const resolvedBg = bg ?? colors.fab;
+    const resolvedColor = color ?? colors.textInverse;
+    return (
     <TouchableOpacity
         activeOpacity={0.9}
         onPress={onPress}
@@ -28,7 +32,7 @@ const FAB: React.FC<Props> = ({
             styles.base,
             Shadows.fab,
             {
-                backgroundColor: bg,
+                backgroundColor: resolvedBg,
                 width: size,
                 height: size,
                 borderRadius: size / 2,
@@ -36,9 +40,10 @@ const FAB: React.FC<Props> = ({
             style,
         ]}
     >
-        <Icon name={iconName} size={Math.round(size * 0.42)} color={color} />
+        <Icon name={iconName} size={Math.round(size * 0.42)} color={resolvedColor} />
     </TouchableOpacity>
-);
+    );
+};
 
 const styles = StyleSheet.create({
     base: {

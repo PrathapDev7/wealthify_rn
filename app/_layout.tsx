@@ -4,12 +4,14 @@ import {Provider} from "react-redux";
 import store from "@/src/redux/store";
 import React, {useEffect, useRef, useState} from "react";
 import {StatusBar} from 'expo-status-bar';
-import {Colors} from "@/src/styles/colors";
 import {Animated, Easing, ImageSourcePropType, StyleSheet, Text, TextInput, View} from "react-native";
 import {Fonts} from "@/src/styles/fonts";
 import {GestureHandlerRootView} from "react-native-gesture-handler";
 import {SafeAreaProvider} from "react-native-safe-area-context";
-import {MD3LightTheme as DefaultTheme, Provider as PaperProvider} from 'react-native-paper';
+import {MD3LightTheme, MD3DarkTheme, Provider as PaperProvider} from 'react-native-paper';
+import {ThemeProvider, useTheme} from '@/src/styles/ThemeContext';
+import {PreferencesProvider} from '@/src/context/PreferencesContext';
+import {AppLockGate} from '@/src/components/AppLockGate';
 import Toast, {ToastConfigParams} from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as SplashScreen from 'expo-splash-screen';
@@ -52,38 +54,27 @@ const applyDefaultFont = (Component: TextComponentWithDefaults) => {
 applyDefaultFont(Text);
 applyDefaultFont(TextInput as TextComponentWithDefaults);
 
-const toastTone = {
-    success: {
-        icon: 'checkmark-circle',
-        color: Colors.accentDark,
-        bg: Colors.accentSoft,
-    },
-    error: {
-        icon: 'alert-circle',
-        color: Colors.negative,
-        bg: Colors.negativeSoft,
-    },
-    info: {
-        icon: 'information-circle',
-        color: Colors.primary,
-        bg: Colors.primarySoft,
-    },
-} as const;
-
 const WealthifyToast = ({type, text1, text2}: ToastConfigParams<any>) => {
+    const {colors} = useTheme();
+
+    const toastTone = {
+        success: {icon: 'checkmark-circle', color: colors.accentDark, bg: colors.accentSoft},
+        error: {icon: 'alert-circle', color: colors.negative, bg: colors.negativeSoft},
+        info: {icon: 'information-circle', color: colors.primary, bg: colors.primarySoft},
+    } as const;
     const tone = toastTone[type as keyof typeof toastTone] || toastTone.info;
 
     return (
-        <View style={styles.toast}>
+        <View style={[styles.toast, {backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.deepPurple}]}>
             <View style={[styles.toastIcon, {backgroundColor: tone.bg}]}>
                 <Icon name={tone.icon} size={20} color={tone.color} />
             </View>
             <View style={styles.toastTextWrap}>
-                <Text numberOfLines={1} style={styles.toastTitle}>
+                <Text numberOfLines={1} style={[styles.toastTitle, {color: colors.text}]}>
                     {text1}
                 </Text>
                 {text2 ? (
-                    <Text numberOfLines={2} style={styles.toastBody}>
+                    <Text numberOfLines={2} style={[styles.toastBody, {color: colors.textSubtle}]}>
                         {text2}
                     </Text>
                 ) : null}
@@ -169,6 +160,53 @@ const AnimatedSplashOverlay = ({play, onFinish}: {play: boolean; onFinish: () =>
     );
 };
 
+interface ThemedRootProps {
+    appRefreshKey: number;
+    onRequestRefresh: () => void;
+    showAnimatedSplash: boolean;
+    playAnimatedSplash: boolean;
+    onSplashFinish: () => void;
+}
+
+const ThemedRoot = ({
+    appRefreshKey,
+    onRequestRefresh,
+    showAnimatedSplash,
+    playAnimatedSplash,
+    onSplashFinish,
+}: ThemedRootProps) => {
+    const {isDark, colors} = useTheme();
+
+    return (
+        <PaperProvider theme={isDark ? MD3DarkTheme : MD3LightTheme}>
+            <StatusBar style={showAnimatedSplash ? "light" : (isDark ? "light" : "dark")} />
+            <AppRefreshProvider requestAppRefresh={onRequestRefresh}>
+                <AppLockGate>
+                    <Stack
+                        key={appRefreshKey}
+                        screenOptions={{
+                            headerShown: false,
+                            contentStyle: {backgroundColor: colors.background},
+                        }}
+                    />
+                </AppLockGate>
+            </AppRefreshProvider>
+            <Toast
+                config={toastConfig}
+                position="bottom"
+                bottomOffset={64}
+                visibilityTime={2400}
+            />
+            {showAnimatedSplash ? (
+                <AnimatedSplashOverlay
+                    play={playAnimatedSplash}
+                    onFinish={onSplashFinish}
+                />
+            ) : null}
+        </PaperProvider>
+    );
+};
+
 export default function RootLayout() {
     const [playAnimatedSplash, setPlayAnimatedSplash] = useState(false);
     const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
@@ -201,32 +239,17 @@ export default function RootLayout() {
         <GestureHandlerRootView style={styles.container}>
             <SafeAreaProvider>
                 <Provider store={store}>
-                    <PaperProvider theme={DefaultTheme}>
-                        <StatusBar style={showAnimatedSplash ? "light" : "dark"} />
-                        <AppRefreshProvider
-                            requestAppRefresh={() => setAppRefreshKey((key) => key + 1)}
-                        >
-                            <Stack
-                                key={appRefreshKey}
-                                screenOptions={{
-                                    headerShown: false,
-                                    contentStyle: {backgroundColor: Colors.background},
-                                }}
+                    <ThemeProvider>
+                        <PreferencesProvider>
+                            <ThemedRoot
+                                appRefreshKey={appRefreshKey}
+                                onRequestRefresh={() => setAppRefreshKey((key) => key + 1)}
+                                showAnimatedSplash={showAnimatedSplash}
+                                playAnimatedSplash={playAnimatedSplash}
+                                onSplashFinish={() => setShowAnimatedSplash(false)}
                             />
-                        </AppRefreshProvider>
-                        <Toast
-                            config={toastConfig}
-                            position="bottom"
-                            bottomOffset={64}
-                            visibilityTime={2400}
-                        />
-                        {showAnimatedSplash ? (
-                            <AnimatedSplashOverlay
-                                play={playAnimatedSplash}
-                                onFinish={() => setShowAnimatedSplash(false)}
-                            />
-                        ) : null}
-                    </PaperProvider>
+                        </PreferencesProvider>
+                    </ThemeProvider>
                 </Provider>
             </SafeAreaProvider>
         </GestureHandlerRootView>
@@ -257,10 +280,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         paddingVertical: 12,
         borderRadius: 18,
-        backgroundColor: Colors.surface,
         borderWidth: 1,
-        borderColor: Colors.border,
-        shadowColor: Colors.deepPurple,
         shadowOffset: {width: 0, height: 14},
         shadowOpacity: 0.16,
         shadowRadius: 24,
@@ -280,13 +300,11 @@ const styles = StyleSheet.create({
     toastTitle: {
         fontFamily: Fonts.semibold,
         fontSize: 14,
-        color: Colors.text,
     },
     toastBody: {
         marginTop: 2,
         fontFamily: Fonts.regular,
         fontSize: 12,
         lineHeight: 17,
-        color: Colors.textSubtle,
     },
 });

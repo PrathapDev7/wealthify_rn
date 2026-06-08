@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Colors, Shadows } from '@/src/styles/theme';
+import { Shadows, useColors } from '@/src/styles/theme';
 import WealthifyIcon, { resolveWealthifyIconName } from './WealthifyIcon';
 
 interface Props {
@@ -19,13 +19,16 @@ interface Props {
 const CircleIconButton: React.FC<Props> = ({
     name,
     onPress,
-    color = Colors.text,
-    bg = Colors.surface,
+    color,
+    bg,
     size = 40,
     iconSize,
     icon,
     style,
 }) => {
+    const colors = useColors();
+    const resolvedColor = color ?? colors.text;
+    const resolvedBg = bg ?? colors.surface;
     const wealthifyName = resolveWealthifyIconName(name);
     return (
         <TouchableOpacity
@@ -35,7 +38,7 @@ const CircleIconButton: React.FC<Props> = ({
                 styles.base,
                 Shadows.sm,
                 {
-                    backgroundColor: bg,
+                    backgroundColor: resolvedBg,
                     width: size,
                     height: size,
                     borderRadius: size / 2,
@@ -48,7 +51,7 @@ const CircleIconButton: React.FC<Props> = ({
             ) : wealthifyName ? (
                 <WealthifyIcon name={wealthifyName} size={iconSize ?? Math.round(size * 0.54)} />
             ) : (
-                <Icon name={name} size={iconSize ?? Math.round(size * 0.5)} color={color} />
+                <Icon name={name} size={iconSize ?? Math.round(size * 0.5)} color={resolvedColor} />
             )}
         </TouchableOpacity>
     );

@@ -50,7 +50,21 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Wealthify needs access to your photos so you can set a custom category icon.",
+          "cameraPermission": "Wealthify needs camera access so you can capture a custom category icon."
+        }
+      ],
+      "expo-notifications",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Wealthify uses Face ID to unlock the app."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

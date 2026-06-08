@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Colors, Fonts, Shadows, radius, space } from "@/src/styles/theme";
+import { Fonts, Shadows, radius, space, useColors, type ColorPalette } from "@/src/styles/theme";
 
 interface Action {
   key: string;
@@ -30,20 +30,20 @@ interface Props {
   bottomOffset?: number;
 }
 
-const ACTIONS: Action[] = [
+const makeActions = (colors: ColorPalette): Action[] => [
   {
     key: "expense",
     label: "Add Expense",
     icon: "receipt",
-    color: Colors.primary,
+    color: colors.primary,
   },
   {
     key: "income",
     label: "Add Income",
     icon: "arrow-up",
-    color: Colors.accentDark,
+    color: colors.accentDark,
   },
-  { key: "budget", label: "Set Budget", icon: "wallet", color: Colors.warning },
+  { key: "budget", label: "Set Budget", icon: "wallet", color: colors.warning },
 ];
 
 // Speed-dial pill stack rendered above the center FAB. Tap the backdrop or
@@ -54,6 +54,9 @@ const AddActionSheet: React.FC<Props> = ({
   onSelect,
   bottomOffset,
 }) => {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const ACTIONS = useMemo(() => makeActions(colors), [colors]);
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const [shouldRender, setShouldRender] = useState(visible);
@@ -176,7 +179,7 @@ const AddActionSheet: React.FC<Props> = ({
                 style={styles.pill}
               >
                 <View style={[styles.iconCircle, { backgroundColor: a.color }]}>
-                  <Icon name={a.icon} size={20} color={Colors.textInverse} />
+                  <Icon name={a.icon} size={20} color={colors.textInverse} />
                 </View>
                 <Text style={styles.pillLabel}>{a.label}</Text>
               </TouchableOpacity>
@@ -188,7 +191,7 @@ const AddActionSheet: React.FC<Props> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   backdrop: {
     position: "absolute",
     left: 0,
@@ -227,7 +230,7 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     paddingVertical: 8,
     paddingLeft: 8,
     paddingRight: 22,
@@ -248,7 +251,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: Fonts.medium,
     fontSize: 14,
-    color: Colors.text,
+    color: colors.text,
     letterSpacing: 0,
     textAlign: "left",
   },

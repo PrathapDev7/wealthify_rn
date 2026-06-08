@@ -1,13 +1,10 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Replace with your actual API base URL
-const baseURL = 'https://expense-tracker-be-3rvm.onrender.com/api/v1/';
-// const baseURL = 'http://localhost:5000/api/v1/';
-// const fallbackBaseURL = 'https://fc50-2406-7400-54-ad1-5500-fc6a-76d8-bc19.ngrok-free.app/api/v1/';
-// const normalizeBaseURL = (url: string) => url.endsWith('/') ? url : `${url}/`;
-// const baseURL = normalizeBaseURL(process.env.EXPO_PUBLIC_API_BASE_URL || fallbackBaseURL);
-
+// (e.g. http://localhost:5000/api/v1/). Falls back to the hosted backend.
+const HOSTED_BASE_URL = 'https://expense-tracker-be-3rvm.onrender.com/api/v1/';
+const ngrokURL = 'https://corset-unsigned-composed.ngrok-free.dev/api/v1/';
+const baseURL = HOSTED_BASE_URL || ngrokURL || 'http://localhost:5000/api/v1/';
 const getHeaders = async () => {
     const headers = {
         'Content-Type': 'application/json',
@@ -50,6 +47,25 @@ const request = async (method, path, body = null, query = null) => {
         }
 
         throw err; // rethrow so you can catch it in calling code if needed
+    }
+};
+
+// Separate helper for multipart/form-data uploads: the JSON `request` helper
+// hardcodes Content-Type, which would break the multipart boundary.
+const uploadRequest = async (path, formData) => {
+    const url = `${baseURL}${path}`;
+    const headers = await getHeaders();
+    delete headers['Content-Type']; // let axios set multipart boundary
+
+    try {
+        return await axios.post(url, formData, { headers });
+    } catch (err) {
+        console.log('Upload Error:', err?.response?.data || err.message);
+        if (err.response?.status === 401) {
+            await AsyncStorage.removeItem('wealthify_token');
+            await AsyncStorage.removeItem('wealthify_user');
+        }
+        throw err;
     }
 };
 
@@ -141,5 +157,68 @@ export default class APIService {
     }
     getBudgets() {
         return request("GET", 'get-budgets')
+    }
+
+    // ---- categories (per-user CRUD) ----
+    updateCategory(id, data) {
+        return request("PUT", `update-category/${id}`, data)
+    }
+    deleteCategory(id) {
+        return request("DELETE", `delete-category/${id}`)
+    }
+
+    // ---- image upload (S3) ----
+    uploadImage(formData) {
+        return uploadRequest("upload-image", formData)
+    }
+
+    // ---- recurring ----
+    addRecurring(data) {
+        return request("POST", "add-recurring", data)
+    }
+    getRecurring() {
+        return request("GET", "get-recurring")
+    }
+    updateRecurring(id, data) {
+        return request("PUT", `update-recurring/${id}`, data)
+    }
+    deleteRecurring(id) {
+        return request("DELETE", `delete-recurring/${id}`)
+    }
+
+    // ---- goals ----
+    addGoal(data) {
+        return request("POST", "add-goal", data)
+    }
+    getGoals() {
+        return request("GET", "get-goals")
+    }
+    updateGoal(id, data) {
+        return request("PUT", `update-goal/${id}`, data)
+    }
+    contributeGoal(id, data) {
+        return request("POST", `contribute-goal/${id}`, data)
+    }
+    deleteGoal(id) {
+        return request("DELETE", `delete-goal/${id}`)
+    }
+
+    // ---- wallets ----
+    addWallet(data) {
+        return request("POST", "add-wallet", data)
+    }
+    getWallets() {
+        return request("GET", "get-wallets")
+    }
+    updateWallet(id, data) {
+        return request("PUT", `update-wallet/${id}`, data)
+    }
+    deleteWallet(id) {
+        return request("DELETE", `delete-wallet/${id}`)
+    }
+
+    // ---- insights ----
+    getInsights() {
+        return request("GET", "get-insights")
     }
 }

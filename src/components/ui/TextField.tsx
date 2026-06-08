@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
     KeyboardTypeOptions,
     Pressable,
@@ -10,7 +10,7 @@ import {
     ViewStyle,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Colors, Typography, noWebOutline, radius, space } from '@/src/styles/theme';
+import { Typography, noWebOutline, radius, space, useColors, type ColorPalette } from '@/src/styles/theme';
 
 interface Props {
     label?: string;
@@ -45,6 +45,8 @@ const TextField: React.FC<Props> = ({
     maxLength,
     editable = true,
 }) => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const inputRef = useRef<TextInput>(null);
     const [reveal, setReveal] = useState(false);
     const [focused, setFocused] = useState(false);
@@ -71,14 +73,14 @@ const TextField: React.FC<Props> = ({
                     <Icon
                         name={leftIconName}
                         size={18}
-                        color={Colors.textSubtle}
+                        color={colors.textSubtle}
                         style={styles.leftIcon}
                     />
                 ) : null}
                 <TextInput
                     ref={inputRef}
                     placeholder={placeholder}
-                    placeholderTextColor={Colors.textSubtle}
+                    placeholderTextColor={colors.textSubtle}
                     value={value}
                     onChangeText={onChangeText}
                     secureTextEntry={isSecure}
@@ -100,7 +102,7 @@ const TextField: React.FC<Props> = ({
                         <Icon
                             name={reveal ? 'eye-outline' : 'eye-off-outline'}
                             size={20}
-                            color={Colors.textSubtle}
+                            color={colors.textSubtle}
                         />
                     </TouchableOpacity>
                 ) : null}
@@ -111,33 +113,34 @@ const TextField: React.FC<Props> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     wrap: {
         width: '100%',
         marginBottom: space.lg,
     },
     label: {
         ...Typography.label,
+        color: colors.textSubtle,
         marginBottom: space.sm,
     },
     field: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
         borderWidth: 1.5,
-        borderColor: Colors.border,
+        borderColor: colors.border,
         borderRadius: radius.md,
         paddingHorizontal: space.lg,
         height: 52,
     },
     fieldFocused: {
-        borderColor: Colors.primary,
+        borderColor: colors.primary,
     },
     fieldError: {
-        borderColor: Colors.negative,
+        borderColor: colors.negative,
     },
     fieldDisabled: {
-        backgroundColor: Colors.surfaceMuted,
+        backgroundColor: colors.surfaceMuted,
     },
     leftIcon: {
         marginRight: space.sm,
@@ -145,11 +148,12 @@ const styles = StyleSheet.create({
     input: {
         flex: 1,
         ...Typography.body,
+        color: colors.text,
         paddingVertical: 0,
     },
     errorText: {
         ...Typography.caption,
-        color: Colors.negative,
+        color: colors.negative,
         marginTop: space.xs,
     },
 });

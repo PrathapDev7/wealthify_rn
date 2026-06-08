@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     ActivityIndicator,
     StyleSheet,
@@ -10,13 +10,14 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-    Colors,
     Fonts,
     Gradients,
     Shadows,
     Typography,
     radius,
     space,
+    useColors,
+    type ColorPalette,
 } from '@/src/styles/theme';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'dark';
@@ -49,6 +50,9 @@ const PillButton: React.FC<Props> = ({
     textStyle,
     fullWidth = true,
 }) => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
+    const variantStyles = useMemo(() => makeVariantStyles(colors), [colors]);
     const isDisabled = disabled || loading;
     const isPrimary = variant === 'primary';
 
@@ -66,7 +70,7 @@ const PillButton: React.FC<Props> = ({
         variantStyles[variant].label,
         textStyle,
     ];
-    const labelColor = (variantStyles[variant].label.color as string) || Colors.textInverse;
+    const labelColor = (variantStyles[variant].label.color as string) || colors.textInverse;
 
     const content = loading ? (
         <ActivityIndicator color={labelColor} />
@@ -118,7 +122,7 @@ const PillButton: React.FC<Props> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     base: {
         borderRadius: radius.md,
         alignItems: 'center',
@@ -156,6 +160,7 @@ const styles = StyleSheet.create({
     },
     label: {
         ...Typography.button,
+        color: colors.textInverse,
     },
 });
 
@@ -171,33 +176,35 @@ const sizeLabelStyles: Record<Size, TextStyle> = {
     lg: { fontSize: 14 },
 };
 
-const variantStyles: Record<Variant, { container: ViewStyle; label: TextStyle }> = {
+const makeVariantStyles = (
+    colors: ColorPalette,
+): Record<Variant, { container: ViewStyle; label: TextStyle }> => ({
     primary: {
         container: {}, // unused — rendered as LinearGradient
-        label: { color: Colors.textInverse, fontFamily: Fonts.semibold },
+        label: { color: colors.textInverse, fontFamily: Fonts.semibold },
     },
     secondary: {
         container: {
-            backgroundColor: Colors.surface,
+            backgroundColor: colors.surface,
             borderWidth: 1,
-            borderColor: Colors.border,
+            borderColor: colors.border,
             ...Shadows.sm,
         },
-        label: { color: Colors.text, fontFamily: Fonts.semibold },
+        label: { color: colors.text, fontFamily: Fonts.semibold },
     },
     ghost: {
         container: {
             backgroundColor: 'transparent',
         },
-        label: { color: Colors.primary, fontFamily: Fonts.semibold },
+        label: { color: colors.primary, fontFamily: Fonts.semibold },
     },
     dark: {
         container: {
-            backgroundColor: Colors.fab,
+            backgroundColor: colors.fab,
             ...Shadows.fab,
         },
-        label: { color: Colors.textInverse, fontFamily: Fonts.semibold },
+        label: { color: colors.textInverse, fontFamily: Fonts.semibold },
     },
-};
+});
 
 export default PillButton;

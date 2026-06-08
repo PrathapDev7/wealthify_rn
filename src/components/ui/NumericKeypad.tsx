@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Colors, Fonts, Typography, radius, space } from '@/src/styles/theme';
+import { Fonts, Typography, radius, space, useColors, type ColorPalette } from '@/src/styles/theme';
 
 const KEYS = [
     ['1', '2', '3'],
@@ -27,7 +27,10 @@ interface Props {
     style?: any;
 }
 
-const NumericKeypad: React.FC<Props> = ({ onDigit, onBackspace, style }) => (
+const NumericKeypad: React.FC<Props> = ({ onDigit, onBackspace, style }) => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
+    return (
     <View style={[styles.wrap, style]}>
         {KEYS.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.row}>
@@ -42,7 +45,7 @@ const NumericKeypad: React.FC<Props> = ({ onDigit, onBackspace, style }) => (
                             onPress={() => (isBackspace ? onBackspace() : onDigit(key))}
                         >
                             {isBackspace ? (
-                                <Icon name="backspace-outline" size={20} color={Colors.text} />
+                                <Icon name="backspace-outline" size={20} color={colors.text} />
                             ) : (
                                 <>
                                     <Text style={styles.number}>{key}</Text>
@@ -55,13 +58,14 @@ const NumericKeypad: React.FC<Props> = ({ onDigit, onBackspace, style }) => (
             </View>
         ))}
     </View>
-);
+    );
+};
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     wrap: {
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
         borderTopWidth: 1,
-        borderTopColor: Colors.divider,
+        borderTopColor: colors.divider,
         paddingHorizontal: space.xl,
         paddingTop: space.xs,
         paddingBottom: space.sm,
@@ -82,13 +86,14 @@ const styles = StyleSheet.create({
         fontFamily: Fonts.medium,
         fontSize: 22,
         lineHeight: 25,
+        color: colors.text,
     },
     letters: {
         ...Typography.caption,
         fontFamily: Fonts.bold,
         fontSize: 9,
         lineHeight: 11,
-        color: Colors.text,
+        color: colors.text,
     },
 });
 

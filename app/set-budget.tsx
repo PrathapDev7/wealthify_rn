@@ -23,10 +23,11 @@ import {
     ScreenContainer,
 } from '@/src/components/ui';
 import {
-    Colors,
     Fonts,
     Typography,
     space,
+    useColors,
+    type ColorPalette,
 } from '@/src/styles/theme';
 import { formatNumberWithCommas } from '@/src/utils/helper';
 import { remoteImage } from '@/assets/Constants/remoteAssets';
@@ -40,6 +41,8 @@ const budgetIcon = remoteImage('assets/icons/budget.png');
 
 export default function SetBudgetScreen() {
     const router = useRouter();
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const params = useLocalSearchParams<{
         category?: string;
         resetAmount?: string;
@@ -297,7 +300,7 @@ export default function SetBudgetScreen() {
                                 style={styles.scopeChip}
                             >
                                 <Text numberOfLines={1} style={styles.scopeChipText}>{budgetKey}</Text>
-                                <Icon name="chevron-down" size={15} color={Colors.primary} />
+                                <Icon name="chevron-down" size={15} color={colors.primary} />
                             </TouchableOpacity>
                         </View>
                         <View style={styles.amountRow}>
@@ -416,7 +419,10 @@ export default function SetBudgetScreen() {
     );
 }
 
-const SetBudgetSkeleton = () => (
+const SetBudgetSkeleton = () => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
+    return (
     <>
         <Card style={styles.balanceCard}>
             <SkeletonBlock width={50} height={50} radius={14} />
@@ -484,9 +490,10 @@ const SetBudgetSkeleton = () => (
             </View>
         </Card>
     </>
-);
+    );
+};
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     flex: { flex: 1 },
     headerRow: {
         flexDirection: 'row',
@@ -500,6 +507,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         ...Typography.screenTitle,
+        color: colors.text,
     },
     headerBottomShade: {
         position: 'absolute',
@@ -530,9 +538,11 @@ const styles = StyleSheet.create({
     },
     balanceLabel: {
         ...Typography.label,
+        color: colors.textSubtle,
     },
     balanceAmount: {
         ...Typography.subtitle,
+        color: colors.text,
         marginTop: 2,
     },
     balanceMeta: {
@@ -541,9 +551,11 @@ const styles = StyleSheet.create({
     },
     metaLabel: {
         ...Typography.caption,
+        color: colors.textSubtle,
     },
     metaValue: {
         ...Typography.moneySm,
+        color: colors.text,
         marginTop: 2,
     },
     amountCard: {
@@ -559,20 +571,21 @@ const styles = StyleSheet.create({
     },
     scopeLabel: {
         ...Typography.label,
+        color: colors.textSubtle,
     },
     scopeChip: {
         maxWidth: 180,
         paddingHorizontal: space.md,
         paddingVertical: 7,
         borderRadius: 999,
-        backgroundColor: Colors.primarySoft,
+        backgroundColor: colors.primarySoft,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 3,
     },
     scopeChipText: {
         ...Typography.bodyStrong,
-        color: Colors.primary,
+        color: colors.primary,
         fontSize: 12,
         flexShrink: 1,
     },
@@ -584,7 +597,7 @@ const styles = StyleSheet.create({
     currency: {
         ...Typography.title,
         fontFamily: Fonts.semibold,
-        color: Colors.textSubtle,
+        color: colors.textSubtle,
         marginRight: 4,
         lineHeight: 32,
         includeFontPadding: false,
@@ -598,11 +611,12 @@ const styles = StyleSheet.create({
         maxWidth: 260,
         textAlign: 'center',
         padding: 0,
-        color: Colors.text,
+        color: colors.text,
         includeFontPadding: false,
     },
     amountLabel: {
         ...Typography.bodySm,
+        color: colors.textSubtle,
         marginTop: space.xs,
     },
     quickSection: {
@@ -611,6 +625,7 @@ const styles = StyleSheet.create({
     },
     sectionLabel: {
         ...Typography.label,
+        color: colors.textSubtle,
         marginBottom: space.sm,
     },
     presetGrid: {
@@ -626,21 +641,21 @@ const styles = StyleSheet.create({
         minHeight: 38,
         paddingHorizontal: space.sm,
         borderRadius: 999,
-        backgroundColor: Colors.surfaceMuted,
+        backgroundColor: colors.surfaceMuted,
         borderWidth: 1,
-        borderColor: Colors.border,
+        borderColor: colors.border,
     },
     presetChipActive: {
-        backgroundColor: Colors.primary,
-        borderColor: Colors.primary,
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
     },
     presetText: {
         ...Typography.bodyStrong,
         fontSize: 12,
-        color: Colors.text,
+        color: colors.text,
     },
     presetTextActive: {
-        color: Colors.textInverse,
+        color: colors.textInverse,
     },
     statsRow: {
         flexDirection: 'row',
@@ -653,19 +668,21 @@ const styles = StyleSheet.create({
         paddingHorizontal: space.lg,
         paddingVertical: space.md,
         borderRadius: 18,
-        backgroundColor: Colors.surfaceLifted,
+        backgroundColor: colors.surfaceLifted,
         borderWidth: 1,
-        borderColor: Colors.divider,
+        borderColor: colors.divider,
     },
     statLabel: {
         ...Typography.caption,
+        color: colors.textSubtle,
         marginBottom: 4,
     },
     statValue: {
         ...Typography.moneySm,
+        color: colors.text,
     },
     statValueNegative: {
-        color: Colors.negative,
+        color: colors.negative,
     },
     savedCard: {
         paddingVertical: space.lg,
@@ -678,10 +695,11 @@ const styles = StyleSheet.create({
     },
     savedTitle: {
         ...Typography.subtitle,
+        color: colors.text,
     },
     savedCount: {
         ...Typography.caption,
-        color: Colors.primary,
+        color: colors.primary,
     },
     savedList: {
         gap: space.sm,
@@ -693,28 +711,29 @@ const styles = StyleSheet.create({
         minHeight: 42,
         paddingHorizontal: space.md,
         borderRadius: 14,
-        backgroundColor: Colors.surfaceSoft,
+        backgroundColor: colors.surfaceSoft,
         borderWidth: 1,
-        borderColor: Colors.border,
+        borderColor: colors.border,
         gap: space.md,
     },
     savedBudgetActive: {
-        backgroundColor: Colors.primarySoft,
-        borderColor: Colors.primarySoftStrong,
+        backgroundColor: colors.primarySoft,
+        borderColor: colors.primarySoftStrong,
     },
     savedName: {
         ...Typography.bodyMedium,
         flex: 1,
-        color: Colors.textBody,
+        color: colors.textBody,
     },
     savedNameActive: {
-        color: Colors.primary,
+        color: colors.primary,
     },
     savedAmount: {
         ...Typography.moneySm,
+        color: colors.text,
     },
     savedAmountActive: {
-        color: Colors.primary,
+        color: colors.primary,
     },
     footer: {
         paddingHorizontal: space.xl,

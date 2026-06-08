@@ -20,13 +20,14 @@ import {
   SectionHeader,
 } from "@/src/components/ui";
 import {
-  Colors,
   Fonts,
   Shadows,
   Typography,
   noWebOutline,
   radius,
   space,
+  useColors,
+  type ColorPalette,
 } from "@/src/styles/theme";
 import { formatNumberWithCommas } from "@/src/utils/helper";
 import { resolveCategoryIcon } from "@/src/utils/categoryIcon";
@@ -34,6 +35,10 @@ import { getTransactionDate, readTransactionList } from "@/src/utils/transaction
 import SkeletonBlock from "@/src/components/skeletons/SkeletonBlock";
 
 const api = new APIService();
+
+type Styles = ReturnType<typeof makeStyles>;
+type LegendStyles = ReturnType<typeof makeLegendStyles>;
+type SkeletonStyles = ReturnType<typeof makeSkeletonStyles>;
 
 interface Txn {
   type?: "income" | "expense";
@@ -97,6 +102,10 @@ const sumTransactions = (list: Txn[]) =>
   list.reduce((total, txn) => total + Number(txn.amount || 0), 0);
 
 export default function AnalyticsScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const legendStyles = useMemo(() => makeLegendStyles(colors), [colors]);
+  const skeletonStyles = useMemo(() => makeSkeletonStyles(colors), [colors]);
   const { width } = useWindowDimensions();
   const chartWidth = Math.min(width - space.xl * 2 - space.lg * 2 - 44, 300);
   const [selectedTab, setSelectedTab] = useState<AnalyticsTab>("overview");
@@ -299,7 +308,7 @@ export default function AnalyticsScreen() {
       data.push({
         value: inc[bucket.key] || 0,
         spacing: 2,
-        frontColor: Colors.primary,
+        frontColor: colors.primary,
         label: bucket.label,
         labelWidth: chartLabelWidth,
         labelTextStyle: styles.chartLabel,
@@ -311,7 +320,7 @@ export default function AnalyticsScreen() {
       const expenseIndex = data.length;
       data.push({
         value: exp[bucket.key] || 0,
-        frontColor: Colors.accentDark,
+        frontColor: colors.accentDark,
         spacing: idx < chartBuckets.length - 1 ? distributedGroupSpacing : 0,
         tooltipType: "Expense",
         tooltipPeriod: bucket.longLabel,
@@ -327,6 +336,8 @@ export default function AnalyticsScreen() {
     currentIncomes,
     currentExpenses,
     selectedRangeKey,
+    colors,
+    styles,
   ]);
   const chartTooltipPlacement = useMemo(() => {
     if (!selectedChartItem || barData.length <= 2)
@@ -335,7 +346,7 @@ export default function AnalyticsScreen() {
     if (selectedChartItem.index >= barData.length - 2)
       return styles.chartTooltipOverlayRight;
     return styles.chartTooltipOverlayCenter;
-  }, [barData.length, selectedChartItem]);
+  }, [barData.length, selectedChartItem, styles]);
 
   const totalIncome = useMemo(
     () => sumTransactions(currentIncomes),
@@ -348,7 +359,7 @@ export default function AnalyticsScreen() {
   const historyBalance = totalIncome - totalExpense;
   const historySign = historyBalance >= 0 ? "+" : "-";
   const historyAmountColor =
-    historyBalance >= 0 ? Colors.accentDark : Colors.negative;
+    historyBalance >= 0 ? colors.accentDark : colors.negative;
   const hasRangeData = totalIncome > 0 || totalExpense > 0;
 
   const byCategory = useMemo(() => {
@@ -502,7 +513,12 @@ export default function AnalyticsScreen() {
         </View>
 
         {loading ? (
-          <AnalyticsSkeleton selectedTab={selectedTab} />
+          <AnalyticsSkeleton
+            selectedTab={selectedTab}
+            styles={styles}
+            legendStyles={legendStyles}
+            skeletonStyles={skeletonStyles}
+          />
         ) : (
           <>
         <Card style={styles.chartCard}>
@@ -525,7 +541,7 @@ export default function AnalyticsScreen() {
                 <Icon
                   name={rangeMenuOpen ? "chevron-up" : "chevron-down"}
                   size={14}
-                  color={Colors.text}
+                  color={colors.text}
                 />
               </Pressable>
               {rangeMenuOpen ? (
@@ -563,8 +579,8 @@ export default function AnalyticsScreen() {
               ) : null}
             </View>
             <View style={styles.legendRow}>
-              <Legend dot={Colors.primary} label="Income" />
-              <Legend dot={Colors.accentDark} label="Expense" />
+              <Legend dot={colors.primary} label="Income" legendStyles={legendStyles} />
+              <Legend dot={colors.accentDark} label="Expense" legendStyles={legendStyles} />
             </View>
           </View>
           <View
@@ -590,7 +606,7 @@ export default function AnalyticsScreen() {
                 yAxisLabelWidth={chartYAxisLabelWidth}
                 yAxisTextStyle={styles.chartYAxisLabel}
                 xAxisTextNumberOfLines={1}
-                rulesColor={Colors.divider}
+                rulesColor={colors.divider}
                 rulesType="dashed"
                 dashWidth={8}
                 dashGap={8}
@@ -615,7 +631,11 @@ export default function AnalyticsScreen() {
                 nestedScrollEnabled
               />
             ) : (
-              <EmptyAnalyticsChartState rangeLabel={emptyRangeLabel} />
+              <EmptyAnalyticsChartState
+                rangeLabel={emptyRangeLabel}
+                styles={styles}
+                colors={colors}
+              />
             )}
             {hasRangeData && selectedChartItem ? (
               <View
@@ -645,8 +665,8 @@ export default function AnalyticsScreen() {
               <View style={styles.statLeft}>
                 <IconBadge
                   name="trending-up"
-                  color={Colors.accentDark}
-                  bg={Colors.accentSoft}
+                  color={colors.accentDark}
+                  bg={colors.accentSoft}
                   size={40}
                   rounded="circle"
                   elevated={false}
@@ -664,8 +684,8 @@ export default function AnalyticsScreen() {
               <View style={styles.statLeft}>
                 <IconBadge
                   name="trending-down"
-                  color={Colors.negative}
-                  bg={Colors.negativeSoft}
+                  color={colors.negative}
+                  bg={colors.negativeSoft}
                   size={40}
                   rounded="circle"
                   elevated={false}
@@ -715,7 +735,11 @@ export default function AnalyticsScreen() {
                   </View>
                 ))
               ) : (
-                <EmptyHistoryState rangeLabel={emptyRangeLabel} />
+                <EmptyHistoryState
+                  rangeLabel={emptyRangeLabel}
+                  styles={styles}
+                  colors={colors}
+                />
               )}
             </Card>
           </>
@@ -726,9 +750,9 @@ export default function AnalyticsScreen() {
                 <View style={styles.trendSummaryHeader}>
                   <IconBadge
                     name={netMovement >= 0 ? "trending-up" : "trending-down"}
-                    color={netMovement >= 0 ? Colors.accentDark : Colors.negative}
+                    color={netMovement >= 0 ? colors.accentDark : colors.negative}
                     bg={
-                      netMovement >= 0 ? Colors.accentSoft : Colors.negativeSoft
+                      netMovement >= 0 ? colors.accentSoft : colors.negativeSoft
                     }
                     size={42}
                     rounded="circle"
@@ -742,8 +766,8 @@ export default function AnalyticsScreen() {
                         {
                           color:
                             netMovement >= 0
-                              ? Colors.accentDark
-                              : Colors.negative,
+                              ? colors.accentDark
+                              : colors.negative,
                         },
                       ]}
                     >
@@ -768,7 +792,11 @@ export default function AnalyticsScreen() {
                 </View>
               </Card>
             ) : (
-              <EmptyTrendSummaryState rangeLabel={emptyRangeLabel} />
+              <EmptyTrendSummaryState
+                rangeLabel={emptyRangeLabel}
+                styles={styles}
+                colors={colors}
+              />
             )}
 
             <SectionHeader title="Trend Detail" />
@@ -784,8 +812,8 @@ export default function AnalyticsScreen() {
                           {
                             color:
                               row.net >= 0
-                                ? Colors.accentDark
-                                : Colors.negative,
+                                ? colors.accentDark
+                                : colors.negative,
                           },
                         ]}
                       >
@@ -798,19 +826,25 @@ export default function AnalyticsScreen() {
                         label="Income"
                         value={row.income}
                         max={maxTrendAmount}
-                        color={Colors.primary}
+                        color={colors.primary}
+                        styles={styles}
                       />
                       <TrendBar
                         label="Expense"
                         value={row.expense}
                         max={maxTrendAmount}
-                        color={Colors.accentDark}
+                        color={colors.accentDark}
+                        styles={styles}
                       />
                     </View>
                   </View>
                 ))
               ) : (
-                <EmptyTrendDetailState rangeLabel={emptyRangeLabel} />
+                <EmptyTrendDetailState
+                  rangeLabel={emptyRangeLabel}
+                  styles={styles}
+                  colors={colors}
+                />
               )}
             </Card>
           </>
@@ -824,23 +858,30 @@ export default function AnalyticsScreen() {
   );
 }
 
-const Legend: React.FC<{ dot: string; label: string }> = ({ dot, label }) => (
+const Legend: React.FC<{
+  dot: string;
+  label: string;
+  legendStyles: LegendStyles;
+}> = ({ dot, label, legendStyles }) => (
   <View style={legendStyles.row}>
     <View style={[legendStyles.dot, { backgroundColor: dot }]} />
     <Text style={legendStyles.label}>{label}</Text>
   </View>
 );
 
-const AnalyticsSkeleton: React.FC<{ selectedTab: AnalyticsTab }> = ({
-  selectedTab,
-}) => (
+const AnalyticsSkeleton: React.FC<{
+  selectedTab: AnalyticsTab;
+  styles: Styles;
+  legendStyles: LegendStyles;
+  skeletonStyles: SkeletonStyles;
+}> = ({ selectedTab, styles, legendStyles, skeletonStyles }) => (
   <>
     <Card style={styles.chartCard}>
       <View style={styles.chartHeader}>
         <SkeletonBlock width={96} height={32} radius={16} />
         <View style={styles.legendRow}>
-          <LegendSkeleton />
-          <LegendSkeleton />
+          <LegendSkeleton legendStyles={legendStyles} skeletonStyles={skeletonStyles} />
+          <LegendSkeleton legendStyles={legendStyles} skeletonStyles={skeletonStyles} />
         </View>
       </View>
       <View style={styles.chartWrap}>
@@ -872,8 +913,8 @@ const AnalyticsSkeleton: React.FC<{ selectedTab: AnalyticsTab }> = ({
 
     {selectedTab === "overview" ? (
       <>
-        <StatRowSkeleton />
-        <StatRowSkeleton />
+        <StatRowSkeleton styles={styles} />
+        <StatRowSkeleton styles={styles} />
         <View style={skeletonStyles.sectionHeader}>
           <SkeletonBlock width={72} height={20} radius={10} />
         </View>
@@ -963,7 +1004,7 @@ const AnalyticsSkeleton: React.FC<{ selectedTab: AnalyticsTab }> = ({
   </>
 );
 
-const StatRowSkeleton = () => (
+const StatRowSkeleton: React.FC<{ styles: Styles }> = ({ styles }) => (
   <Card style={styles.statRow}>
     <View style={styles.statLeft}>
       <SkeletonBlock width={40} height={40} radius={20} />
@@ -975,7 +1016,10 @@ const StatRowSkeleton = () => (
   </Card>
 );
 
-const LegendSkeleton = () => (
+const LegendSkeleton: React.FC<{
+  legendStyles: LegendStyles;
+  skeletonStyles: SkeletonStyles;
+}> = ({ legendStyles, skeletonStyles }) => (
   <View style={legendStyles.row}>
     <SkeletonBlock width={8} height={8} radius={4} />
     <SkeletonBlock
@@ -987,19 +1031,22 @@ const LegendSkeleton = () => (
   </View>
 );
 
-const EmptyMetricChip: React.FC<{ dot: string; label: string }> = ({
-  dot,
-  label,
-}) => (
+const EmptyMetricChip: React.FC<{
+  dot: string;
+  label: string;
+  styles: Styles;
+}> = ({ dot, label, styles }) => (
   <View style={styles.emptyMetricChip}>
     <View style={[styles.emptyMetricDot, { backgroundColor: dot }]} />
     <Text style={styles.emptyMetricText}>{label}</Text>
   </View>
 );
 
-const EmptyAnalyticsChartState: React.FC<{ rangeLabel: string }> = ({
-  rangeLabel,
-}) => (
+const EmptyAnalyticsChartState: React.FC<{
+  rangeLabel: string;
+  styles: Styles;
+  colors: ColorPalette;
+}> = ({ rangeLabel, styles, colors }) => (
   <View style={styles.emptyChartState}>
     <View style={styles.emptyChartGraphic}>
       <View style={styles.emptyChartBars}>
@@ -1008,7 +1055,7 @@ const EmptyAnalyticsChartState: React.FC<{ rangeLabel: string }> = ({
         <View style={[styles.emptyBar, styles.emptyBarMuted]} />
       </View>
       <View style={styles.emptyChartIcon}>
-        <Icon name="analytics-outline" size={26} color={Colors.primary} />
+        <Icon name="analytics-outline" size={26} color={colors.primary} />
       </View>
     </View>
     <Text style={styles.emptyTitle}>No analytics yet</Text>
@@ -1016,16 +1063,20 @@ const EmptyAnalyticsChartState: React.FC<{ rangeLabel: string }> = ({
       Add income or expenses for {rangeLabel} to see your cash flow here.
     </Text>
     <View style={styles.emptyMetricRow}>
-      <EmptyMetricChip dot={Colors.primary} label="Income ₹0" />
-      <EmptyMetricChip dot={Colors.accentDark} label="Expense ₹0" />
+      <EmptyMetricChip dot={colors.primary} label="Income ₹0" styles={styles} />
+      <EmptyMetricChip dot={colors.accentDark} label="Expense ₹0" styles={styles} />
     </View>
   </View>
 );
 
-const EmptyHistoryState: React.FC<{ rangeLabel: string }> = ({ rangeLabel }) => (
+const EmptyHistoryState: React.FC<{
+  rangeLabel: string;
+  styles: Styles;
+  colors: ColorPalette;
+}> = ({ rangeLabel, styles, colors }) => (
   <View style={styles.emptyInlineState}>
     <View style={styles.emptyInlineIcon}>
-      <Icon name="file-tray-outline" size={24} color={Colors.textSubtle} />
+      <Icon name="file-tray-outline" size={24} color={colors.textSubtle} />
     </View>
     <View style={styles.emptyInlineCopy}>
       <Text style={styles.emptyInlineTitle}>No history yet</Text>
@@ -1036,12 +1087,14 @@ const EmptyHistoryState: React.FC<{ rangeLabel: string }> = ({ rangeLabel }) => 
   </View>
 );
 
-const EmptyTrendSummaryState: React.FC<{ rangeLabel: string }> = ({
-  rangeLabel,
-}) => (
+const EmptyTrendSummaryState: React.FC<{
+  rangeLabel: string;
+  styles: Styles;
+  colors: ColorPalette;
+}> = ({ rangeLabel, styles, colors }) => (
   <Card style={styles.emptyTrendSummaryCard}>
     <View style={styles.emptyInlineIcon}>
-      <Icon name="trending-up-outline" size={24} color={Colors.primary} />
+      <Icon name="trending-up-outline" size={24} color={colors.primary} />
     </View>
     <View style={styles.emptyInlineCopy}>
       <Text style={styles.emptyInlineTitle}>No movement yet</Text>
@@ -1052,11 +1105,13 @@ const EmptyTrendSummaryState: React.FC<{ rangeLabel: string }> = ({
   </Card>
 );
 
-const EmptyTrendDetailState: React.FC<{ rangeLabel: string }> = ({
-  rangeLabel,
-}) => (
+const EmptyTrendDetailState: React.FC<{
+  rangeLabel: string;
+  styles: Styles;
+  colors: ColorPalette;
+}> = ({ rangeLabel, styles, colors }) => (
   <View style={styles.emptyDetailState}>
-    <Icon name="stats-chart-outline" size={26} color={Colors.textSubtle} />
+    <Icon name="stats-chart-outline" size={26} color={colors.textSubtle} />
     <Text style={styles.emptyTitle}>No trend data</Text>
     <Text style={styles.emptySubText}>
       There are no income or expense entries for {rangeLabel}.
@@ -1069,7 +1124,8 @@ const TrendBar: React.FC<{
   value: number;
   max: number;
   color: string;
-}> = ({ label, value, max, color }) => {
+  styles: Styles;
+}> = ({ label, value, max, color, styles }) => {
   const fillWidth =
     `${Math.max(4, Math.min(100, (value / max) * 100))}%` as DimensionValue;
 
@@ -1091,7 +1147,8 @@ const TrendBar: React.FC<{
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) =>
+  StyleSheet.create({
   scroll: {
     paddingHorizontal: space.xl,
     paddingTop: space.lg,
@@ -1105,10 +1162,11 @@ const styles = StyleSheet.create({
   },
   title: {
     ...Typography.screenTitle,
+    color: colors.text,
   },
   segmentWrap: {
     flexDirection: "row",
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: 4,
     marginBottom: space.md,
@@ -1127,15 +1185,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 36,
     borderRadius: radius.sm,
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
   },
   segmentText: {
     ...Typography.bodySm,
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   segmentActiveText: {
     ...Typography.bodySm,
-    color: Colors.textInverse,
+    color: colors.textInverse,
     fontFamily: Fonts.bold,
   },
   chartCard: {
@@ -1175,9 +1233,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: space.md,
     paddingVertical: 6,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     borderRadius: radius.pill,
   },
   rangeMenu: {
@@ -1186,9 +1244,9 @@ const styles = StyleSheet.create({
     left: 0,
     width: 164,
     paddingVertical: space.xs,
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     borderRadius: radius.sm,
     ...Shadows.md,
     zIndex: 12,
@@ -1199,38 +1257,38 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm,
   },
   rangeOptionActive: {
-    backgroundColor: Colors.primarySoft,
+    backgroundColor: colors.primarySoft,
   },
   rangeOptionText: {
     ...Typography.bodySm,
     fontFamily: Fonts.medium,
-    color: Colors.textBody,
+    color: colors.textBody,
   },
   rangeOptionTextActive: {
-    color: Colors.primary,
+    color: colors.primary,
     fontFamily: Fonts.semibold,
   },
   rangeText: {
     ...Typography.bodySm,
     fontFamily: Fonts.medium,
     marginRight: 4,
-    color: Colors.text,
+    color: colors.text,
   },
   chartLabel: {
     ...Typography.caption,
-    color: Colors.textSubtle,
+    color: colors.textSubtle,
     textAlign: "center",
   },
   chartYAxisLabel: {
     ...Typography.caption,
-    color: Colors.textSubtle,
+    color: colors.textSubtle,
   },
   chartTooltip: {
     width: 128,
     minHeight: 56,
     paddingHorizontal: space.sm,
     paddingVertical: 6,
-    backgroundColor: Colors.text,
+    backgroundColor: colors.text,
     borderRadius: radius.xs,
     alignItems: "center",
     justifyContent: "center",
@@ -1257,12 +1315,12 @@ const styles = StyleSheet.create({
   },
   chartTooltipLabel: {
     ...Typography.caption,
-    color: Colors.textInverse,
+    color: colors.textInverse,
     fontFamily: Fonts.medium,
   },
   chartTooltipValue: {
     ...Typography.bodySm,
-    color: Colors.textInverse,
+    color: colors.textInverse,
     fontFamily: Fonts.semibold,
     marginTop: 2,
   },
@@ -1287,9 +1345,11 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     ...Typography.bodyMedium,
+    color: colors.text,
   },
   statAmount: {
     ...Typography.subtitle,
+    color: colors.text,
   },
   donutCard: {
     marginBottom: space.md,
@@ -1299,7 +1359,7 @@ const styles = StyleSheet.create({
   },
   donutLabel: {
     ...Typography.bodyMedium,
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   donutWrap: {
     alignItems: "center",
@@ -1312,10 +1372,11 @@ const styles = StyleSheet.create({
   },
   donutCenterSmall: {
     ...Typography.caption,
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   donutCenterBig: {
     ...Typography.titleLg,
+    color: colors.text,
   },
   emptyChartState: {
     width: "100%",
@@ -1346,19 +1407,19 @@ const styles = StyleSheet.create({
     width: 16,
     borderRadius: radius.pill,
     borderWidth: 3,
-    borderColor: Colors.surface,
+    borderColor: colors.surface,
   },
   emptyBarIncome: {
     height: 42,
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
   },
   emptyBarExpense: {
     height: 30,
-    backgroundColor: Colors.accentDark,
+    backgroundColor: colors.accentDark,
   },
   emptyBarMuted: {
     height: 50,
-    backgroundColor: Colors.primarySoftStrong,
+    backgroundColor: colors.primarySoftStrong,
   },
   emptyChartIcon: {
     width: 58,
@@ -1366,17 +1427,19 @@ const styles = StyleSheet.create({
     borderRadius: 29,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.primarySoft,
+    backgroundColor: colors.primarySoft,
     borderWidth: 6,
-    borderColor: Colors.surface,
+    borderColor: colors.surface,
     ...Shadows.xs,
   },
   emptyTitle: {
     ...Typography.bodyStrong,
+    color: colors.text,
     textAlign: "center",
   },
   emptySubText: {
     ...Typography.bodySm,
+    color: colors.textSubtle,
     maxWidth: 274,
     marginTop: space.xs,
     textAlign: "center",
@@ -1395,7 +1458,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     marginHorizontal: space.xs,
     marginBottom: space.xs,
-    backgroundColor: Colors.surfaceSoft,
+    backgroundColor: colors.surfaceSoft,
     borderRadius: radius.pill,
   },
   emptyMetricDot: {
@@ -1406,7 +1469,7 @@ const styles = StyleSheet.create({
   },
   emptyMetricText: {
     ...Typography.caption,
-    color: Colors.textBody,
+    color: colors.textBody,
   },
   emptyInlineState: {
     flexDirection: "row",
@@ -1422,16 +1485,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: space.md,
-    backgroundColor: Colors.surfaceSoft,
+    backgroundColor: colors.surfaceSoft,
   },
   emptyInlineCopy: {
     flex: 1,
   },
   emptyInlineTitle: {
     ...Typography.bodyStrong,
+    color: colors.text,
   },
   emptyInlineSub: {
     ...Typography.bodySm,
+    color: colors.textSubtle,
     marginTop: 2,
   },
   emptyTrendSummaryCard: {
@@ -1447,7 +1512,7 @@ const styles = StyleSheet.create({
   catRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: space.md,
     marginBottom: space.sm,
@@ -1466,10 +1531,11 @@ const styles = StyleSheet.create({
   },
   historyDay: {
     ...Typography.bodyStrong,
+    color: colors.text,
   },
   historyTotal: {
     ...Typography.bodyStrong,
-    color: Colors.accentDark,
+    color: colors.accentDark,
   },
   historyRow: {
     flexDirection: "row",
@@ -1477,7 +1543,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
     borderTopWidth: 1,
-    borderTopColor: Colors.divider,
+    borderTopColor: colors.divider,
   },
   catBody: {
     flex: 1,
@@ -1485,12 +1551,15 @@ const styles = StyleSheet.create({
   },
   catTitle: {
     ...Typography.bodyMedium,
+    color: colors.text,
   },
   catShare: {
     ...Typography.caption,
+    color: colors.textSubtle,
   },
   catAmount: {
     ...Typography.bodyMedium,
+    color: colors.text,
     marginLeft: space.sm,
   },
   trendSummaryCard: {
@@ -1507,9 +1576,11 @@ const styles = StyleSheet.create({
   },
   trendSummaryLabel: {
     ...Typography.caption,
+    color: colors.textSubtle,
   },
   trendSummaryValue: {
     ...Typography.title,
+    color: colors.text,
   },
   trendMetricRow: {
     flexDirection: "row",
@@ -1517,17 +1588,18 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingTop: space.sm,
     borderTopWidth: 1,
-    borderTopColor: Colors.divider,
+    borderTopColor: colors.divider,
     marginTop: space.sm,
   },
   trendMetricLabel: {
     ...Typography.caption,
+    color: colors.textSubtle,
     flex: 1,
   },
   trendMetricValue: {
     ...Typography.bodySm,
     fontFamily: Fonts.semibold,
-    color: Colors.text,
+    color: colors.text,
     textAlign: "right",
     flex: 1.2,
   },
@@ -1538,7 +1610,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
     borderTopWidth: 1,
-    borderTopColor: Colors.divider,
+    borderTopColor: colors.divider,
   },
   trendRowHeader: {
     flexDirection: "row",
@@ -1548,9 +1620,11 @@ const styles = StyleSheet.create({
   },
   trendRowTitle: {
     ...Typography.bodyMedium,
+    color: colors.text,
   },
   trendRowNet: {
     ...Typography.bodyMedium,
+    color: colors.text,
   },
   trendBars: {
     gap: 8,
@@ -1561,13 +1635,14 @@ const styles = StyleSheet.create({
   },
   trendBarLabel: {
     ...Typography.caption,
+    color: colors.textSubtle,
     width: 58,
   },
   trendBarTrack: {
     flex: 1,
     height: 8,
     borderRadius: radius.pill,
-    backgroundColor: Colors.surfaceMuted,
+    backgroundColor: colors.surfaceMuted,
     overflow: "hidden",
   },
   trendBarFill: {
@@ -1576,6 +1651,7 @@ const styles = StyleSheet.create({
   },
   trendBarAmount: {
     ...Typography.caption,
+    color: colors.textSubtle,
     width: 72,
     textAlign: "right",
   },
@@ -1584,7 +1660,8 @@ const styles = StyleSheet.create({
   },
 });
 
-const legendStyles = StyleSheet.create({
+const makeLegendStyles = (colors: ColorPalette) =>
+  StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -1598,10 +1675,12 @@ const legendStyles = StyleSheet.create({
   },
   label: {
     ...Typography.caption,
+    color: colors.textSubtle,
   },
 });
 
-const skeletonStyles = StyleSheet.create({
+const makeSkeletonStyles = (_colors: ColorPalette) =>
+  StyleSheet.create({
   chartFrame: {
     width: "100%",
     height: 210,

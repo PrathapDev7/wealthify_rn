@@ -1,14 +1,17 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {Button} from 'react-native-paper';
 import {DatePickerModal} from 'react-native-paper-dates';
 import moment from 'moment';
+import {useColors, type ColorPalette} from '@/src/styles/theme';
 
 export default function CustomDatePicker({value, onChange, placeholder}: {
     value: any,
     placeholder: string,
     onChange: (date: string) => void
 }) {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const [show, setShow] = useState(false);
     const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -31,6 +34,8 @@ export default function CustomDatePicker({value, onChange, placeholder}: {
             <Button
                 mode="contained"
                 compact={true}
+                buttonColor={colors.inputBackground}
+                textColor={value ? colors.text : colors.textPlaceholder}
                 onPress={() => setShow(true)}
                 style={styles.input}
                 labelStyle={styles.inputText}
@@ -53,16 +58,16 @@ export default function CustomDatePicker({value, onChange, placeholder}: {
     );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     container: {
         justifyContent: 'center',
         alignItems: 'center',
         width: '100%',
     },
     input: {
-        backgroundColor: '#f7f2ff',
+        backgroundColor: colors.inputBackground,
         borderWidth: 1,
-        borderColor: '#e6e1f8',
+        borderColor: colors.inputBorder,
         padding: 0,
         borderRadius: 10,
         marginBottom: 4,
@@ -70,11 +75,9 @@ const styles = StyleSheet.create({
     },
     inputText: {
         fontSize: 12,
-        color: '#333',
     },
     inputContent: {
         justifyContent: 'flex-start',
-        color: '#333',
-        paddingLeft: 6
+        paddingLeft: 6,
     },
 });

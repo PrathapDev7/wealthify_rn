@@ -19,13 +19,14 @@ import {
     ScreenContainer,
 } from '@/src/components/ui';
 import {
-    Colors,
     Fonts,
     Shadows,
     Typography,
     focusRing,
     noWebOutline,
     space,
+    useColors,
+    type ColorPalette,
 } from '@/src/styles/theme';
 import { resolveCategoryIcon } from '@/src/utils/categoryIcon';
 import { DEFAULT_CATEGORIES } from '@/src/utils/defaultCategories';
@@ -43,6 +44,8 @@ interface CategoryOpt {
 
 export default function SelectCategoryScreen() {
     const router = useRouter();
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const params = useLocalSearchParams<{
         type?: 'expense' | 'income';
         returnTo?: string;
@@ -207,10 +210,10 @@ export default function SelectCategoryScreen() {
                     searchFocused && styles.searchWrapFocused,
                 ]}
             >
-                <Icon name="search" size={18} color={Colors.textSubtle} />
+                <Icon name="search" size={18} color={colors.textSubtle} />
                 <TextInput
                     placeholder={type === 'income' ? 'Search for income categories' : 'Search for expense categories'}
-                    placeholderTextColor={Colors.textSubtle}
+                    placeholderTextColor={colors.textSubtle}
                     value={query}
                     onChangeText={setQuery}
                     style={[styles.searchInput, noWebOutline]}
@@ -238,7 +241,7 @@ export default function SelectCategoryScreen() {
                     ))}
                     {!loading && filtered.length === 0 && (
                         <View style={styles.empty}>
-                            <Icon name="search" size={32} color={Colors.textSubtle} />
+                            <Icon name="search" size={32} color={colors.textSubtle} />
                             <Text style={styles.emptyText}>No categories found</Text>
                             <Text style={styles.emptySub}>
                                 Try a different search term.
@@ -276,6 +279,8 @@ const CategoryTile: React.FC<{
     type,
     onPress,
 }) => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const icon = resolveCategoryIcon(title, type);
     const shouldFitOneLine = title.trim().length <= 13;
     return (
@@ -299,6 +304,8 @@ const AutoScrollLabel: React.FC<{
     title: string;
     shouldFitOneLine: boolean;
 }> = ({ title, shouldFitOneLine }) => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const offset = useRef(new Animated.Value(0)).current;
     const [containerWidth, setContainerWidth] = useState(0);
     const [textWidth, setTextWidth] = useState(0);
@@ -379,7 +386,7 @@ const AutoScrollLabel: React.FC<{
     );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -389,18 +396,19 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         ...Typography.screenTitle,
+        color: colors.text,
     },
     searchWrap: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
         marginHorizontal: space.xl,
         marginTop: space.lg,
         paddingHorizontal: space.lg,
         height: 48,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: Colors.border,
+        borderColor: colors.border,
         ...Shadows.sm,
     },
     searchWrapFocused: {
@@ -411,6 +419,7 @@ const styles = StyleSheet.create({
         flex: 1,
         marginLeft: space.sm,
         ...Typography.body,
+        color: colors.text,
     },
     gridScroll: {
         paddingHorizontal: space.xl,
@@ -418,7 +427,7 @@ const styles = StyleSheet.create({
         paddingBottom: space['3xl'],
     },
     tileIcon: {
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
         ...Shadows.sm,
     },
     tileLabel: {
@@ -426,7 +435,7 @@ const styles = StyleSheet.create({
         fontFamily: Fonts.medium,
         fontSize: 12,
         lineHeight: 16,
-        color: Colors.textMuted,
+        color: colors.textMuted,
         textAlign: 'center',
     },
     tileLabelFrame: {
@@ -448,7 +457,7 @@ const styles = StyleSheet.create({
     tileLabelMultiLine: {
         width: '100%',
         marginTop: space.xs,
-        color: Colors.textMuted,
+        color: colors.textMuted,
         textAlign: 'center',
     },
     empty: {
@@ -459,10 +468,12 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         ...Typography.bodyMedium,
+        color: colors.text,
         marginTop: space.md,
     },
     emptySub: {
         ...Typography.bodySm,
+        color: colors.textSubtle,
         textAlign: 'center',
         marginTop: space.xs,
         paddingHorizontal: space.xl,

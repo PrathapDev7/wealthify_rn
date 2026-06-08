@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Colors } from '@/src/styles/theme';
+import { useColors, type ColorPalette } from '@/src/styles/theme';
 import { useAppRefresh } from '@/src/context/AppRefreshContext';
 import GradientBackground from './GradientBackground';
 
@@ -45,6 +45,8 @@ const ScreenContainer: React.FC<Props> = ({
     contentStyle,
     extendUnderStatusBar = false,
 }) => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const { requestAppRefresh } = useAppRefresh();
     const [refreshReady, setRefreshReady] = useState(false);
     const refreshReadyRef = useRef(false);
@@ -158,7 +160,7 @@ const ScreenContainer: React.FC<Props> = ({
                 ]}
             >
                 <Animated.View style={{ transform: [{ rotate: refreshRotate }] }}>
-                    <Icon name="refresh" size={20} color={Colors.primary} />
+                    <Icon name="refresh" size={20} color={colors.primary} />
                 </Animated.View>
             </Animated.View>
         </View>
@@ -194,10 +196,10 @@ const ScreenContainer: React.FC<Props> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     root: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: colors.background,
     },
     flex: {
         flex: 1,
@@ -214,10 +216,10 @@ const styles = StyleSheet.create({
         borderRadius: 19,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: Colors.border,
-        shadowColor: Colors.deepPurple,
+        borderColor: colors.border,
+        shadowColor: colors.deepPurple,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.12,
         shadowRadius: 16,

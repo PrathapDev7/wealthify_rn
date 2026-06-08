@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Colors, Shadows, radius } from '@/src/styles/theme';
+import { Shadows, radius, useColors } from '@/src/styles/theme';
 import WealthifyIcon, { resolveWealthifyIconName } from './WealthifyIcon';
 
 interface Props {
@@ -19,14 +19,17 @@ interface Props {
 // Used for category icons across the app.
 const IconBadge: React.FC<Props> = ({
     name,
-    color = Colors.primary,
-    bg = Colors.surface,
+    color,
+    bg,
     size = 44,
     iconSize,
     rounded = 'square',
     elevated = true,
     style,
 }) => {
+    const colors = useColors();
+    const resolvedColor = color ?? colors.primary;
+    const resolvedBg = bg ?? colors.surface;
     const computedRadius = rounded === 'circle' ? size / 2 : radius.md;
     const wealthifyName = resolveWealthifyIconName(name);
     return (
@@ -35,7 +38,7 @@ const IconBadge: React.FC<Props> = ({
                 styles.base,
                 elevated && Shadows.xs,
                 {
-                    backgroundColor: bg,
+                    backgroundColor: resolvedBg,
                     width: size,
                     height: size,
                     borderRadius: computedRadius,
@@ -46,7 +49,7 @@ const IconBadge: React.FC<Props> = ({
             {wealthifyName ? (
                 <WealthifyIcon name={wealthifyName} size={iconSize ?? Math.round(size * 0.52)} />
             ) : (
-                <Icon name={name} size={iconSize ?? Math.round(size * 0.5)} color={color} />
+                <Icon name={name} size={iconSize ?? Math.round(size * 0.5)} color={resolvedColor} />
             )}
         </View>
     );

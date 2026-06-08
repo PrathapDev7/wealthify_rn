@@ -24,13 +24,14 @@ import {
     ScreenContainer,
 } from '@/src/components/ui';
 import {
-    Colors,
     Fonts,
     Shadows,
     Typography,
     noWebOutline,
     radius,
     space,
+    useColors,
+    type ColorPalette,
 } from '@/src/styles/theme';
 import { formatNumberWithCommas } from '@/src/utils/helper';
 import { resolveCategoryIcon } from '@/src/utils/categoryIcon';
@@ -45,6 +46,8 @@ const readParam = (value?: string | string[]) =>
 
 export default function TransactionDetailScreen() {
     const router = useRouter();
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
     const params = useLocalSearchParams<{
         id?: string;
         transactionType?: TransactionType;
@@ -84,7 +87,7 @@ export default function TransactionDetailScreen() {
         [category, title, transactionType],
     );
     const amountNumber = Number(amount || 0);
-    const amountColor = isIncome ? Colors.accentDark : Colors.negative;
+    const amountColor = isIncome ? colors.accentDark : colors.negative;
     const sign = isIncome ? '+' : '-';
     const formattedAmount = `${sign}₹${formatNumberWithCommas(
         Math.abs(amountNumber || 0).toFixed(2),
@@ -387,7 +390,7 @@ export default function TransactionDetailScreen() {
                             <Icon
                                 name="trash-outline"
                                 size={18}
-                                color={Colors.negative}
+                                color={colors.negative}
                             />
                             <Text style={styles.deleteText}>
                                 {deleting ? 'Deleting...' : 'Delete Transaction'}
@@ -404,14 +407,18 @@ const MetaPill: React.FC<{
     icon: string;
     label: string;
     color?: string;
-}> = ({ icon, label, color = Colors.textSubtle }) => (
+}> = ({ icon, label, color }) => {
+    const colors = useColors();
+    const styles = useMemo(() => makeStyles(colors), [colors]);
+    return (
     <View style={styles.metaPill}>
-        <Icon name={icon} size={14} color={color} />
+        <Icon name={icon} size={14} color={color ?? colors.textSubtle} />
         <Text style={styles.metaPillText} numberOfLines={1}>
             {label}
         </Text>
     </View>
-);
+    );
+};
 
 const CategorySelector: React.FC<{
     type: TransactionType;
@@ -420,7 +427,10 @@ const CategorySelector: React.FC<{
     loading: boolean;
     onSelect: (category: string) => void;
     onMorePress: () => void;
-}> = ({ type, selected, categories, loading, onSelect, onMorePress }) => (
+}> = ({ type, selected, categories, loading, onSelect, onMorePress }) => {
+    const colors = useColors();
+    const categoryStyles = useMemo(() => makeCategoryStyles(colors), [colors]);
+    return (
     <View style={categoryStyles.wrap}>
         <Text style={categoryStyles.label}>Category</Text>
         <ScrollView
@@ -458,7 +468,7 @@ const CategorySelector: React.FC<{
                 <Chip
                     label="More"
                     iconName="ellipsis-horizontal"
-                    iconColor={Colors.primary}
+                    iconColor={colors.primary}
                     selected={false}
                     onPress={onMorePress}
                     style={categoryStyles.chip}
@@ -466,7 +476,8 @@ const CategorySelector: React.FC<{
             ) : null}
         </ScrollView>
     </View>
-);
+    );
+};
 
 const DetailField: React.FC<{
     label: string;
@@ -488,7 +499,10 @@ const DetailField: React.FC<{
     multiline = false,
     maxLength,
     leftText,
-}) => (
+}) => {
+    const colors = useColors();
+    const fieldStyles = useMemo(() => makeFieldStyles(colors), [colors]);
+    return (
     <View style={fieldStyles.wrap}>
         <Text style={fieldStyles.label}>{label}</Text>
         <View style={[fieldStyles.box, multiline && fieldStyles.boxMultiline]}>
@@ -497,7 +511,7 @@ const DetailField: React.FC<{
                 value={value}
                 onChangeText={onChangeText}
                 placeholder={placeholder}
-                placeholderTextColor={Colors.textPlaceholder}
+                placeholderTextColor={colors.textPlaceholder}
                 keyboardType={keyboardType}
                 autoCapitalize={autoCapitalize}
                 multiline={multiline}
@@ -510,9 +524,10 @@ const DetailField: React.FC<{
             />
         </View>
     </View>
-);
+    );
+};
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     flex: {
         flex: 1,
     },
@@ -526,6 +541,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         ...Typography.screenTitle,
+        color: colors.text,
     },
     headerSpacer: {
         width: 40,
@@ -551,12 +567,13 @@ const styles = StyleSheet.create({
     heroType: {
         ...Typography.caption,
         fontFamily: Fonts.semibold,
-        color: Colors.textSubtle,
+        color: colors.textSubtle,
         marginBottom: 2,
     },
     heroTitle: {
         ...Typography.subtitle,
         fontFamily: Fonts.bold,
+        color: colors.text,
     },
     heroAmount: {
         ...Typography.display,
@@ -577,13 +594,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: space.md,
         marginRight: space.sm,
         marginBottom: space.xs,
-        backgroundColor: Colors.surfaceSoft,
+        backgroundColor: colors.surfaceSoft,
         borderRadius: radius.pill,
     },
     metaPillText: {
         ...Typography.caption,
         marginLeft: 6,
-        color: Colors.textBody,
+        color: colors.textBody,
     },
     sectionLabelRow: {
         marginTop: space.xl,
@@ -592,6 +609,7 @@ const styles = StyleSheet.create({
     sectionLabel: {
         ...Typography.bodyMedium,
         fontFamily: Fonts.semibold,
+        color: colors.text,
     },
     formCard: {
         paddingBottom: space.sm,
@@ -607,13 +625,13 @@ const styles = StyleSheet.create({
         marginTop: space.md,
         borderRadius: radius.md,
         borderWidth: 1,
-        borderColor: Colors.negativeSoft,
-        backgroundColor: Colors.surface,
+        borderColor: colors.negativeSoft,
+        backgroundColor: colors.surface,
         ...Shadows.xs,
     },
     deleteText: {
         ...Typography.bodyMedium,
-        color: Colors.negative,
+        color: colors.negative,
         marginLeft: space.sm,
     },
     actionDisabled: {
@@ -621,12 +639,13 @@ const styles = StyleSheet.create({
     },
 });
 
-const categoryStyles = StyleSheet.create({
+const makeCategoryStyles = (colors: ColorPalette) => StyleSheet.create({
     wrap: {
         marginBottom: space.lg,
     },
     label: {
         ...Typography.label,
+        color: colors.textSubtle,
         marginBottom: space.sm,
     },
     row: {
@@ -641,21 +660,22 @@ const categoryStyles = StyleSheet.create({
         height: 46,
         marginRight: space.sm,
         borderRadius: radius.pill,
-        backgroundColor: Colors.surfaceSoft,
+        backgroundColor: colors.surfaceSoft,
         borderWidth: 1,
-        borderColor: Colors.border,
+        borderColor: colors.border,
     },
     loadingChipWide: {
         width: 112,
     },
 });
 
-const fieldStyles = StyleSheet.create({
+const makeFieldStyles = (colors: ColorPalette) => StyleSheet.create({
     wrap: {
         marginBottom: space.lg,
     },
     label: {
         ...Typography.label,
+        color: colors.textSubtle,
         marginBottom: space.sm,
     },
     box: {
@@ -663,10 +683,10 @@ const fieldStyles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1.5,
-        borderColor: Colors.border,
+        borderColor: colors.border,
         borderRadius: radius.sm,
         paddingHorizontal: space.lg,
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
     },
     boxMultiline: {
         minHeight: 106,
@@ -676,14 +696,14 @@ const fieldStyles = StyleSheet.create({
     },
     leftText: {
         ...Typography.bodyMedium,
-        color: Colors.textSubtle,
+        color: colors.textSubtle,
         marginRight: space.sm,
     },
     input: {
         flex: 1,
         minWidth: 0,
         ...Typography.body,
-        color: Colors.text,
+        color: colors.text,
         paddingVertical: 0,
     },
     inputMultiline: {

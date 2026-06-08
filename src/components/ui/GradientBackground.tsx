@@ -8,7 +8,7 @@ import Svg, {
     Rect,
     Stop,
 } from 'react-native-svg';
-import { Gradients, GradientStops, Colors } from '@/src/styles/theme';
+import { Gradients, GradientStops, useColors, useTheme } from '@/src/styles/theme';
 
 type Variant = 'wash' | 'primary' | 'plain';
 
@@ -25,6 +25,8 @@ const GradientBackground: React.FC<Props> = ({
     style,
     height,
 }) => {
+    const colors = useColors();
+    const { isDark } = useTheme();
     const { width } = useWindowDimensions();
     const reactId = React.useId();
     const glowId = React.useMemo(
@@ -34,7 +36,7 @@ const GradientBackground: React.FC<Props> = ({
 
     if (variant === 'plain') {
         return (
-            <View style={[styles.plain, { height: height as any }, style]}>
+            <View style={[styles.plain, { backgroundColor: colors.background, height: height as any }, style]}>
                 {children}
             </View>
         );
@@ -54,14 +56,23 @@ const GradientBackground: React.FC<Props> = ({
         );
     }
 
+    // Derive the wash from palette keys so it darkens automatically in dark mode.
+    const washColors = [
+        colors.lavenderWashTop,
+        colors.lavenderWashTopSoft,
+        colors.lavenderWashMid,
+        colors.lavenderWashBottom,
+    ];
+    const glowScale = isDark ? 0.5 : 1;
+
     const glowRadiusX = Math.max(width * 1.18, 460);
     const glowRadiusY = Math.max(width * 1.02, 400);
     const glowCenterY = -glowRadiusY * 0.2;
 
     return (
-        <View style={[styles.gradient, { height: height as any }, style]}>
+        <View style={[styles.gradient, { backgroundColor: colors.lavenderWashTopSoft, height: height as any }, style]}>
             <LinearGradient
-                colors={Gradients.lavenderWash as any}
+                colors={washColors as any}
                 locations={GradientStops.lavenderWash as any}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
@@ -75,9 +86,9 @@ const GradientBackground: React.FC<Props> = ({
             >
                 <Defs>
                     <RadialGradient id={glowId} cx="50%" cy="50%" r="50%">
-                        <Stop offset="0" stopColor="#8E62FF" stopOpacity="0.44" />
-                        <Stop offset="0.38" stopColor="#BBA2FF" stopOpacity="0.56" />
-                        <Stop offset="0.8" stopColor="#F0E9FF" stopOpacity="0.26" />
+                        <Stop offset="0" stopColor="#8E62FF" stopOpacity={0.44 * glowScale} />
+                        <Stop offset="0.38" stopColor="#BBA2FF" stopOpacity={0.56 * glowScale} />
+                        <Stop offset="0.8" stopColor="#F0E9FF" stopOpacity={0.26 * glowScale} />
                         <Stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
                     </RadialGradient>
                 </Defs>
@@ -99,11 +110,9 @@ const styles = StyleSheet.create({
     gradient: {
         width: '100%',
         overflow: 'hidden',
-        backgroundColor: Colors.lavenderWashTopSoft,
     },
     plain: {
         width: '100%',
-        backgroundColor: Colors.background,
     },
 });
 
