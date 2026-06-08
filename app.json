@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "icon": "./assets/images/icon-purple.png",
-      "bundleIdentifier": "com.prathapdev7.wealthifyexpo",
+      "bundleIdentifier": "com.invent.wealthify",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
