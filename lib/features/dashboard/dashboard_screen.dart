@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,13 +11,14 @@ import '../../core/widgets/app_card.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/misc.dart';
 import '../../core/widgets/transaction_row.dart';
-import '../../core/widgets/wealthify_icon.dart';
 import '../../data/models/budget_model.dart';
 import '../../data/models/stats_model.dart';
-import '../../data/models/transaction_model.dart';
+import '../../data/models/wallet_model.dart';
 import '../../data/repositories/budgets_repository.dart';
 import '../../data/repositories/transactions_repository.dart';
+import '../../data/repositories/wallets_repository.dart';
 import '../preferences/preferences_controller.dart';
+import '../wallets/wallet_ui.dart';
 
 final dashboardDataProvider =
     FutureProvider.autoDispose<(StatsModel, BudgetModel)>((ref) async {
@@ -33,9 +33,22 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
-    ref.watch(preferencesProvider);
+    final prefs = ref.watch(preferencesProvider);
     final money = ref.read(preferencesProvider.notifier).money;
     final async = ref.watch(dashboardDataProvider);
+
+    // The chosen default ("primary") wallet, if any, drives the wallet-card icon.
+    final wallets = ref.watch(walletsListProvider).asData?.value ?? const [];
+    final defaultWalletId = prefs.defaultWallet;
+    WalletModel? primaryWallet;
+    if (defaultWalletId != null && defaultWalletId.isNotEmpty) {
+      for (final w in wallets) {
+        if (w.id == defaultWalletId) {
+          primaryWallet = w;
+          break;
+        }
+      }
+    }
 
     return async.when(
       loading: () => const LoadingView(),
@@ -118,11 +131,19 @@ class DashboardScreen extends ConsumerWidget {
                     Container(
                       width: 42,
                       height: 42,
-                      decoration:
-                          BoxDecoration(color: c.primarySoft, shape: BoxShape.circle),
+                      decoration: BoxDecoration(
+                          color: c.primarySoft, shape: BoxShape.circle),
                       child: Center(
-                          child: WealthifyIcon('spending_wallet',
-                              size: 26, color: c.primary)),
+                        child: Icon(
+                          // Reflect the chosen wallet's kind (wallet/bank/card);
+                          // fall back to a generic wallet icon when none is set.
+                          primaryWallet != null
+                              ? kindIcon(primaryWallet.kind)
+                              : Icons.account_balance_wallet_outlined,
+                          size: 24,
+                          color: c.primary,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
@@ -165,8 +186,6 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ),
               const SizedBox(height: AppSpacing.xl),
-              _Past7DaysCard(transactions: stats.allData),
-              const SizedBox(height: AppSpacing.xl),
               SectionHeader('Recent Transactions',
                   actionLabel: 'See All',
                   onAction: () => context.go(Routes.transactions)),
@@ -206,135 +225,4 @@ class _AnimatedMoney extends StatelessWidget {
       builder: (_, v, _) => Text(money(v.floorToDouble()), style: style),
     );
   }
-}
-
-/// Last-7-days income vs expense paired bars, mirroring RN's `Past7DaysStats`.
-class _Past7DaysCard extends StatelessWidget {
-  const _Past7DaysCard({required this.transactions});
-
-  final List<TransactionModel> transactions;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-
-    // Build the 7 day buckets ending today (oldest → newest), matching the
-    // RN labels: subtract(i).format('ddd') reversed.
-    final today = DateTime.now();
-    final days = List.generate(7, (i) {
-      final d = DateTime(today.year, today.month, today.day)
-          .subtract(Duration(days: 6 - i));
-      return d;
-    });
-    final income = List<double>.filled(7, 0);
-    final expense = List<double>.filled(7, 0);
-
-    for (final t in transactions) {
-      final d = DateTime.tryParse(t.date);
-      if (d == null) continue;
-      final key = DateTime(d.year, d.month, d.day);
-      final idx = days.indexWhere((day) => day == key);
-      if (idx < 0) continue;
-      if (t.isIncome) {
-        income[idx] += t.amount.toDouble();
-      } else {
-        expense[idx] += t.amount.toDouble();
-      }
-    }
-
-    final maxVal = [
-      ...income,
-      ...expense,
-    ].fold<double>(0, (m, v) => v > m ? v : m);
-    final maxY = maxVal <= 0 ? 10.0 : maxVal * 1.2;
-
-    final groups = <BarChartGroupData>[
-      for (var i = 0; i < 7; i++)
-        BarChartGroupData(
-          x: i,
-          barsSpace: 3,
-          barRods: [
-            BarChartRodData(
-                toY: income[i],
-                color: c.accentDark,
-                width: 7,
-                borderRadius: BorderRadius.circular(3)),
-            BarChartRodData(
-                toY: expense[i],
-                color: c.negative,
-                width: 7,
-                borderRadius: BorderRadius.circular(3)),
-          ],
-        ),
-    ];
-
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Past 7 Days Stats',
-              style: AppText.subtitle.copyWith(color: c.text)),
-          const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: [
-              _legendDot(c.accentDark),
-              const SizedBox(width: 4),
-              Text('Income', style: AppText.caption.copyWith(color: c.textSubtle)),
-              const SizedBox(width: AppSpacing.md),
-              _legendDot(c.negative),
-              const SizedBox(width: 4),
-              Text('Expense',
-                  style: AppText.caption.copyWith(color: c.textSubtle)),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            height: 180,
-            child: BarChart(
-              BarChartData(
-                maxY: maxY,
-                alignment: BarChartAlignment.spaceAround,
-                borderData: FlBorderData(show: false),
-                gridData: const FlGridData(show: false),
-                barTouchData: BarTouchData(enabled: false),
-                titlesData: FlTitlesData(
-                  leftTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 22,
-                      getTitlesWidget: (value, meta) {
-                        final i = value.toInt();
-                        if (i < 0 || i >= days.length) {
-                          return const SizedBox.shrink();
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(DateFormat('EEE').format(days[i]),
-                              style: AppText.caption
-                                  .copyWith(color: c.textSubtle)),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                barGroups: groups,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _legendDot(Color color) => Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      );
 }
