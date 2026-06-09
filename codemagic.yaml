@@ -1,0 +1,96 @@
+# Codemagic CI/CD for Wealthify (Flutter).
+# Docs: https://docs.codemagic.io/yaml-quick-start/building-a-flutter-app/
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# ONE-TIME SETUP (in the Codemagic web UI + Apple) before the iOS workflow runs:
+#
+# 1. Apple Developer Program membership ($99/yr) — required for TestFlight.
+# 2. App Store Connect → create the app with bundle id  com.invent.wealthify
+#    (or let Codemagic register it on first run).
+# 3. Codemagic → Team settings → Integrations → App Store Connect:
+#    add an "App Store Connect API key" (generate it in App Store Connect →
+#    Users and Access → Integrations, with the "App Manager" role).
+#    Give it a name and put that SAME name below under  integrations.app_store_connect
+#    (replace "WealthifyAppStoreConnect").
+# 4. Codemagic → connect this repository (branch: feature-flutter), then
+#    "Start new build" → pick the workflow.
+#
+# Code signing is fully automatic: with the API key above, Codemagic creates/fetches
+# the distribution certificate + provisioning profile for com.invent.wealthify.
+# ─────────────────────────────────────────────────────────────────────────────
+
+workflows:
+  # ───────────────────────────── iOS → TestFlight ─────────────────────────────
+  ios-testflight:
+    name: Wealthify iOS (TestFlight)
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+    integrations:
+      app_store_connect: WealthifyAppStoreConnect   # <-- name of your ASC API key in Codemagic
+    environment:
+      ios_signing:
+        distribution_type: app_store                # automatic signing for App Store/TestFlight
+        bundle_identifier: com.invent.wealthify
+      vars:
+        BUNDLE_ID: "com.invent.wealthify"
+        # The app's backend. Change to your ngrok/Render URL as needed.
+        API_BASE_URL: "https://expense-tracker-be-3rvm.onrender.com/api/v1/"
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Install CocoaPods dependencies
+        script: find . -name "Podfile" -execdir pod install \;
+      - name: Set up code signing (apply provisioning profiles)
+        script: xcode-project use-profiles
+      - name: Build signed IPA
+        script: |
+          flutter build ipa --release \
+            --build-number=$BUILD_NUMBER \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      email:
+        recipients:
+          - prathap.developer7@gmail.com
+        notify:
+          success: true
+          failure: true
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true        # uploads the build to TestFlight
+        # beta_groups:                     # uncomment to auto-distribute to a tester group
+        #   - Internal Testers
+
+  # ───────────────────────────── Android → APK ────────────────────────────────
+  # Bonus: builds an installable (debug-signed) release APK in the cloud.
+  android-apk:
+    name: Wealthify Android (APK)
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      vars:
+        API_BASE_URL: "https://expense-tracker-be-3rvm.onrender.com/api/v1/"
+      flutter: stable
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Build release APK
+        script: |
+          flutter build apk --release \
+            --build-number=$BUILD_NUMBER \
+            --dart-define=API_BASE_URL="$API_BASE_URL"
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+    publishing:
+      email:
+        recipients:
+          - prathap.developer7@gmail.com
+        notify:
+          success: true
+          failure: true
