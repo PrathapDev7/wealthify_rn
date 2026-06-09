@@ -32,7 +32,18 @@ class LocalNotifications {
     }
     try {
       const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-      const darwin = DarwinInitializationSettings();
+      // iOS/macOS: request permission up-front and — importantly — allow the
+      // banner/sound/badge to show while the app is in the FOREGROUND. iOS
+      // suppresses foreground notifications by default, which is why the test
+      // reminder was silent on iPhone but worked fine on Android.
+      const darwin = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+        defaultPresentAlert: true,
+        defaultPresentBadge: true,
+        defaultPresentSound: true,
+      );
       const settings =
           InitializationSettings(android: android, iOS: darwin, macOS: darwin);
       await _plugin.initialize(settings: settings);
@@ -89,7 +100,13 @@ class LocalNotifications {
       importance: Importance.high,
       priority: Priority.high,
     );
-    const darwin = DarwinNotificationDetails();
+    // Force foreground presentation on iOS/macOS (show the banner, play the
+    // sound, and update the badge even when Wealthify is the active app).
+    const darwin = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
     return NotificationDetails(android: android, iOS: darwin, macOS: darwin);
   }
 
