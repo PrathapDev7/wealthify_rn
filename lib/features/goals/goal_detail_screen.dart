@@ -19,6 +19,19 @@ String _formatDate(String? iso) {
   return DateFormat('d MMM yyyy').format(d);
 }
 
+/// Fetches the single goal by id (mirrors the detail-mode `load()` in
+/// `legacy_rn/app/goal-detail.tsx`, which re-pulls the goals list and finds
+/// the one being viewed). Lets contribute / mark-complete / save-edit refresh
+/// the detail view in place instead of leaving the screen.
+final _goalDetailProvider =
+    FutureProvider.autoDispose.family<GoalModel?, String>((ref, id) async {
+  final goals = await ref.read(goalsRepositoryProvider).getGoals();
+  for (final g in goals) {
+    if (g.id == id) return g;
+  }
+  return null;
+});
+
 class GoalDetailScreen extends ConsumerStatefulWidget {
   const GoalDetailScreen({super.key, this.goal});
 
@@ -32,6 +45,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
   // Form fields (create mode + inline edit in detail mode).
   late final TextEditingController _name;
   late final TextEditingController _targetAmount;
+  late final TextEditingController _note;
   final _contribAmount = TextEditingController();
 
   String? _targetDate; // ISO yyyy-MM-dd
@@ -49,6 +63,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
     _name = TextEditingController(text: g?.name ?? '');
     _targetAmount =
         TextEditingController(text: g == null ? '' : '${g.targetAmount}');
+    _note = TextEditingController(text: g?.note ?? '');
     _targetDate = g?.targetDate != null && g!.targetDate!.length >= 10
         ? g.targetDate!.substring(0, 10)
         : null;
@@ -58,6 +73,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
   void dispose() {
     _name.dispose();
     _targetAmount.dispose();
+    _note.dispose();
     _contribAmount.dispose();
     super.dispose();
   }
@@ -73,8 +89,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
       lastDate: DateTime(now.year + 50),
     );
     if (picked != null) {
-      setState(() =>
-          _targetDate = DateFormat('yyyy-MM-dd').format(picked));
+      setState(() => _targetDate = DateFormat('yyyy-MM-dd').format(picked));
     }
   }
 
@@ -90,12 +105,14 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
       showAppSnack(context, 'Enter a target amount', error: true);
       return;
     }
+    final note = _note.text.trim();
     setState(() => _saving = true);
     try {
       await ref.read(goalsRepositoryProvider).addGoal({
         'name': name,
         'targetAmount': target,
         if (_targetDate != null) 'targetDate': _targetDate,
+        if (note.isNotEmpty) 'note': note,
       });
       if (!mounted) return;
       showAppSnack(context, 'Goal created');
@@ -108,7 +125,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
   }
 
   // ---- detail mode actions ----
-  Future<void> _contribute() async {
+  Future<void> _contribute(String id) async {
     final amount = num.tryParse(_contribAmount.text.trim());
     if (amount == null || amount <= 0) {
       showAppSnack(context, 'Enter an amount', error: true);
@@ -116,12 +133,11 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
     }
     setState(() => _contributing = true);
     try {
-      await ref
-          .read(goalsRepositoryProvider)
-          .contributeGoal(widget.goal!.id, amount);
+      await ref.read(goalsRepositoryProvider).contributeGoal(id, amount);
       if (!mounted) return;
+      _contribAmount.clear();
       showAppSnack(context, 'Contribution added');
-      context.pop(true);
+      ref.invalidate(_goalDetailProvider(id));
     } catch (e) {
       if (mounted) showAppSnack(context, errorMessage(e), error: true);
     } finally {
@@ -129,7 +145,17 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
     }
   }
 
-  Future<void> _saveEdit() async {
+  void _startEditing(GoalModel goal) {
+    _name.text = goal.name;
+    _targetAmount.text = '${goal.targetAmount}';
+    _note.text = goal.note ?? '';
+    _targetDate = goal.targetDate != null && goal.targetDate!.length >= 10
+        ? goal.targetDate!.substring(0, 10)
+        : null;
+    setState(() => _editing = true);
+  }
+
+  Future<void> _saveEdit(String id) async {
     final name = _name.text.trim();
     if (name.isEmpty) {
       showAppSnack(context, 'Enter a goal name', error: true);
@@ -140,16 +166,20 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
       showAppSnack(context, 'Enter a target amount', error: true);
       return;
     }
+    final note = _note.text.trim();
+    final hasDate = _targetDate != null && _targetDate!.isNotEmpty;
     setState(() => _saving = true);
     try {
-      await ref.read(goalsRepositoryProvider).updateGoal(widget.goal!.id, {
+      await ref.read(goalsRepositoryProvider).updateGoal(id, {
         'name': name,
         'targetAmount': target,
-        if (_targetDate != null) 'targetDate': _targetDate,
+        if (hasDate) 'targetDate': _targetDate,
+        if (note.isNotEmpty) 'note': note,
       });
       if (!mounted) return;
       showAppSnack(context, 'Goal updated');
-      context.pop(true);
+      setState(() => _editing = false);
+      ref.invalidate(_goalDetailProvider(id));
     } catch (e) {
       if (mounted) showAppSnack(context, errorMessage(e), error: true);
     } finally {
@@ -157,15 +187,15 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
     }
   }
 
-  Future<void> _markComplete() async {
+  Future<void> _markComplete(String id) async {
     setState(() => _completing = true);
     try {
       await ref
           .read(goalsRepositoryProvider)
-          .updateGoal(widget.goal!.id, {'completed': true});
+          .updateGoal(id, {'completed': true});
       if (!mounted) return;
       showAppSnack(context, 'Goal marked complete');
-      context.pop(true);
+      ref.invalidate(_goalDetailProvider(id));
     } catch (e) {
       if (mounted) showAppSnack(context, errorMessage(e), error: true);
     } finally {
@@ -173,7 +203,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
     }
   }
 
-  Future<void> _delete() async {
+  Future<void> _delete(String id) async {
     final c = context.colors;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -201,7 +231,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
     );
     if (confirmed != true) return;
     try {
-      await ref.read(goalsRepositoryProvider).deleteGoal(widget.goal!.id);
+      await ref.read(goalsRepositoryProvider).deleteGoal(id);
       if (!mounted) return;
       showAppSnack(context, 'Goal deleted');
       context.pop(true);
@@ -212,24 +242,60 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final title = _isCreate
-        ? 'New goal'
-        : _editing
-            ? 'Edit goal'
-            : 'Goal';
+    if (_isCreate) {
+      return GradientScaffold(
+        child: Column(
+          children: [
+            const ScreenHeader(title: 'New goal'),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 120),
+                children: _buildForm('Create goal', _create),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Detail mode: drive the view from the provider so contribute /
+    // mark-complete / save-edit refresh in place.
+    final id = widget.goal!.id;
+    final async = ref.watch(_goalDetailProvider(id));
+    final title = _editing ? 'Edit goal' : 'Goal';
+
     return GradientScaffold(
       child: Column(
         children: [
           ScreenHeader(title: title),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 120),
-              children: _isCreate
-                  ? _buildForm('Create goal', _create)
-                  : _editing
-                      ? _buildForm('Save changes', _saveEdit, showCancel: true)
-                      : _buildDetail(),
+            child: async.when(
+              loading: () => const LoadingView(),
+              error: (e, _) => Center(
+                child: PillButton(
+                  label: 'Retry',
+                  expand: false,
+                  onPressed: () => ref.invalidate(_goalDetailProvider(id)),
+                ),
+              ),
+              data: (goal) {
+                if (goal == null) {
+                  return const EmptyState(
+                    icon: Icons.error_outline,
+                    title: 'Goal not found',
+                    message: 'It may have been deleted. Go back and try again.',
+                  );
+                }
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 120),
+                  children: _editing
+                      ? _buildForm('Save changes', () => _saveEdit(id),
+                          showCancel: true)
+                      : _buildDetail(goal),
+                );
+              },
             ),
           ),
         ],
@@ -277,6 +343,12 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
                       onPressed: () => setState(() => _targetDate = null),
                     ),
             ),
+            const SizedBox(height: AppSpacing.lg),
+            AppTextField(
+              controller: _note,
+              label: 'Note (optional)',
+              hint: 'Add a note',
+            ),
           ],
         ),
       ),
@@ -298,9 +370,8 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
   }
 
   // ---- detail view ----
-  List<Widget> _buildDetail() {
+  List<Widget> _buildDetail(GoalModel goal) {
     final c = context.colors;
-    final goal = widget.goal!;
     ref.watch(preferencesProvider);
     final money = ref.read(preferencesProvider.notifier).money;
     final percent = (goal.progress * 100).round();
@@ -381,7 +452,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
               PillButton(
                 label: 'Add contribution',
                 loading: _contributing,
-                onPressed: _contributing ? null : _contribute,
+                onPressed: _contributing ? null : () => _contribute(goal.id),
               ),
             ],
           ),
@@ -447,19 +518,19 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
       PillButton(
         label: 'Edit goal',
         variant: PillVariant.secondary,
-        onPressed: () => setState(() => _editing = true),
+        onPressed: () => _startEditing(goal),
       ),
       if (!goal.completed) ...[
         const SizedBox(height: AppSpacing.md),
         PillButton(
           label: 'Mark complete',
           loading: _completing,
-          onPressed: _completing ? null : _markComplete,
+          onPressed: _completing ? null : () => _markComplete(goal.id),
         ),
       ],
       const SizedBox(height: AppSpacing.md),
       TextButton.icon(
-        onPressed: _delete,
+        onPressed: () => _delete(goal.id),
         icon: Icon(Icons.delete_outline, color: c.negative, size: 18),
         label: Text('Delete',
             style: AppText.button.copyWith(color: c.negative)),

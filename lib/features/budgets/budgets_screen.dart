@@ -6,6 +6,7 @@ import '../../core/router/routes.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/utils/category_icon.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/budget_model.dart';
 import '../../data/models/stats_model.dart';
@@ -56,9 +57,21 @@ class BudgetsScreen extends ConsumerWidget {
                 }
 
                 final overall = budget.overall;
+                // Sort category rows by spend ratio descending (mirrors RN).
                 final categoryKeys = budget.budgets.keys
                     .where((k) => k != 'Overall')
-                    .toList();
+                    .toList()
+                  ..sort((a, b) {
+                    final ra = (spentByCategory[a] ?? 0) /
+                        ((budget.budgets[a] ?? 0) == 0
+                            ? 1
+                            : budget.budgets[a]!);
+                    final rb = (spentByCategory[b] ?? 0) /
+                        ((budget.budgets[b] ?? 0) == 0
+                            ? 1
+                            : budget.budgets[b]!);
+                    return rb.compareTo(ra);
+                  });
 
                 return RefreshIndicator(
                   onRefresh: () => ref.refresh(budgetsDataProvider.future),
@@ -104,15 +117,31 @@ class BudgetsScreen extends ConsumerWidget {
                           final spent = spentByCategory[key] ?? 0;
                           final remaining = limit - spent;
                           final over = remaining < 0;
+                          final iconSpec = resolveCategoryIcon(key, colors: c);
                           return AppCard(
                             margin:
                                 const EdgeInsets.only(bottom: AppSpacing.md),
-                            onTap: () => context.push(Routes.setBudget),
+                            onTap: () => context.push(
+                                '${Routes.setBudget}?category=${Uri.encodeComponent(key)}'),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
+                                    Container(
+                                      width: 30,
+                                      height: 30,
+                                      alignment: Alignment.center,
+                                      margin: const EdgeInsets.only(
+                                          right: AppSpacing.sm),
+                                      decoration: BoxDecoration(
+                                        color: iconSpec.color
+                                            .withValues(alpha: 0.13),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: WealthifyIcon(iconSpec.name,
+                                          size: 16),
+                                    ),
                                     Expanded(
                                       child: Text(
                                         key,

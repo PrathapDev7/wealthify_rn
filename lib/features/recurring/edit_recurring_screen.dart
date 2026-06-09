@@ -17,6 +17,10 @@ import '../auth/auth_screen.dart';
 
 const _kinds = ['expense', 'income'];
 const _kindLabels = {'expense': 'Expense', 'income': 'Income'};
+const _kindIcons = {
+  'expense': Icons.arrow_upward,
+  'income': Icons.arrow_downward,
+};
 
 const _frequencies = ['daily', 'weekly', 'monthly', 'yearly'];
 const _frequencyLabels = {
@@ -207,6 +211,7 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
                           for (final k in _kinds) ...[
                             AppChip(
                               label: _kindLabels[k]!,
+                              icon: _kindIcons[k],
                               selected: _kind == k,
                               onTap: () => setState(() => _kind = k),
                             ),

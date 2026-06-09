@@ -12,12 +12,17 @@ class AppChip extends StatelessWidget {
     this.selected = false,
     this.onTap,
     this.icon,
+    this.leading,
   });
 
   final String label;
   final bool selected;
   final VoidCallback? onTap;
   final IconData? icon;
+
+  /// Optional custom leading widget (e.g. a brand glyph). Takes precedence over
+  /// [icon] when both are provided.
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +40,10 @@ class AppChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) ...[
+            if (leading != null) ...[
+              leading!,
+              const SizedBox(width: 6),
+            ] else if (icon != null) ...[
               Icon(icon,
                   size: 15, color: selected ? c.textInverse : c.textSubtle),
               const SizedBox(width: 6),

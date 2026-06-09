@@ -11,24 +11,32 @@ class Preferences {
     this.currencySymbol = '₹',
     this.currencyCode = 'INR',
     this.defaultTxnType = 'expense',
+    this.defaultCategory,
+    this.defaultWallet,
     this.weekStart = 'monday',
   });
 
   final String currencySymbol;
   final String currencyCode;
   final String defaultTxnType; // 'expense' | 'income'
+  final String? defaultCategory; // pre-selected category for new transactions
+  final String? defaultWallet; // pre-selected wallet id for new transactions
   final String weekStart; // 'monday' | 'sunday'
 
   Preferences copyWith({
     String? currencySymbol,
     String? currencyCode,
     String? defaultTxnType,
+    String? defaultCategory,
+    String? defaultWallet,
     String? weekStart,
   }) =>
       Preferences(
         currencySymbol: currencySymbol ?? this.currencySymbol,
         currencyCode: currencyCode ?? this.currencyCode,
         defaultTxnType: defaultTxnType ?? this.defaultTxnType,
+        defaultCategory: defaultCategory ?? this.defaultCategory,
+        defaultWallet: defaultWallet ?? this.defaultWallet,
         weekStart: weekStart ?? this.weekStart,
       );
 
@@ -36,6 +44,12 @@ class Preferences {
         currencySymbol: (j['currencySymbol'] ?? '₹').toString(),
         currencyCode: (j['currencyCode'] ?? 'INR').toString(),
         defaultTxnType: (j['defaultTxnType'] ?? 'expense').toString(),
+        defaultCategory: (j['defaultCategory'] as String?)?.trim().isEmpty ?? true
+            ? null
+            : (j['defaultCategory'] as String).trim(),
+        defaultWallet: (j['defaultWallet'] as String?)?.trim().isEmpty ?? true
+            ? null
+            : (j['defaultWallet'] as String).trim(),
         weekStart: (j['weekStart'] ?? 'monday').toString(),
       );
 
@@ -43,6 +57,8 @@ class Preferences {
         'currencySymbol': currencySymbol,
         'currencyCode': currencyCode,
         'defaultTxnType': defaultTxnType,
+        'defaultCategory': defaultCategory,
+        'defaultWallet': defaultWallet,
         'weekStart': weekStart,
       };
 }

@@ -21,10 +21,10 @@ class _Slide {
 const _slides = [
   _Slide(Icons.account_balance_wallet_outlined, 'Your Finances in One Place',
       'Track every rupee — incomes, expenses, and budgets — without juggling apps.'),
-  _Slide(Icons.pie_chart_outline, 'Budgets That Work',
-      'Set monthly limits per category and see exactly where your money goes.'),
-  _Slide(Icons.savings_outlined, 'Reach Your Goals',
-      'Save towards what matters, automate recurring bills, and grow your wealth.'),
+  _Slide(Icons.pie_chart_outline, 'Set Smart Budgets',
+      'Plan ahead with category budgets, and get nudged before you overspend.'),
+  _Slide(Icons.bar_chart_outlined, 'Insights That Help',
+      'See trends month over month, spot patterns, and make better money decisions.'),
 ];
 
 class WelcomeScreen extends ConsumerStatefulWidget {

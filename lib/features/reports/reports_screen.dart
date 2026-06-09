@@ -69,6 +69,9 @@ final reportProvider = FutureProvider.autoDispose
   );
 });
 
+/// Quick date-range presets, mirroring the RN reports range selector.
+enum _RangeKey { thisMonth, lastMonth, thisYear, custom }
+
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
 
@@ -79,15 +82,35 @@ class ReportsScreen extends ConsumerStatefulWidget {
 class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   late DateTime _start;
   late DateTime _end;
+  _RangeKey _range = _RangeKey.thisMonth;
   bool _exporting = false;
 
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _start = DateTime(now.year, now.month, 1);
-    _end = DateTime(now.year, now.month, now.day);
+    _applyPreset(_RangeKey.thisMonth);
   }
+
+  /// Recomputes [_start]/[_end] for a preset and stores the active key.
+  void _applyPreset(_RangeKey key) {
+    final now = DateTime.now();
+    switch (key) {
+      case _RangeKey.lastMonth:
+        final lastMonth = DateTime(now.year, now.month - 1, 1);
+        _start = lastMonth;
+        _end = DateTime(now.year, now.month, 0); // last day of previous month
+      case _RangeKey.thisYear:
+        _start = DateTime(now.year, 1, 1);
+        _end = DateTime(now.year, 12, 31);
+      case _RangeKey.thisMonth:
+      case _RangeKey.custom:
+        _start = DateTime(now.year, now.month, 1);
+        _end = DateTime(now.year, now.month, now.day);
+    }
+    _range = key;
+  }
+
+  void _selectPreset(_RangeKey key) => setState(() => _applyPreset(key));
 
   Future<void> _pickStart() async {
     final picked = await showDatePicker(
@@ -96,7 +119,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       firstDate: DateTime(2020),
       lastDate: _end,
     );
-    if (picked != null) setState(() => _start = picked);
+    if (picked != null) {
+      setState(() {
+        _start = picked;
+        _range = _RangeKey.custom;
+      });
+    }
   }
 
   Future<void> _pickEnd() async {
@@ -107,16 +135,27 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       firstDate: _start,
       lastDate: DateTime(now.year + 1, now.month, now.day),
     );
-    if (picked != null) setState(() => _end = picked);
+    if (picked != null) {
+      setState(() {
+        _end = picked;
+        _range = _RangeKey.custom;
+      });
+    }
   }
+
+  /// Best-available free-text label for a transaction row in exports
+  /// (incomes prefer `title`, expenses use `description`).
+  static String _describe(TransactionModel t) =>
+      (t.isIncome ? (t.title ?? t.description) : t.description) ?? '';
 
   List<List<String>> _csvRows(ReportData data, String Function(num?) money) {
     return [
-      ['Date', 'Type', 'Category', 'Amount'],
+      ['Date', 'Type', 'Category', 'Description', 'Amount'],
       ...data.all.map((t) => [
             t.date,
             t.isIncome ? 'Income' : 'Expense',
             t.category,
+            _describe(t),
             t.amount.toString(),
           ]),
     ];
@@ -168,17 +207,24 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             ),
             pw.SizedBox(height: 20),
             pw.TableHelper.fromTextArray(
-              headers: const ['Date', 'Type', 'Category', 'Amount'],
+              headers: const [
+                'Date',
+                'Type',
+                'Category',
+                'Description',
+                'Amount'
+              ],
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
               headerDecoration:
                   const pw.BoxDecoration(color: PdfColors.grey200),
-              cellAlignments: const {3: pw.Alignment.centerRight},
+              cellAlignments: const {4: pw.Alignment.centerRight},
               cellStyle: const pw.TextStyle(fontSize: 10),
               data: data.all
                   .map((t) => [
                         t.date,
                         t.isIncome ? 'Income' : 'Expense',
                         t.category,
+                        _describe(t),
                         money(t.amount),
                       ])
                   .toList(),
@@ -236,13 +282,33 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               padding: const EdgeInsets.fromLTRB(
                   AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 120),
               children: [
+                // Quick range presets
+                _RangeSegmented(
+                  value: _range,
+                  onChanged: _selectPreset,
+                ),
+                const SizedBox(height: AppSpacing.md),
                 // Custom range
                 AppCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Custom range',
-                          style: AppText.label.copyWith(color: c.textSubtle)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Custom range',
+                              style:
+                                  AppText.label.copyWith(color: c.textSubtle)),
+                          if (_range == _RangeKey.custom)
+                            GestureDetector(
+                              onTap: () =>
+                                  _selectPreset(_RangeKey.thisMonth),
+                              child: Text('Clear',
+                                  style:
+                                      AppText.link.copyWith(color: c.primary)),
+                            ),
+                        ],
+                      ),
                       const SizedBox(height: AppSpacing.md),
                       _DateRow(
                         label: 'Start',
@@ -293,6 +359,63 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Segmented control for the quick range presets (This month / Last month /
+/// This year). The active "custom" range is reflected by no preset being lit.
+class _RangeSegmented extends StatelessWidget {
+  const _RangeSegmented({required this.value, required this.onChanged});
+
+  final _RangeKey value;
+  final ValueChanged<_RangeKey> onChanged;
+
+  static const _options = <(_RangeKey, String)>[
+    (_RangeKey.thisMonth, 'This month'),
+    (_RangeKey.lastMonth, 'Last month'),
+    (_RangeKey.thisYear, 'This year'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.xs),
+      decoration: BoxDecoration(
+        color: c.surfaceMuted,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Row(
+        children: [
+          for (final opt in _options) ...[
+            if (opt != _options.first) const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => onChanged(opt.$1),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: AppSpacing.sm + 2),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: opt.$1 == value ? c.primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppRadius.xs),
+                  ),
+                  child: Text(
+                    opt.$2,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.bodySm.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: opt.$1 == value ? c.textInverse : c.textSubtle,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

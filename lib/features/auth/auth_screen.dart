@@ -28,7 +28,7 @@ class AuthScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
-  bool _isRegister = false;
+  bool _isRegister = true;
   bool _obscure = true;
   final _mobile = TextEditingController();
   final _password = TextEditingController();
@@ -106,6 +106,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             Text(_isRegister ? 'Get Started with Wealthify' : 'Welcome back',
                 textAlign: TextAlign.center,
                 style: AppText.titleLg.copyWith(color: c.text)),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              _isRegister
+                  ? 'Create your secure wallet in just a few steps.'
+                  : 'Log in to keep your finances on track.',
+              textAlign: TextAlign.center,
+              style: AppText.body.copyWith(color: c.textMuted),
+            ),
             const SizedBox(height: AppSpacing.xl2),
             if (_isRegister) ...[
               AppTextField(
@@ -169,6 +177,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: AppSpacing.xl2),
+            Text.rich(
+              TextSpan(
+                style: AppText.caption.copyWith(color: c.textSubtle),
+                children: [
+                  const TextSpan(text: 'By continuing, you agree to our '),
+                  TextSpan(
+                      text: 'Terms',
+                      style: AppText.caption.copyWith(color: c.primary)),
+                  const TextSpan(text: ' and '),
+                  TextSpan(
+                      text: 'Privacy Policy',
+                      style: AppText.caption.copyWith(color: c.primary)),
+                  const TextSpan(text: '.'),
+                ],
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),

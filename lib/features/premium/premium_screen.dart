@@ -1,22 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/widgets.dart';
 
-/// Premium upsell screen: a gradient hero card, the feature list and an
-/// upgrade CTA. Purely presentational for now (no billing wired up).
+/// Invite & Earn screen — mirrors `legacy_rn/app/premium.tsx` (the
+/// `InviteEarnScreen` component). Three referral cards, a centered headline and
+/// a "Get Started" CTA. Purely presentational for now (no invite flow wired up).
 class PremiumScreen extends ConsumerWidget {
   const PremiumScreen({super.key});
 
-  static const _features = <String>[
-    'Advanced insights & trends',
-    'Unlimited budgets',
-    'Export to CSV & PDF',
-    'Priority support',
+  static const _items = <(String, String, String)>[
+    (
+      'earn_rewards',
+      'Earn Rewards',
+      'Invite & earn prizes when friends join.',
+    ),
+    (
+      'earn_sharing',
+      'Earn Sharing',
+      'Share your link and earn too.',
+    ),
+    (
+      'track_referrals',
+      'Track Referrals',
+      'See who joined and what you earn.',
+    ),
   ];
 
   @override
@@ -26,97 +37,93 @@ class PremiumScreen extends ConsumerWidget {
     return GradientScaffold(
       child: Column(
         children: [
-          const ScreenHeader(title: 'Premium'),
+          const ScreenHeader(title: ''),
           Expanded(
-            child: ListView(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 120),
-              children: [
-                // Gradient hero card.
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(AppSpacing.xl2),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [c.primaryGradientStart, c.primaryGradientEnd],
+                  AppSpacing.xl, AppSpacing.xl4, AppSpacing.xl, AppSpacing.xl2),
+              child: Column(
+                children: [
+                  for (var i = 0; i < _items.length; i++) ...[
+                    if (i > 0) const SizedBox(height: AppSpacing.lg),
+                    _InviteCard(
+                      glyph: _items[i].$1,
+                      title: _items[i].$2,
+                      body: _items[i].$3,
                     ),
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                    boxShadow: AppShadows.primaryGlow,
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.diamond_outlined,
-                            color: Colors.white, size: 32),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Text('Wealthify Premium',
+                  ],
+                  const SizedBox(height: AppSpacing.xl6),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md),
+                    child: Column(
+                      children: [
+                        Text('Invite Other People',
+                            textAlign: TextAlign.center,
+                            style: AppText.title.copyWith(color: c.text)),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'Connect all your accounts from any bank. Add savings, '
+                          'credit cards, PayPal and more.',
                           textAlign: TextAlign.center,
-                          style: AppText.title.copyWith(color: Colors.white)),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'Unlock the full power of your money.',
-                        textAlign: TextAlign.center,
-                        style:
-                            AppText.bodySm.copyWith(color: Colors.white70),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-
-                // Feature list.
-                AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("What's included",
-                          style: AppText.label.copyWith(color: c.textSubtle)),
-                      const SizedBox(height: AppSpacing.md),
-                      for (var i = 0; i < _features.length; i++) ...[
-                        if (i > 0) const SizedBox(height: AppSpacing.md),
-                        Row(
-                          children: [
-                            Container(
-                              width: 26,
-                              height: 26,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: c.primary.withValues(alpha: 0.13),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.check,
-                                  size: 16, color: c.primary),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Text(_features[i],
-                                  style: AppText.bodyMedium
-                                      .copyWith(color: c.text)),
-                            ),
-                          ],
+                          style: AppText.bodySm.copyWith(color: c.textMuted),
                         ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.xl2),
+                  const SizedBox(height: AppSpacing.xl4),
+                  PillButton(
+                    label: 'Get Started',
+                    onPressed: () =>
+                        showAppSnack(context, 'Invite flow coming soon'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-                PillButton(
-                  label: 'Upgrade',
-                  leading: const Icon(Icons.diamond_outlined,
-                      color: Colors.white, size: 18),
-                  onPressed: () => showAppSnack(context, 'Coming soon'),
-                ),
+class _InviteCard extends StatelessWidget {
+  const _InviteCard({
+    required this.glyph,
+    required this.title,
+    required this.body,
+  });
+
+  final String glyph;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return AppCard(
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: c.surfaceSoft,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: WealthifyIcon(glyph, size: 28),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: AppText.bodyStrong.copyWith(color: c.text)),
+                const SizedBox(height: 2),
+                Text(body,
+                    style: AppText.caption.copyWith(color: c.textMuted)),
               ],
             ),
           ),

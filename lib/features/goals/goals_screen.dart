@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/router/routes.dart';
 import '../../core/theme/app_spacing.dart';
@@ -14,6 +15,13 @@ import '../preferences/preferences_controller.dart';
 final goalsProvider = FutureProvider.autoDispose<List<GoalModel>>(
   (ref) => ref.read(goalsRepositoryProvider).getGoals(),
 );
+
+String _formatDate(String? iso) {
+  if (iso == null || iso.isEmpty) return '';
+  final d = DateTime.tryParse(iso);
+  if (d == null) return '';
+  return DateFormat('d MMM yyyy').format(d);
+}
 
 class GoalsScreen extends ConsumerWidget {
   const GoalsScreen({super.key});
@@ -74,11 +82,15 @@ class GoalsScreen extends ConsumerWidget {
                         ),
                         ...goals.map((goal) {
                           final percent = (goal.progress * 100).round();
+                          final targetDate = _formatDate(goal.targetDate);
                           return AppCard(
                             margin:
                                 const EdgeInsets.only(bottom: AppSpacing.md),
-                            onTap: () => context.push(Routes.goalDetail,
-                                extra: goal),
+                            onTap: () async {
+                              await context.push(Routes.goalDetail,
+                                  extra: goal);
+                              ref.invalidate(goalsProvider);
+                            },
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -110,6 +122,12 @@ class GoalsScreen extends ConsumerWidget {
                                   style: AppText.caption
                                       .copyWith(color: c.textSubtle),
                                 ),
+                                if (targetDate.isNotEmpty)
+                                  Text(
+                                    'Target date $targetDate',
+                                    style: AppText.caption
+                                        .copyWith(color: c.textSubtle),
+                                  ),
                               ],
                             ),
                           );

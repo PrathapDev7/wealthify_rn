@@ -33,9 +33,9 @@ String frequencyLabel(int interval, String frequency) {
   if (n == 1) {
     return switch (frequency) {
       'daily' => 'Every day',
-      'weekly' => 'Every week',
-      'monthly' => 'Every month',
-      'yearly' => 'Every year',
+      'weekly' => 'Weekly',
+      'monthly' => 'Monthly',
+      'yearly' => 'Yearly',
       _ => 'Every $u',
     };
   }
@@ -103,24 +103,39 @@ class RecurringScreen extends ConsumerWidget {
   }
 }
 
-class _RecurringCard extends ConsumerWidget {
+class _RecurringCard extends ConsumerStatefulWidget {
   const _RecurringCard({required this.rule, required this.money});
 
   final RecurringModel rule;
   final String Function(num?) money;
 
-  Future<void> _toggleActive(BuildContext context, WidgetRef ref) async {
+  @override
+  ConsumerState<_RecurringCard> createState() => _RecurringCardState();
+}
+
+class _RecurringCardState extends ConsumerState<_RecurringCard> {
+  bool _busy = false;
+
+  RecurringModel get rule => widget.rule;
+
+  Future<void> _toggleActive() async {
+    setState(() => _busy = true);
     try {
       await ref
           .read(recurringRepositoryProvider)
           .updateRecurring(rule.id, {'active': !rule.active});
+      if (!mounted) return;
+      showAppSnack(
+          context, rule.active ? 'Recurring paused' : 'Recurring resumed');
       ref.invalidate(recurringListProvider);
     } catch (e) {
-      if (context.mounted) showAppSnack(context, errorMessage(e), error: true);
+      if (mounted) showAppSnack(context, errorMessage(e), error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+  Future<void> _delete() async {
     final c = context.colors;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -149,18 +164,22 @@ class _RecurringCard extends ConsumerWidget {
     if (confirmed != true) return;
     try {
       await ref.read(recurringRepositoryProvider).deleteRecurring(rule.id);
-      if (context.mounted) showAppSnack(context, 'Recurring deleted');
+      if (mounted) showAppSnack(context, 'Recurring deleted');
       ref.invalidate(recurringListProvider);
     } catch (e) {
-      if (context.mounted) showAppSnack(context, errorMessage(e), error: true);
+      if (mounted) showAppSnack(context, errorMessage(e), error: true);
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final c = context.colors;
-    final isIncome = rule.kind == 'income';
-    final tagColor = isIncome ? c.accentDark : c.negative;
+    final isExpense = rule.kind == 'expense';
+    final kindColor = isExpense ? c.negative : c.accentDark;
+    final hasDescription =
+        rule.description != null && rule.description!.isNotEmpty;
+    final subtitle = frequencyLabel(rule.interval, rule.frequency) +
+        (rule.nextRunDate.isNotEmpty ? ' · next ${rule.nextRunDate}' : '');
 
     return Opacity(
       opacity: rule.active ? 1 : 0.55,
@@ -175,16 +194,20 @@ class _RecurringCard extends ConsumerWidget {
             Row(
               children: [
                 Container(
-                  width: 36,
-                  height: 36,
+                  width: 30,
+                  height: 30,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: c.primary.withValues(alpha: 0.13),
+                    color: kindColor.withValues(alpha: 0.13),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.autorenew, size: 18, color: c.primary),
+                  child: Icon(
+                    isExpense ? Icons.arrow_upward : Icons.arrow_downward,
+                    size: 16,
+                    color: kindColor,
+                  ),
                 ),
-                const SizedBox(width: AppSpacing.md),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,54 +216,107 @@ class _RecurringCard extends ConsumerWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppText.bodyMedium.copyWith(color: c.text)),
-                      Text(frequencyLabel(rule.interval, rule.frequency),
-                          style: AppText.caption.copyWith(color: c.textSubtle)),
+                      if (hasDescription)
+                        Text(rule.description!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style:
+                                AppText.bodySm.copyWith(color: c.textSubtle)),
                     ],
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                Text(money(rule.amount),
-                    style: AppText.moneySm.copyWith(color: tagColor)),
+                Text(widget.money(rule.amount),
+                    style: AppText.bodyStrong.copyWith(color: kindColor)),
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: tagColor.withValues(alpha: 0.13),
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
+            Text(subtitle,
+                style: AppText.caption.copyWith(color: c.textSubtle)),
+            const SizedBox(height: AppSpacing.xs),
+            Container(
+              margin: const EdgeInsets.only(top: AppSpacing.sm),
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: c.border, width: 0.5)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ActionButton(
+                      busy: _busy,
+                      icon: rule.active
+                          ? Icons.pause
+                          : Icons.play_arrow,
+                      label: rule.active ? 'Pause' : 'Resume',
+                      color: c.primary,
+                      onTap: _busy ? null : _toggleActive,
+                    ),
                   ),
-                  child: Text(isIncome ? 'Income' : 'Expense',
-                      style: AppText.caption.copyWith(
-                          color: tagColor, fontWeight: FontWeight.w700)),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    rule.nextRunDate.isNotEmpty
-                        ? 'Next: ${rule.nextRunDate}'
-                        : '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.caption.copyWith(color: c.textSubtle),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _ActionButton(
+                      icon: Icons.delete_outline,
+                      label: 'Delete',
+                      color: c.negative,
+                      onTap: _delete,
+                    ),
                   ),
-                ),
-                Switch(
-                  value: rule.active,
-                  activeThumbColor: c.primary,
-                  onChanged: (_) => _toggleActive(context, ref),
-                ),
-                IconButton(
-                  onPressed: () => _delete(context, ref),
-                  icon: Icon(Icons.delete_outline, size: 20, color: c.negative),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Labeled row action (Pause/Resume, Delete) mirroring the RN `actionBtn`.
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.busy = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: c.surfaceMuted,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        child: busy
+            ? SizedBox(
+                height: 16,
+                width: 16,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: c.primary),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 15, color: color),
+                  const SizedBox(width: 5),
+                  Text(label,
+                      style: AppText.bodySm
+                          .copyWith(color: color, fontWeight: FontWeight.w600)),
+                ],
+              ),
       ),
     );
   }

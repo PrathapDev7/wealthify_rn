@@ -17,6 +17,7 @@ import '../../core/widgets/misc.dart';
 import '../../core/widgets/wealthify_icon.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/repositories/transactions_repository.dart';
+import '../categories/select_category_screen.dart';
 import '../preferences/preferences_controller.dart';
 
 String _errorMessage(Object? error) {
@@ -42,6 +43,7 @@ class _TransactionDetailScreenState
     extends ConsumerState<TransactionDetailScreen> {
   late final TextEditingController _amount;
   late final TextEditingController _description;
+  late final TextEditingController _subCategory;
   late String _category;
   late String _date; // YYYY-MM-DD
   bool _saving = false;
@@ -54,6 +56,7 @@ class _TransactionDetailScreenState
     super.initState();
     _amount = TextEditingController(text: _txn.amount.toString());
     _description = TextEditingController(text: _txn.description ?? '');
+    _subCategory = TextEditingController(text: _txn.subCategory ?? '');
     _category = _txn.category;
     _date = _txn.date;
   }
@@ -62,6 +65,7 @@ class _TransactionDetailScreenState
   void dispose() {
     _amount.dispose();
     _description.dispose();
+    _subCategory.dispose();
     super.dispose();
   }
 
@@ -115,7 +119,12 @@ class _TransactionDetailScreenState
       'category': _category.trim(),
       'date': DateFormat('yyyy-MM-dd').format(_parsedDate!),
       'description': _description.text.trim(),
-      if (isIncome) 'title': _category.trim() else 'type': _txn.type ?? 'self',
+      if (isIncome)
+        'title': _category.trim()
+      else ...{
+        'sub_category': _subCategory.text.trim(),
+        'type': _txn.type ?? 'self',
+      },
     };
 
     setState(() => _saving = true);
@@ -281,17 +290,26 @@ class _TransactionDetailScreenState
                   prefixIcon: Icons.payments_outlined,
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                AppTextField(
-                  label: 'Category',
-                  hint: 'Select a category',
-                  readOnly: true,
-                  onTap: busy ? null : _pickCategory,
-                  controller: TextEditingController(text: _category),
-                  prefixIcon: Icons.category_outlined,
-                  suffix: Icon(Icons.chevron_right,
-                      size: 20, color: c.textSubtle),
+                Text('Category',
+                    style: AppText.label.copyWith(color: c.textSubtle)),
+                const SizedBox(height: AppSpacing.sm),
+                _CategoryChips(
+                  type: _txn.kind,
+                  selected: _category,
+                  enabled: !busy,
+                  onSelect: (v) => setState(() => _category = v),
+                  onMore: _pickCategory,
                 ),
                 const SizedBox(height: AppSpacing.lg),
+                if (!isIncome) ...[
+                  AppTextField(
+                    controller: _subCategory,
+                    label: 'Sub-category',
+                    hint: 'Optional',
+                    prefixIcon: Icons.label_outline,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
                 AppTextField(
                   label: 'Date',
                   hint: 'YYYY-MM-DD',
@@ -353,6 +371,77 @@ class _MetaChip extends StatelessWidget {
           Icon(icon, size: 14, color: color ?? c.textSubtle),
           const SizedBox(width: 6),
           Text(label, style: AppText.caption.copyWith(color: c.textBody)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Horizontal strip of popular categories (recents + saved + defaults, deduped)
+/// plus a "More" chip that opens the full picker. Mirrors the RN
+/// `CategorySelector` in `transaction-detail.tsx`.
+class _CategoryChips extends ConsumerWidget {
+  const _CategoryChips({
+    required this.type,
+    required this.selected,
+    required this.enabled,
+    required this.onSelect,
+    required this.onMore,
+  });
+
+  final String type; // 'income' | 'expense'
+  final String selected;
+  final bool enabled;
+  final ValueChanged<String> onSelect;
+  final VoidCallback onMore;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final async = ref.watch(categoryOptionsProvider(type));
+    final income = type == 'income';
+
+    final options = async.maybeWhen(
+      data: (o) => [...o.recent, ...o.grid],
+      orElse: () => <String>[],
+    );
+
+    // Dedupe, keep current selection in view, cap to 6 like RN.
+    final seen = <String>{};
+    final popular = <String>[];
+    for (final name in [
+      if (selected.trim().isNotEmpty) selected.trim(),
+      ...options,
+    ]) {
+      final label = name.trim();
+      if (label.isEmpty) continue;
+      if (seen.add(label.toLowerCase())) popular.add(label);
+    }
+    final visible = popular.take(6).toList();
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final name in visible) ...[
+            Builder(builder: (_) {
+              final spec = resolveCategoryIcon(name, income: income, colors: c);
+              return AppChip(
+                label: name,
+                icon: null,
+                selected: name.toLowerCase() == selected.toLowerCase(),
+                onTap: enabled ? () => onSelect(name) : null,
+                // Use the resolved brand glyph for parity with RN chips.
+                leading: WealthifyIcon(spec.name, size: 15),
+              );
+            }),
+            const SizedBox(width: AppSpacing.sm),
+          ],
+          AppChip(
+            label: 'More',
+            icon: Icons.more_horiz,
+            onTap: enabled ? onMore : null,
+          ),
         ],
       ),
     );

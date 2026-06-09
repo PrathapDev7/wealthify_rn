@@ -32,6 +32,16 @@ String _kindLabel(String kind) => switch (kind) {
       _ => 'Cash',
     };
 
+/// Parses a wallet's stored hex accent (e.g. '#7B3FF2' / '7B3FF2'), or null.
+Color? _parseColor(String? hex) {
+  if (hex == null) return null;
+  var h = hex.trim().replaceFirst('#', '');
+  if (h.length == 6) h = 'FF$h';
+  if (h.length != 8) return null;
+  final value = int.tryParse(h, radix: 16);
+  return value == null ? null : Color(value);
+}
+
 class WalletsScreen extends ConsumerWidget {
   const WalletsScreen({super.key});
 
@@ -127,6 +137,7 @@ class _WalletCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final negative = wallet.balance < 0;
+    final accent = _parseColor(wallet.color) ?? c.primary;
     return AppCard(
       onTap: () => context.push(Routes.editWallet, extra: wallet),
       child: Column(
@@ -139,10 +150,10 @@ class _WalletCard extends StatelessWidget {
                 height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: c.primary.withValues(alpha: 0.13),
+                  color: accent.withValues(alpha: 0.13),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(_kindIcon(wallet.kind), size: 18, color: c.primary),
+                child: Icon(_kindIcon(wallet.kind), size: 18, color: accent),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(

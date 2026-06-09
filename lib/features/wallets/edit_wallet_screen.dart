@@ -14,14 +14,14 @@ import '../../data/models/wallet_model.dart';
 import '../../data/repositories/wallets_repository.dart';
 import '../auth/auth_screen.dart';
 
-const _kinds = ['cash', 'bank', 'card', 'wallet'];
-
-const _kindLabels = {
-  'cash': 'Cash',
-  'bank': 'Bank',
-  'card': 'Card',
-  'wallet': 'Wallet',
-};
+/// Wallet kinds with their segmented-control label + icon (mirrors RN
+/// `KIND_OPTIONS`).
+const _kindOptions = <(String, String, IconData)>[
+  ('cash', 'Cash', Icons.payments_outlined),
+  ('bank', 'Bank', Icons.account_balance_outlined),
+  ('card', 'Card', Icons.credit_card),
+  ('wallet', 'Wallet', Icons.account_balance_wallet_outlined),
+];
 
 class EditWalletScreen extends ConsumerStatefulWidget {
   const EditWalletScreen({super.key, this.wallet});
@@ -78,7 +78,7 @@ class _EditWalletScreenState extends ConsumerState<EditWalletScreen> {
         await repo.addWallet(data);
       }
       if (!mounted) return;
-      showAppSnack(context, 'Saved');
+      showAppSnack(context, _isEdit ? 'Wallet updated' : 'Wallet added');
       if (context.mounted) context.pop();
     } catch (e) {
       if (mounted) showAppSnack(context, errorMessage(e), error: true);
@@ -151,18 +151,55 @@ class _EditWalletScreenState extends ConsumerState<EditWalletScreen> {
                       Text('Type',
                           style: AppText.label.copyWith(color: c.textSubtle)),
                       const SizedBox(height: AppSpacing.sm),
-                      Row(
-                        children: [
-                          for (final k in _kinds) ...[
-                            AppChip(
-                              label: _kindLabels[k]!,
-                              selected: _kind == k,
-                              onTap: () => setState(() => _kind = k),
-                            ),
-                            if (k != _kinds.last)
-                              const SizedBox(width: AppSpacing.sm),
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: c.surfaceMuted,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        child: Row(
+                          children: [
+                            for (final (value, label, icon) in _kindOptions)
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => setState(() => _kind = value),
+                                  behavior: HitTestBehavior.opaque,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: _kind == value
+                                          ? c.primary
+                                          : Colors.transparent,
+                                      borderRadius:
+                                          BorderRadius.circular(AppRadius.xs),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(icon,
+                                            size: 15,
+                                            color: _kind == value
+                                                ? c.textInverse
+                                                : c.textSubtle),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          label,
+                                          style: AppText.bodySm.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: _kind == value
+                                                ? c.textInverse
+                                                : c.textSubtle,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
-                        ],
+                        ),
                       ),
                     ],
                   ),
