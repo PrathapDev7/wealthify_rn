@@ -49,3 +49,6 @@ app.*.map.json
 
 # Local backend override
 .env.local
+
+# Kotlin compiler session artifacts
+android/.kotlin/

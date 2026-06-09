@@ -67,7 +67,11 @@ dev_dependencies:
   build_runner: ^2.15.0
   json_serializable: ^6.14.0
   flutter_launcher_icons: ^0.14.0
-  flutter_native_splash: ^2.4.0
+  # flutter_native_splash removed: its native module pins compileSdk 31 (too low
+  # for current AndroidX deps) and fails the release build. The splash resources
+  # it generated are already committed under android/ (and web/), so the native
+  # splash still works without the runtime package. Re-add temporarily only if
+  # you need to regenerate: dart run flutter_native_splash:create
 
 # App launcher icons — regenerate with: dart run flutter_launcher_icons
 flutter_launcher_icons:

@@ -6,7 +6,10 @@ plugins {
 
 android {
     namespace = "com.invent.wealthify"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned to 36 (not flutter.compileSdkVersion=31) because the current plugin
+    // set (flutter_local_notifications, image_picker, local_auth, …) and newer
+    // AndroidX deps require compiling against API 36. Plugin modules inherit this.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
