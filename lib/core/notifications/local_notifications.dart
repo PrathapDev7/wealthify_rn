@@ -1,3 +1,5 @@
+import 'dart:ui' show Color;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
@@ -31,7 +33,8 @@ class LocalNotifications {
       // Timezone data may already be loaded — ignore.
     }
     try {
-      const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const android =
+          AndroidInitializationSettings('@drawable/ic_stat_wealthify');
       // iOS/macOS: request permission up-front and — importantly — allow the
       // banner/sound/badge to show while the app is in the FOREGROUND. iOS
       // suppresses foreground notifications by default, which is why the test
@@ -99,6 +102,7 @@ class LocalNotifications {
       channelName,
       importance: Importance.high,
       priority: Priority.high,
+      color: const Color(0xFF7C4DFF),
     );
     // Force foreground presentation on iOS/macOS (show the banner, play the
     // sound, and update the badge even when Wealthify is the active app).
@@ -165,6 +169,64 @@ class LocalNotifications {
         tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
     if (!scheduled.isAfter(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
+    }
+    return scheduled;
+  }
+
+  // ── Per-wallet (card bill) reminders ──────────────────────────────────────
+
+  static const int _walletBase = 1000;
+
+  int _walletNotifId(String walletId) =>
+      _walletBase + (walletId.hashCode.abs() % 100000);
+
+  /// Schedules a monthly reminder on [day] (clamped to 1-28 so it fires every
+  /// month) for a card bill. Idempotent — replaces any existing reminder for
+  /// [walletId].
+  Future<void> scheduleMonthly({
+    required String walletId,
+    required int day,
+    required String title,
+    required String body,
+  }) async {
+    await init();
+    try {
+      final id = _walletNotifId(walletId);
+      await _plugin.cancel(id: id);
+      await _plugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: _nextInstanceOfDay(day.clamp(1, 28), 10, 0),
+        notificationDetails:
+            _details(channelId: 'bills', channelName: 'Bill reminders'),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+      );
+    } catch (_) {
+      // Scheduling unavailable — ignore.
+    }
+  }
+
+  /// Cancels the reminder for [walletId], if any.
+  Future<void> cancelWalletReminder(String walletId) async {
+    await init();
+    try {
+      await _plugin.cancel(id: _walletNotifId(walletId));
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  /// Next [day]-of-month at [hour]:[minute] local (this month if still ahead,
+  /// else next month).
+  tz.TZDateTime _nextInstanceOfDay(int day, int hour, int minute) {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduled =
+        tz.TZDateTime(tz.local, now.year, now.month, day, hour, minute);
+    if (!scheduled.isAfter(now)) {
+      scheduled =
+          tz.TZDateTime(tz.local, now.year, now.month + 1, day, hour, minute);
     }
     return scheduled;
   }

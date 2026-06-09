@@ -153,10 +153,6 @@ class AccountScreen extends ConsumerWidget {
               () => _editName(context, ref)),
           _Row(Icons.key_outlined, 'Change Password',
               () => _changePassword(context, ref)),
-          _Row(Icons.phone_iphone_outlined, 'Device',
-              () => showAppSnack(context, 'Coming soon')),
-          _Row(Icons.business_outlined, 'Connect to Banks',
-              () => showAppSnack(context, 'Coming soon')),
         ]),
         _section(c, 'Settings'),
         _group(c, [

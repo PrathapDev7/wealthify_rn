@@ -11,8 +11,11 @@ import '../../core/widgets/app_card.dart';
 import '../../core/widgets/misc.dart';
 import '../../core/widgets/wealthify_icon.dart';
 import '../../data/models/transaction_model.dart';
+import '../../data/models/wallet_model.dart';
 import '../../data/repositories/transactions_repository.dart';
+import '../../data/repositories/wallets_repository.dart';
 import '../preferences/preferences_controller.dart';
+import '../wallets/wallet_ui.dart';
 
 // ── Range model ─────────────────────────────────────────────────────────────
 
@@ -88,12 +91,16 @@ class AnalyticsData {
     required this.expense,
     required this.buckets,
     required this.categories,
+    required this.byAccount,
   });
 
   final num income;
   final num expense;
   final List<AnalyticsBucket> buckets;
   final List<CategorySlice> categories;
+
+  /// Per-wallet (account id → income/expense) within the range. '' = unassigned.
+  final Map<String, ({num income, num expense})> byAccount;
 
   num get balance => income - expense;
   bool get hasData => income > 0 || expense > 0;
@@ -207,11 +214,27 @@ final analyticsDataProvider =
       .toList()
     ..sort((a, b) => b.amount.compareTo(a.amount));
 
+  // Per-wallet (account) income/expense within the range.
+  final byAccount = <String, ({num income, num expense})>{};
+  void addAccount(String? acc, {num inc = 0, num exp = 0}) {
+    final key = (acc == null || acc.trim().isEmpty) ? '' : acc.trim();
+    final cur = byAccount[key] ?? (income: 0, expense: 0);
+    byAccount[key] = (income: cur.income + inc, expense: cur.expense + exp);
+  }
+
+  for (final e in rangeExpenses) {
+    addAccount(e.account, exp: e.amount);
+  }
+  for (final i in rangeIncomes) {
+    addAccount(i.account, inc: i.amount);
+  }
+
   return AnalyticsData(
     income: rangeIncomes.fold<num>(0, (s, t) => s + t.amount),
     expense: rangeExpenses.fold<num>(0, (s, t) => s + t.amount),
     buckets: buckets,
     categories: categories,
+    byAccount: byAccount,
   );
 });
 
@@ -236,6 +259,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     ref.watch(preferencesProvider);
     final money = ref.read(preferencesProvider.notifier).money;
     final async = ref.watch(analyticsDataProvider(_range));
+    final wallets = ref.watch(walletsListProvider).asData?.value ?? const [];
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -276,7 +300,11 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               ),
               const SizedBox(height: AppSpacing.md),
               if (_tab == _Tab.overview)
-                _OverviewSection(range: _range, data: data, money: money)
+                _OverviewSection(
+                    range: _range,
+                    data: data,
+                    money: money,
+                    wallets: wallets)
               else
                 _TrendsSection(range: _range, data: data, money: money),
             ],
@@ -626,11 +654,15 @@ class _EmptyChart extends StatelessWidget {
 
 class _OverviewSection extends StatelessWidget {
   const _OverviewSection(
-      {required this.range, required this.data, required this.money});
+      {required this.range,
+      required this.data,
+      required this.money,
+      required this.wallets});
 
   final AnalyticsRange range;
   final AnalyticsData data;
   final String Function(num?) money;
+  final List<WalletModel> wallets;
 
   @override
   Widget build(BuildContext context) {
@@ -638,6 +670,18 @@ class _OverviewSection extends StatelessWidget {
     final balance = data.balance;
     final balancePositive = balance >= 0;
     final topCategories = data.categories.take(4).toList();
+
+    final walletById = {for (final w in wallets) w.id: w};
+    final walletRows = data.byAccount.entries
+        .where((e) => e.key.isNotEmpty && walletById.containsKey(e.key))
+        .map((e) => (
+              wallet: walletById[e.key]!,
+              income: e.value.income,
+              expense: e.value.expense,
+            ))
+        .where((r) => r.income > 0 || r.expense > 0)
+        .toList()
+      ..sort((a, b) => b.expense.compareTo(a.expense));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -696,7 +740,84 @@ class _OverviewSection extends StatelessWidget {
             ],
           ),
         ),
+        if (walletRows.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.lg),
+          const SectionHeader('By wallet'),
+          const SizedBox(height: AppSpacing.md),
+          AppCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (var i = 0; i < walletRows.length; i++)
+                  _WalletSpendRow(
+                    wallet: walletRows[i].wallet,
+                    income: walletRows[i].income,
+                    expense: walletRows[i].expense,
+                    totalExpense: data.expense,
+                    money: money,
+                    first: i == 0,
+                  ),
+              ],
+            ),
+          ),
+        ],
       ],
+    );
+  }
+}
+
+/// One wallet's income/expense within the range, with a spend-share bar.
+class _WalletSpendRow extends StatelessWidget {
+  const _WalletSpendRow({
+    required this.wallet,
+    required this.income,
+    required this.expense,
+    required this.totalExpense,
+    required this.money,
+    required this.first,
+  });
+
+  final WalletModel wallet;
+  final num income;
+  final num expense;
+  final num totalExpense;
+  final String Function(num?) money;
+  final bool first;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final share = totalExpense > 0
+        ? (expense / totalExpense).clamp(0.0, 1.0).toDouble()
+        : 0.0;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+      decoration: BoxDecoration(
+        border: first ? null : Border(top: BorderSide(color: c.divider)),
+      ),
+      child: Row(
+        children: [
+          walletAvatar(wallet, size: 38),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(wallet.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.bodyMedium.copyWith(color: c.text)),
+                const SizedBox(height: 6),
+                AppProgressBar(value: share, color: c.accentDark, height: 6),
+                const SizedBox(height: 4),
+                Text('in ${money(income)} · out ${money(expense)}',
+                    style: AppText.caption.copyWith(color: c.textSubtle)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

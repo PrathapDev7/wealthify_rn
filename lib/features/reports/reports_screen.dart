@@ -1,13 +1,10 @@
 import 'dart:io';
 
-import 'package:csv/csv.dart';
+import 'package:excel/excel.dart' as xlsx;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_spacing.dart';
@@ -148,29 +145,46 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   static String _describe(TransactionModel t) =>
       (t.isIncome ? (t.title ?? t.description) : t.description) ?? '';
 
-  List<List<String>> _csvRows(ReportData data, String Function(num?) money) {
-    return [
-      ['Date', 'Type', 'Category', 'Description', 'Amount'],
-      ...data.all.map((t) => [
-            t.date,
-            t.isIncome ? 'Income' : 'Expense',
-            t.category,
-            _describe(t),
-            t.amount.toString(),
-          ]),
-    ];
-  }
+  /// Converts a mixed row to Excel cells (numbers → numeric cells, else text).
+  List<xlsx.CellValue?> _row(List<dynamic> cells) => cells
+      .map<xlsx.CellValue?>((v) => v is num
+          ? xlsx.DoubleCellValue(v.toDouble())
+          : xlsx.TextCellValue('$v'))
+      .toList();
 
-  Future<void> _exportCsv(ReportData data, String Function(num?) money) async {
+  Future<void> _exportXlsx(ReportData data) async {
     setState(() => _exporting = true);
     try {
-      final csv = const CsvEncoder().convert(_csvRows(data, money));
+      final excel = xlsx.Excel.createExcel();
+      final sheet = excel[excel.sheets.keys.first];
+      sheet.appendRow(
+          _row(const ['Date', 'Type', 'Category', 'Description', 'Amount']));
+      for (final t in data.all) {
+        sheet.appendRow(_row([
+          t.date,
+          t.isIncome ? 'Income' : 'Expense',
+          t.category,
+          _describe(t),
+          t.amount,
+        ]));
+      }
+      sheet.appendRow(_row(const ['']));
+      sheet.appendRow(_row(['Income', data.income]));
+      sheet.appendRow(_row(['Expense', data.expense]));
+      sheet.appendRow(_row(['Net', data.net]));
+
+      final bytes = excel.encode();
+      if (bytes == null) throw Exception('Could not build the workbook');
       final dir = await getTemporaryDirectory();
-      final path = '${dir.path}/wealthify_report.csv';
-      await File(path).writeAsString(csv);
+      final path = '${dir.path}/wealthify_report.xlsx';
+      await File(path).writeAsBytes(bytes);
       await SharePlus.instance.share(
         ShareParams(
-          files: [XFile(path, mimeType: 'text/csv')],
+          files: [
+            XFile(path,
+                mimeType:
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          ],
           subject: 'Wealthify report',
         ),
       );
@@ -179,91 +193,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
-  }
-
-  Future<void> _exportPdf(ReportData data, String Function(num?) money) async {
-    setState(() => _exporting = true);
-    try {
-      final doc = pw.Document();
-      final rangeLabel = '${_df.format(_start)} to ${_df.format(_end)}';
-      doc.addPage(
-        pw.MultiPage(
-          build: (context) => [
-            pw.Text('Wealthify report',
-                style: pw.TextStyle(
-                    fontSize: 22, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 4),
-            pw.Text(rangeLabel,
-                style:
-                    const pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
-            pw.SizedBox(height: 16),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                _pdfTotal('Income', money(data.income)),
-                _pdfTotal('Expense', money(data.expense)),
-                _pdfTotal('Net', money(data.net)),
-              ],
-            ),
-            pw.SizedBox(height: 20),
-            pw.TableHelper.fromTextArray(
-              headers: const [
-                'Date',
-                'Type',
-                'Category',
-                'Description',
-                'Amount'
-              ],
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              headerDecoration:
-                  const pw.BoxDecoration(color: PdfColors.grey200),
-              cellAlignments: const {4: pw.Alignment.centerRight},
-              cellStyle: const pw.TextStyle(fontSize: 10),
-              data: data.all
-                  .map((t) => [
-                        t.date,
-                        t.isIncome ? 'Income' : 'Expense',
-                        t.category,
-                        _describe(t),
-                        money(t.amount),
-                      ])
-                  .toList(),
-            ),
-          ],
-        ),
-      );
-      await Printing.sharePdf(
-          bytes: await doc.save(), filename: 'wealthify_report.pdf');
-    } catch (e) {
-      if (mounted) showAppSnack(context, errorMessage(e), error: true);
-    } finally {
-      if (mounted) setState(() => _exporting = false);
-    }
-  }
-
-  pw.Widget _pdfTotal(String label, String value) {
-    return pw.Expanded(
-      child: pw.Container(
-        margin: const pw.EdgeInsets.symmetric(horizontal: 4),
-        padding: const pw.EdgeInsets.all(12),
-        decoration: pw.BoxDecoration(
-          border: pw.Border.all(color: PdfColors.grey300),
-          borderRadius: pw.BorderRadius.circular(8),
-        ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(label,
-                style:
-                    const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
-            pw.SizedBox(height: 4),
-            pw.Text(value,
-                style: pw.TextStyle(
-                    fontSize: 14, fontWeight: pw.FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -352,8 +281,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     data: data,
                     money: money,
                     exporting: _exporting,
-                    onCsv: () => _exportCsv(data, money),
-                    onPdf: () => _exportPdf(data, money),
+                    onExport: () => _exportXlsx(data),
                   ),
                 ),
               ],
@@ -462,15 +390,13 @@ class _Report extends StatelessWidget {
     required this.data,
     required this.money,
     required this.exporting,
-    required this.onCsv,
-    required this.onPdf,
+    required this.onExport,
   });
 
   final ReportData data;
   final String Function(num?) money;
   final bool exporting;
-  final VoidCallback onCsv;
-  final VoidCallback onPdf;
+  final VoidCallback onExport;
 
   @override
   Widget build(BuildContext context) {
@@ -569,19 +495,11 @@ class _Report extends StatelessWidget {
         Text('Export', style: AppText.label.copyWith(color: c.textSubtle)),
         const SizedBox(height: AppSpacing.sm),
         PillButton(
-          label: 'Export CSV',
-          variant: PillVariant.secondary,
-          loading: exporting,
-          leading: Icon(Icons.description_outlined, size: 18, color: c.text),
-          onPressed: hasData && !exporting ? onCsv : null,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        PillButton(
-          label: 'Export PDF',
+          label: 'Export Excel',
           loading: exporting,
           leading:
-              Icon(Icons.ios_share_outlined, size: 18, color: c.textOnPrimary),
-          onPressed: hasData && !exporting ? onPdf : null,
+              Icon(Icons.grid_on_outlined, size: 18, color: c.textOnPrimary),
+          onPressed: hasData && !exporting ? onExport : null,
         ),
       ],
     );

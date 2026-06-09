@@ -1,9 +1,14 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/data/provider_catalog.dart';
+import '../../core/notifications/local_notifications.dart';
+import '../../core/providers.dart';
 import '../../core/router/routes.dart';
+import '../../core/storage/prefs.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
@@ -143,8 +148,11 @@ class _EditWalletScreenState extends ConsumerState<EditWalletScreen> {
       final repo = ref.read(walletsRepositoryProvider);
       if (_isEdit) {
         await repo.updateWallet(widget.wallet!.id, data);
+        await _syncReminderFor(widget.wallet!.id, _kind, billDay);
       } else {
         await repo.addWallet(data);
+        // A new wallet has no id yet — refetch and (re)schedule card reminders.
+        await _applyReminders(await repo.getWallets());
       }
       ref.invalidate(walletsListProvider);
       if (!mounted) return;
@@ -187,11 +195,59 @@ class _EditWalletScreenState extends ConsumerState<EditWalletScreen> {
     try {
       await ref.read(walletsRepositoryProvider).deleteWallet(widget.wallet!.id);
       ref.invalidate(walletsListProvider);
+      await LocalNotifications.instance.cancelWalletReminder(widget.wallet!.id);
       if (!mounted) return;
       showAppSnack(context, 'Wallet deleted');
       if (context.mounted) context.pop();
     } catch (e) {
       if (mounted) showAppSnack(context, errorMessage(e), error: true);
+    }
+  }
+
+  /// Whether bill reminders are enabled in the notifications settings.
+  bool _billsEnabled() {
+    final raw = ref.read(prefsProvider).getString(Prefs.kNotifSettings);
+    if (raw == null) return false;
+    try {
+      return jsonDecode(raw)['billReminders'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _syncReminderFor(String id, String kind, int? day) async {
+    final notif = LocalNotifications.instance;
+    if (_billsEnabled() &&
+        kind == 'card' &&
+        day != null &&
+        day >= 1 &&
+        day <= 31) {
+      await notif.scheduleMonthly(
+        walletId: id,
+        day: day,
+        title: 'Card bill reminder',
+        body: '${_name.text.trim()} bill is due around day $day.',
+      );
+    } else {
+      await notif.cancelWalletReminder(id);
+    }
+  }
+
+  Future<void> _applyReminders(List<WalletModel> wallets) async {
+    final on = _billsEnabled();
+    final notif = LocalNotifications.instance;
+    for (final w in wallets) {
+      final day = w.reminderDay;
+      if (on && w.kind == 'card' && day != null && day >= 1 && day <= 31) {
+        await notif.scheduleMonthly(
+          walletId: w.id,
+          day: day,
+          title: 'Card bill reminder',
+          body: '${w.name} bill is due around day $day.',
+        );
+      } else {
+        await notif.cancelWalletReminder(w.id);
+      }
     }
   }
 
