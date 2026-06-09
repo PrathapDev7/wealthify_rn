@@ -4,6 +4,7 @@ import 'package:local_auth/local_auth.dart';
 
 import '../../core/providers.dart';
 import '../../core/storage/prefs.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
@@ -25,8 +26,13 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
 
   bool _loading = true;
   bool _enabled = false;
-  bool _supported = false;
+  bool _hasHardware = false;
+  bool _enrolled = false;
   List<BiometricType> _biometrics = const [];
+
+  /// Whether App Lock can be enabled — hardware present AND a biometric enrolled
+  /// (mirrors RN's `available = hasHw && enrolled`).
+  bool get _available => _hasHardware && _enrolled;
 
   @override
   void initState() {
@@ -37,23 +43,29 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
   Future<void> _init() async {
     final enabled = ref.read(prefsProvider).getBool(Prefs.kAppLock);
 
-    var supported = false;
+    var hasHardware = false;
+    var enrolled = false;
     var biometrics = const <BiometricType>[];
     try {
+      // `isDeviceSupported()` reports whether the device has the sensor/OS
+      // support; `getAvailableBiometrics()` reports what is actually enrolled.
       final deviceSupported = await _auth.isDeviceSupported();
       final canCheck = await _auth.canCheckBiometrics;
+      hasHardware = deviceSupported || canCheck;
       biometrics = await _auth.getAvailableBiometrics();
-      supported = deviceSupported && canCheck && biometrics.isNotEmpty;
+      enrolled = biometrics.isNotEmpty;
     } catch (_) {
       // local_auth unavailable (e.g. web/unsupported platform) — stay disabled.
-      supported = false;
+      hasHardware = false;
+      enrolled = false;
       biometrics = const [];
     }
 
     if (!mounted) return;
     setState(() {
       _enabled = enabled;
-      _supported = supported;
+      _hasHardware = hasHardware;
+      _enrolled = enrolled;
       _biometrics = biometrics;
       _loading = false;
     });
@@ -67,7 +79,11 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
       return;
     }
 
-    if (!_supported) return;
+    if (!_available) {
+      showAppSnack(context, 'No biometrics enrolled on this device',
+          error: true);
+      return;
+    }
 
     bool ok = false;
     try {
@@ -105,19 +121,31 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
         error: !ok);
   }
 
+  /// Human label for a biometric type, mirroring RN's `labelForType`.
   String _labelFor(BiometricType type) {
     switch (type) {
       case BiometricType.face:
-        return 'Face';
+        return 'Face ID';
       case BiometricType.fingerprint:
-        return 'Fingerprint';
+        return 'Fingerprint/Touch ID';
       case BiometricType.iris:
         return 'Iris';
       case BiometricType.strong:
-        return 'Strong';
       case BiometricType.weak:
-        return 'Weak';
+        return 'Biometrics';
     }
+  }
+
+  /// Distinct supported-method labels for display (dedupes the `strong`/`weak`
+  /// class entries that map to the same generic label).
+  List<String> get _methodLabels {
+    final seen = <String>{};
+    final labels = <String>[];
+    for (final b in _biometrics) {
+      final label = _labelFor(b);
+      if (seen.add(label)) labels.add(label);
+    }
+    return labels;
   }
 
   @override
@@ -127,7 +155,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     return GradientScaffold(
       child: Column(
         children: [
-          const ScreenHeader(title: 'App Lock'),
+          const ScreenHeader(title: 'Security'),
           Expanded(
             child: _loading
                 ? const LoadingView()
@@ -135,36 +163,8 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                     padding: const EdgeInsets.fromLTRB(
                         AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 60),
                     children: [
-                      if (!_supported) ...[
-                        AppCard(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(Icons.warning_amber_rounded,
-                                  color: c.warning, size: 22),
-                              const SizedBox(width: AppSpacing.md),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Biometrics unavailable',
-                                        style: AppText.bodyMedium
-                                            .copyWith(color: c.text)),
-                                    const SizedBox(height: AppSpacing.xs),
-                                    Text(
-                                      'This device has no biometric sensor, so '
-                                      'App Lock cannot be enabled.',
-                                      style: AppText.bodySm
-                                          .copyWith(color: c.textSubtle),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                      ],
+                      _capabilityCard(c),
+                      const SizedBox(height: AppSpacing.lg),
                       Text('App lock',
                           style: AppText.label.copyWith(color: c.textSubtle)),
                       const SizedBox(height: AppSpacing.sm),
@@ -191,39 +191,112 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                             const SizedBox(width: AppSpacing.md),
                             Switch(
                               value: _enabled,
-                              onChanged: _supported ? _toggle : null,
+                              onChanged: _available ? _toggle : null,
                               activeTrackColor: c.primary,
                             ),
                           ],
                         ),
                       ),
-                      if (_biometrics.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.lg),
-                        Text('Available methods',
-                            style: AppText.label.copyWith(color: c.textSubtle)),
-                        const SizedBox(height: AppSpacing.sm),
-                        Wrap(
-                          spacing: AppSpacing.sm,
-                          runSpacing: AppSpacing.sm,
-                          children: [
-                            for (final b in _biometrics)
-                              AppChip(label: _labelFor(b)),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.xl),
+                      const SizedBox(height: AppSpacing.lg),
                       PillButton(
                         label: 'Test unlock',
                         variant: PillVariant.secondary,
                         leading: Icon(Icons.fingerprint,
                             size: 18, color: c.text),
-                        onPressed: _supported ? _testUnlock : null,
+                        onPressed: _available ? _testUnlock : null,
                       ),
                     ],
                   ),
           ),
         ],
       ),
+    );
+  }
+
+  /// Capability summary card mirroring RN's available / no-hardware /
+  /// not-enrolled states.
+  Widget _capabilityCard(AppColors c) {
+    if (_available) {
+      final methods = _methodLabels;
+      final body = methods.isNotEmpty
+          ? 'This device supports ${methods.join(', ')}.'
+          : 'This device supports biometric authentication.';
+      return _infoCard(
+        c,
+        icon: Icons.verified_user_outlined,
+        iconColor: c.primary,
+        badgeColor: c.primary.withValues(alpha: 0.13),
+        title: 'Biometric unlock available',
+        body: body,
+      );
+    }
+
+    final title = !_hasHardware ? 'No biometric hardware' : 'No biometrics enrolled';
+    final body = !_hasHardware
+        ? 'This device has no biometric sensor, so App Lock cannot be enabled.'
+        : 'Add a fingerprint, Face ID, or device passcode in your system '
+            'settings to use App Lock.';
+    return _infoCard(
+      c,
+      icon: Icons.warning_amber_rounded,
+      iconColor: c.warning,
+      badgeColor: c.warning.withValues(alpha: 0.13),
+      title: title,
+      body: body,
+      warn: true,
+    );
+  }
+
+  Widget _infoCard(
+    AppColors c, {
+    required IconData icon,
+    required Color iconColor,
+    required Color badgeColor,
+    required String title,
+    required String body,
+    bool warn = false,
+  }) {
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: badgeColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 18, color: iconColor),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(title,
+                  style: AppText.bodyMedium.copyWith(color: c.text)),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(body, style: AppText.bodySm.copyWith(color: c.textSubtle)),
+      ],
+    );
+
+    // Positive state reuses the standard surface card.
+    if (!warn) return AppCard(child: content);
+
+    // Warning state tints the card like RN's `warnCard` (soft bg + border).
+    // Built bespoke because AppCard hardcodes the opaque surface fill.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: c.warningSoft,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: c.warning.withValues(alpha: 0.33)),
+      ),
+      child: content,
     );
   }
 }

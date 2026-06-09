@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -63,7 +64,7 @@ class _NotifSettings {
 
 /// Hour presets for the daily reminder (24h), matching the RN segmented control.
 const List<(int, String)> _timeOptions = [
-  (9, '09:00'),
+  (9, '9:00'),
   (12, '12:00'),
   (18, '18:00'),
   (20, '20:00'),
@@ -82,6 +83,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   _NotifSettings _settings = const _NotifSettings();
   bool _granted = false;
   bool _checkedPermission = false;
+
+  /// Notifications are unsupported on web (mirrors RN's `Platform.OS !== 'web'`).
+  static const bool _supported = !kIsWeb;
 
   @override
   void initState() {
@@ -223,8 +227,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               padding: const EdgeInsets.fromLTRB(
                   AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.xl4),
               children: [
-                if (_checkedPermission && !_granted) _permissionCard(c),
-                if (_checkedPermission && _granted) _statusRow(c),
+                if (_checkedPermission && _supported && !_granted)
+                  _permissionCard(c),
+                if (_checkedPermission && _supported && _granted) _statusRow(c),
+                if (!_supported) _unsupportedRow(c),
 
                 // Daily reminder
                 _sectionLabel(c, 'Daily reminder'),
@@ -305,6 +311,18 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             Icon(Icons.check_circle, size: 16, color: c.accentDark),
             const SizedBox(width: AppSpacing.xs),
             Text('Notifications are enabled',
+                style: AppText.bodySm.copyWith(color: c.textSubtle)),
+          ],
+        ),
+      );
+
+  Widget _unsupportedRow(AppColors c) => Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.xs, left: AppSpacing.xs),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, size: 16, color: c.textSubtle),
+            const SizedBox(width: AppSpacing.xs),
+            Text("Notifications aren't available here",
                 style: AppText.bodySm.copyWith(color: c.textSubtle)),
           ],
         ),
