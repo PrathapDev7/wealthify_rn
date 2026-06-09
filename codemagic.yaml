@@ -28,9 +28,6 @@ workflows:
     integrations:
       app_store_connect: WealthifyAppStoreConnect   # <-- name of your ASC API key in Codemagic
     environment:
-      ios_signing:
-        distribution_type: app_store                # automatic signing for App Store/TestFlight
-        bundle_identifier: com.invent.wealthify
       vars:
         BUNDLE_ID: "com.invent.wealthify"
         # The app's backend. Change to your ngrok/Render URL as needed.
@@ -43,7 +40,19 @@ workflows:
         script: flutter pub get
       - name: Install CocoaPods dependencies
         script: find . -name "Podfile" -execdir pod install \;
-      - name: Set up code signing (apply provisioning profiles)
+      # ── Explicit code signing (more reliable than the automatic ios_signing block) ──
+      # fetch-signing-files --create registers the App ID if missing, then creates the
+      # distribution certificate + App Store provisioning profile via your ASC API key.
+      - name: Initialize a temporary keychain
+        script: keychain initialize
+      - name: Fetch or CREATE signing files for the bundle id
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+      - name: Add the distribution certificate to the keychain
+        script: keychain add-certificates
+      - name: Apply the provisioning profiles to the Xcode project
         script: xcode-project use-profiles
       - name: Build signed IPA
         script: |
