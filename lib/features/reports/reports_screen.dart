@@ -145,33 +145,95 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   static String _describe(TransactionModel t) =>
       (t.isIncome ? (t.title ?? t.description) : t.description) ?? '';
 
-  /// Converts a mixed row to Excel cells (numbers → numeric cells, else text).
-  List<xlsx.CellValue?> _row(List<dynamic> cells) => cells
-      .map<xlsx.CellValue?>((v) => v is num
-          ? xlsx.DoubleCellValue(v.toDouble())
-          : xlsx.TextCellValue('$v'))
-      .toList();
+  /// Converts a mixed row to Excel cells: whole numbers → int cells, other
+  /// numbers → double cells, everything else → text.
+  List<xlsx.CellValue?> _row(List<dynamic> cells) =>
+      cells.map<xlsx.CellValue?>((v) {
+        if (v is int) return xlsx.IntCellValue(v);
+        if (v is num) {
+          return v == v.roundToDouble()
+              ? xlsx.IntCellValue(v.toInt())
+              : xlsx.DoubleCellValue(v.toDouble());
+        }
+        return xlsx.TextCellValue('$v');
+      }).toList();
 
+  /// Excel sheet-name rules: ≤31 chars, none of []\/?*: , and unique.
+  String _safeSheetName(String raw) {
+    var s = raw.replaceAll(RegExp(r'[\[\]\\/\?\*:]'), ' ').trim();
+    if (s.isEmpty) s = 'Sheet';
+    if (s.length > 31) s = s.substring(0, 31).trim();
+    return s;
+  }
+
+  String _uniqueSheetName(String base, Set<String> used) {
+    var name = base;
+    var n = 2;
+    while (used.any((u) => u.toLowerCase() == name.toLowerCase())) {
+      final suffix = ' ($n)';
+      final maxBase = 31 - suffix.length;
+      name =
+          (base.length > maxBase ? base.substring(0, maxBase) : base) + suffix;
+      n++;
+    }
+    used.add(name);
+    return name;
+  }
+
+  /// Builds a multi-sheet workbook mirroring the user's ExpenseSheet layout:
+  /// an `MM` summary (Income / Expenses / Savings + per-category totals) plus
+  /// one sheet per category filled with its transactions (S.No/Date/Description/
+  /// Amount + Total).
   Future<void> _exportXlsx(ReportData data) async {
     setState(() => _exporting = true);
     try {
       final excel = xlsx.Excel.createExcel();
-      final sheet = excel[excel.sheets.keys.first];
-      sheet.appendRow(
-          _row(const ['Date', 'Type', 'Category', 'Description', 'Amount']));
-      for (final t in data.all) {
-        sheet.appendRow(_row([
-          t.date,
-          t.isIncome ? 'Income' : 'Expense',
-          t.category,
-          _describe(t),
-          t.amount,
-        ]));
+      final first = excel.sheets.keys.first;
+      if (first != 'MM') excel.rename(first, 'MM');
+      final rangeLabel = '${_df.format(_start)} to ${_df.format(_end)}';
+
+      // ── MM: monthly summary ──
+      final mm = excel['MM'];
+      mm.appendRow(_row(const ['Monthly Balance Sheet']));
+      mm.appendRow(_row(['Range', rangeLabel]));
+      mm.appendRow(_row(const ['']));
+      mm.appendRow(_row(['Income', data.income]));
+      mm.appendRow(_row(['Expenses', data.expense]));
+      mm.appendRow(_row(['Savings (Net)', data.net]));
+      mm.appendRow(_row(const ['']));
+      mm.appendRow(_row(const ['Expenses by category', 'Amount']));
+      for (final cat in data.categories) {
+        mm.appendRow(_row([cat.category, cat.amount]));
       }
-      sheet.appendRow(_row(const ['']));
-      sheet.appendRow(_row(['Income', data.income]));
-      sheet.appendRow(_row(['Expense', data.expense]));
-      sheet.appendRow(_row(['Net', data.net]));
+      mm.appendRow(_row(['Total Expenses', data.expense]));
+
+      // ── One sheet per category, filled with its transactions ──
+      final byCat = <String, List<TransactionModel>>{};
+      for (final t in data.all) {
+        final key = t.category.trim().isEmpty ? 'Other' : t.category.trim();
+        (byCat[key] ??= []).add(t);
+      }
+      final totals = {
+        for (final e in byCat.entries)
+          e.key: e.value.fold<num>(0, (s, t) => s + t.amount)
+      };
+      final catNames = byCat.keys.toList()
+        ..sort((a, b) => totals[b]!.compareTo(totals[a]!));
+
+      final used = <String>{'MM'};
+      for (final cat in catNames) {
+        final sheet = excel[_uniqueSheetName(_safeSheetName(cat), used)];
+        sheet.appendRow(_row(const ['S.No', 'Date', 'Description', 'Amount']));
+        final txns = [...byCat[cat]!]..sort((a, b) => a.date.compareTo(b.date));
+        var i = 1;
+        for (final t in txns) {
+          final desc = _describe(t);
+          sheet.appendRow(
+              _row([i, t.date, desc.isEmpty ? cat : desc, t.amount]));
+          i++;
+        }
+        sheet.appendRow(_row(['', '', 'Total', totals[cat]!]));
+      }
 
       final bytes = excel.encode();
       if (bytes == null) throw Exception('Could not build the workbook');
