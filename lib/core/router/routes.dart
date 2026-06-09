@@ -14,6 +14,7 @@ abstract class Routes {
   static const addTransaction = '/add-transaction';
   static const transactionDetail = '/transaction-detail';
   static const selectCategory = '/select-category';
+  static const selectProvider = '/select-provider';
   static const budgets = '/budgets';
   static const setBudget = '/set-budget';
   static const wallets = '/wallets';

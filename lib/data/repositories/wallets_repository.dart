@@ -27,3 +27,9 @@ class WalletsRepository {
 final walletsRepositoryProvider = Provider<WalletsRepository>(
   (ref) => WalletsRepository(ref.read(apiClientProvider)),
 );
+
+/// The user's wallets (with server-computed balances). Defined here so any
+/// screen — including the editor — can `ref.invalidate` it after a mutation.
+final walletsListProvider = FutureProvider.autoDispose<List<WalletModel>>(
+  (ref) => ref.read(walletsRepositoryProvider).getWallets(),
+);

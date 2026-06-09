@@ -34,6 +34,7 @@ import '../../features/transactions/add_transaction_screen.dart';
 import '../../features/transactions/transaction_detail_screen.dart';
 import '../../features/transactions/transactions_screen.dart';
 import '../../features/wallets/edit_wallet_screen.dart';
+import '../../features/wallets/select_provider_screen.dart';
 import '../../features/wallets/wallets_screen.dart';
 import '../providers.dart';
 import '../storage/prefs.dart';
@@ -105,6 +106,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.selectCategory,
         builder: (_, state) => SelectCategoryScreen(
             type: state.uri.queryParameters['type'] ?? 'expense'),
+      ),
+      GoRoute(
+        path: Routes.selectProvider,
+        builder: (_, state) => SelectProviderScreen(
+            type: state.uri.queryParameters['type'] ?? 'bank'),
       ),
       GoRoute(path: Routes.budgets, builder: (_, _) => const BudgetsScreen()),
       GoRoute(

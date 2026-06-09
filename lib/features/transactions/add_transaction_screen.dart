@@ -7,20 +7,19 @@ import '../../core/router/routes.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
-import '../../core/utils/category_icon.dart';
 import '../../core/widgets/app_card.dart';
-import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import '../../core/widgets/misc.dart';
 import '../../core/widgets/numeric_keypad.dart';
-import '../../core/widgets/wealthify_icon.dart';
 import '../../data/models/wallet_model.dart';
 import '../../data/repositories/categories_repository.dart';
 import '../../data/repositories/transactions_repository.dart';
 import '../../data/repositories/wallets_repository.dart';
 import '../auth/auth_screen.dart';
 import '../preferences/preferences_controller.dart';
+import '../wallets/widgets/wallet_picker.dart';
+import 'widgets/category_chips.dart';
 
 /// Groups the integer part of a raw amount string with thousand separators,
 /// preserving a trailing/in-progress decimal. Ported from
@@ -41,6 +40,7 @@ String _formatAmountInput(String raw) {
 }
 
 /// Add Expense / Add Income form. Mirrors `legacy_rn/app/add-transaction.tsx`.
+/// Kept intentionally minimal: amount + category + wallet (+ date).
 class AddTransactionScreen extends ConsumerStatefulWidget {
   const AddTransactionScreen({super.key, required this.type});
 
@@ -54,9 +54,6 @@ class AddTransactionScreen extends ConsumerStatefulWidget {
 
 class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   bool get income => widget.type == 'income';
-
-  final _description = TextEditingController();
-  final _title = TextEditingController();
 
   String _amount = ''; // raw digits + optional single '.'
   String? _category;
@@ -90,13 +87,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (defaultWallet != null && defaultWallet.isNotEmpty) {
       _account = defaultWallet;
     }
-  }
-
-  @override
-  void dispose() {
-    _description.dispose();
-    _title.dispose();
-    super.dispose();
   }
 
   Future<void> _loadWallets() async {
@@ -137,12 +127,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final picked = await context
         .push<String>('${Routes.selectCategory}?type=${widget.type}');
     if (picked == null || !mounted) return;
+    _selectCategory(picked);
+  }
+
+  void _selectCategory(String value) {
     setState(() {
-      _category = picked;
+      _category = value;
       _subCategory = null;
       _subCategories = const [];
     });
-    _loadSubCategories(picked);
+    _loadSubCategories(value);
   }
 
   Future<void> _pickDate() async {
@@ -190,18 +184,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       return;
     }
 
-    final desc = _description.text.trim();
-    final titleText = _title.text.trim();
     final sub = _subCategory?.trim() ?? '';
     final payload = <String, dynamic>{
       'amount': amount,
       'category': _category,
       'date': DateFormat('yyyy-MM-dd').format(_date),
-      'description': desc,
       'type': income ? 'income' : 'self',
       'sub_category': sub,
       if (_account != null && _account!.isNotEmpty) 'account': _account,
-      'title': titleText.isNotEmpty ? titleText : _category,
+      'title': _category,
     };
 
     setState(() => _saving = true);
@@ -226,8 +217,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   Widget build(BuildContext context) {
     final c = context.colors;
     final symbol = ref.read(preferencesProvider).currencySymbol;
-    final catSpec =
-        _category == null ? null : resolveCategoryIcon(_category, income: income, colors: c);
 
     return GradientScaffold(
       child: Column(
@@ -269,34 +258,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 ),
                 const SizedBox(height: AppSpacing.lg),
 
-                // Category selector → select-category screen.
+                // Category — scrollable icon chips + "More".
                 Text('Category',
                     style: AppText.label.copyWith(color: c.textSubtle)),
-                const SizedBox(height: AppSpacing.xs),
-                AppCard(
-                  onTap: _pickCategory,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-                  child: Row(
-                    children: [
-                      if (catSpec != null)
-                        WealthifyIcon(catSpec.name, size: 22)
-                      else
-                        Icon(Icons.category_outlined,
-                            size: 18, color: c.textSubtle),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Text(
-                          _category ?? 'Select category',
-                          style: AppText.body.copyWith(
-                              color: _category != null
-                                  ? c.text
-                                  : c.textPlaceholder),
-                        ),
-                      ),
-                      Icon(Icons.chevron_right, size: 20, color: c.textSubtle),
-                    ],
-                  ),
+                const SizedBox(height: AppSpacing.sm),
+                CategoryChips(
+                  type: widget.type,
+                  selected: _category ?? '',
+                  enabled: !_saving,
+                  onSelect: _selectCategory,
+                  onMore: _pickCategory,
                 ),
 
                 // Sub-category (only when the category has any).
@@ -326,22 +297,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   Text('Wallet',
                       style: AppText.label.copyWith(color: c.textSubtle)),
                   const SizedBox(height: AppSpacing.sm),
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.sm,
-                    children: [
-                      AppChip(
-                        label: 'None',
-                        selected: _account == null,
-                        onTap: () => setState(() => _account = null),
-                      ),
-                      for (final w in _wallets)
-                        AppChip(
-                          label: w.name,
-                          selected: _account == w.id,
-                          onTap: () => setState(() => _account = w.id),
-                        ),
-                    ],
+                  WalletPicker(
+                    wallets: _wallets,
+                    selectedId: _account,
+                    enabled: !_saving,
+                    onSelect: (id) => setState(() => _account = id),
                   ),
                 ],
 
@@ -367,25 +327,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       Icon(Icons.chevron_right, size: 20, color: c.textSubtle),
                     ],
                   ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-
-                // Title (income only)
-                if (income) ...[
-                  AppTextField(
-                    controller: _title,
-                    label: 'Title',
-                    hint: _category ?? 'Defaults to category',
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                ],
-
-                // Description
-                AppTextField(
-                  controller: _description,
-                  label: 'Description (optional)',
-                  hint: 'Add a note',
-                  maxLines: 3,
                 ),
                 const SizedBox(height: AppSpacing.xl2),
 

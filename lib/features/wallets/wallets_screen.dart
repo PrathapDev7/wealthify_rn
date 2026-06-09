@@ -10,37 +10,9 @@ import '../../core/widgets/app_card.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import '../../core/widgets/misc.dart';
-import '../../data/models/wallet_model.dart';
 import '../../data/repositories/wallets_repository.dart';
 import '../preferences/preferences_controller.dart';
-
-final walletsListProvider = FutureProvider.autoDispose<List<WalletModel>>(
-  (ref) => ref.read(walletsRepositoryProvider).getWallets(),
-);
-
-IconData _kindIcon(String kind) => switch (kind) {
-      'bank' => Icons.account_balance_outlined,
-      'card' => Icons.credit_card,
-      'wallet' => Icons.account_balance_wallet_outlined,
-      _ => Icons.payments_outlined,
-    };
-
-String _kindLabel(String kind) => switch (kind) {
-      'bank' => 'Bank',
-      'card' => 'Card',
-      'wallet' => 'Wallet',
-      _ => 'Cash',
-    };
-
-/// Parses a wallet's stored hex accent (e.g. '#7B3FF2' / '7B3FF2'), or null.
-Color? _parseColor(String? hex) {
-  if (hex == null) return null;
-  var h = hex.trim().replaceFirst('#', '');
-  if (h.length == 6) h = 'FF$h';
-  if (h.length != 8) return null;
-  final value = int.tryParse(h, radix: 16);
-  return value == null ? null : Color(value);
-}
+import 'widgets/wallet_card_visual.dart';
 
 class WalletsScreen extends ConsumerWidget {
   const WalletsScreen({super.key});
@@ -98,7 +70,7 @@ class WalletsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       if (wallets.isEmpty)
-                        EmptyState(
+                        const EmptyState(
                           icon: Icons.account_balance_wallet_outlined,
                           title: 'No wallets yet',
                           message:
@@ -107,10 +79,33 @@ class WalletsScreen extends ConsumerWidget {
                       else
                         ...wallets.map((w) => Padding(
                               padding:
-                                  const EdgeInsets.only(bottom: AppSpacing.md),
-                              child: _WalletCard(wallet: w, money: money),
+                                  const EdgeInsets.only(bottom: AppSpacing.lg),
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => context.push(Routes.editWallet,
+                                    extra: w),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    WalletCardVisual(
+                                        wallet: w,
+                                        balanceText: money(w.balance)),
+                                    const SizedBox(height: AppSpacing.xs),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: AppSpacing.xs),
+                                      child: Text(
+                                        'in ${money(w.income)} · out ${money(w.expense)}',
+                                        style: AppText.caption
+                                            .copyWith(color: c.textSubtle),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             )),
-                      const SizedBox(height: AppSpacing.lg),
+                      const SizedBox(height: AppSpacing.sm),
                       PillButton(
                         label: 'Add wallet',
                         onPressed: () => context.push(Routes.editWallet),
@@ -120,65 +115,6 @@ class WalletsScreen extends ConsumerWidget {
                 );
               },
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WalletCard extends StatelessWidget {
-  const _WalletCard({required this.wallet, required this.money});
-
-  final WalletModel wallet;
-  final String Function(num?) money;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    final negative = wallet.balance < 0;
-    final accent = _parseColor(wallet.color) ?? c.primary;
-    return AppCard(
-      onTap: () => context.push(Routes.editWallet, extra: wallet),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.13),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(_kindIcon(wallet.kind), size: 18, color: accent),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(wallet.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.bodyMedium.copyWith(color: c.text)),
-                    Text(_kindLabel(wallet.kind),
-                        style: AppText.caption.copyWith(color: c.textSubtle)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(money(wallet.balance),
-                  style: AppText.moneySm
-                      .copyWith(color: negative ? c.negative : c.text)),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'in ${money(wallet.income)} · out ${money(wallet.expense)}',
-            style: AppText.caption.copyWith(color: c.textSubtle),
           ),
         ],
       ),
