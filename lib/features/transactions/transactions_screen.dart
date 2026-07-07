@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/providers.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
@@ -177,6 +178,7 @@ DateTime _sortDate(TransactionModel t) =>
 /// Fetches incomes and/or expenses for the active filters, merges and sorts
 /// them (date desc), and returns the income/expense totals.
 final txnFeedProvider = FutureProvider.autoDispose<TxnFeed>((ref) async {
+  ref.watch(dataRefreshProvider); // refetch after any transaction mutation
   final f = ref.watch(txnFiltersProvider);
   final repo = ref.read(transactionsRepositoryProvider);
 

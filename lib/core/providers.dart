@@ -17,3 +17,21 @@ final secureStoreProvider = Provider<SecureStore>(
 final apiClientProvider = Provider<ApiClient>(
   (ref) => ApiClient(ref.read(secureStoreProvider)),
 );
+
+/// Monotonic counter bumped whenever transaction data is mutated (add / edit /
+/// delete). The always-alive shell tabs (Home, Transactions, Analytics) live in
+/// an `IndexedStack`, so their `autoDispose` data providers stay cached across
+/// tab switches and would otherwise show stale data until a manual pull-to-
+/// refresh. Those providers `ref.watch(dataRefreshProvider)` so a bump forces a
+/// refetch; mutations bump it via [DataRefreshNotifier.bump] (see
+/// `TransactionsRepository`).
+final dataRefreshProvider =
+    NotifierProvider<DataRefreshNotifier, int>(DataRefreshNotifier.new);
+
+class DataRefreshNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  /// Signals that shared data changed; watchers refetch.
+  void bump() => state++;
+}

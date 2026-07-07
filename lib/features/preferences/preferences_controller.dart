@@ -80,6 +80,21 @@ class PreferencesController extends Notifier<Preferences> {
     ref.read(prefsProvider).setString(Prefs.kPreferences, jsonEncode(next.toJson()));
   }
 
+  /// Persists the user's default wallet (the wallet pre-selected for new
+  /// transactions). Pass null to clear it. Builds the next state directly
+  /// because [Preferences.copyWith] can't null-out an existing value.
+  void setDefaultWallet(String? walletId) {
+    if (state.defaultWallet == walletId) return;
+    update(Preferences(
+      currencySymbol: state.currencySymbol,
+      currencyCode: state.currencyCode,
+      defaultTxnType: state.defaultTxnType,
+      defaultCategory: state.defaultCategory,
+      defaultWallet: walletId,
+      weekStart: state.weekStart,
+    ));
+  }
+
   /// Formats a value using the active currency symbol.
   String money(num? value) =>
       formatCurrency(value, symbol: state.currencySymbol);

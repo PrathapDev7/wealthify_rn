@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/providers.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
@@ -22,6 +23,7 @@ import '../wallets/wallet_ui.dart';
 
 final dashboardDataProvider =
     FutureProvider.autoDispose<(StatsModel, BudgetModel)>((ref) async {
+  ref.watch(dataRefreshProvider); // refetch after any transaction mutation
   final stats = await ref.read(transactionsRepositoryProvider).getStats();
   final budget = await ref.read(budgetsRepositoryProvider).getBudgets();
   return (stats, budget);
@@ -198,7 +200,12 @@ class DashboardScreen extends ConsumerWidget {
                       style: AppText.bodySm.copyWith(color: c.textSubtle)),
                 )
               else
-                ...recent.map((t) => TransactionRow(txn: t, money: money)),
+                ...recent.map((t) => TransactionRow(
+                      txn: t,
+                      money: money,
+                      onTap: () =>
+                          context.push(Routes.transactionDetail, extra: t),
+                    )),
             ],
           ),
         );

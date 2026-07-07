@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/router/routes.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
@@ -14,6 +15,7 @@ import '../../core/widgets/misc.dart';
 import '../../data/models/recurring_model.dart';
 import '../../data/repositories/recurring_repository.dart';
 import '../auth/auth_screen.dart';
+import '../transactions/widgets/category_chips.dart';
 
 const _kinds = ['expense', 'income'];
 const _kindLabels = {'expense': 'Expense', 'income': 'Income'};
@@ -42,9 +44,9 @@ class EditRecurringScreen extends ConsumerStatefulWidget {
 
 class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
   late final TextEditingController _amount;
-  late final TextEditingController _category;
   late final TextEditingController _interval;
   late final TextEditingController _description;
+  String _category = '';
   late String _kind;
   late String _frequency;
   DateTime? _startDate;
@@ -58,7 +60,7 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
     super.initState();
     final r = widget.rule;
     _amount = TextEditingController(text: r == null ? '' : '${r.amount}');
-    _category = TextEditingController(text: r?.category ?? '');
+    _category = r?.category ?? '';
     _interval = TextEditingController(text: r == null ? '1' : '${r.interval}');
     _description = TextEditingController(text: r?.description ?? '');
     _kind = r?.kind ?? 'expense';
@@ -75,7 +77,6 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
   @override
   void dispose() {
     _amount.dispose();
-    _category.dispose();
     _interval.dispose();
     _description.dispose();
     super.dispose();
@@ -103,13 +104,22 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
     if (picked != null) setState(() => _endDate = picked);
   }
 
+  /// Opens the full category picker for the active type, mirroring the
+  /// add/edit transaction screens.
+  Future<void> _pickCategory() async {
+    final picked =
+        await context.push<String>('${Routes.selectCategory}?type=$_kind');
+    if (picked == null || !mounted) return;
+    setState(() => _category = picked);
+  }
+
   Future<void> _save() async {
     final amount = num.tryParse(_amount.text.trim());
     if (amount == null || amount <= 0) {
       showAppSnack(context, 'Enter an amount', error: true);
       return;
     }
-    final category = _category.text.trim();
+    final category = _category.trim();
     if (category.isEmpty) {
       showAppSnack(context, 'Enter a category', error: true);
       return;
@@ -213,7 +223,13 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
                               label: _kindLabels[k]!,
                               icon: _kindIcons[k],
                               selected: _kind == k,
-                              onTap: () => setState(() => _kind = k),
+                              // Category options differ by type — reset the
+                              // selection when switching expense ↔ income.
+                              onTap: () => setState(() {
+                                if (_kind == k) return;
+                                _kind = k;
+                                _category = '';
+                              }),
                             ),
                             if (k != _kinds.last)
                               const SizedBox(width: AppSpacing.sm),
@@ -229,10 +245,15 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
                             decimal: true),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      AppTextField(
-                        controller: _category,
-                        label: 'Category',
-                        hint: 'e.g. Rent, Salary, Netflix',
+                      Text('Category',
+                          style: AppText.label.copyWith(color: c.textSubtle)),
+                      const SizedBox(height: AppSpacing.sm),
+                      CategoryChips(
+                        type: _kind,
+                        selected: _category,
+                        enabled: !_saving,
+                        onSelect: (v) => setState(() => _category = v),
+                        onMore: _pickCategory,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       AppTextField(

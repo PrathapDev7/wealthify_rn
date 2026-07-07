@@ -22,17 +22,14 @@ class SplashScreen extends StatelessWidget {
               height: 88,
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: Colors.white,
                 borderRadius: BorderRadius.circular(AppRadius.xl),
                 boxShadow: AppShadows.primaryGlow,
               ),
-              child: const Padding(
-                padding: EdgeInsets.all(6),
-                child: Image(
-                  image: AssetImage(
-                      'assets/wealthify/glyph_256/wealthify_mark.png'),
-                  fit: BoxFit.contain,
-                ),
+              child: const Image(
+                // The app's real logo (same mark as the launcher icon and the
+                // native splash) — not the abstract glyph used previously.
+                image: AssetImage('assets/images/icon-purple.png'),
+                fit: BoxFit.cover,
               ),
             ),
             const SizedBox(height: AppSpacing.lg),

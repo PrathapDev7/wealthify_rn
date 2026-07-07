@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:excel/excel.dart' as xlsx;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -145,111 +146,132 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   static String _describe(TransactionModel t) =>
       (t.isIncome ? (t.title ?? t.description) : t.description) ?? '';
 
-  /// Converts a mixed row to Excel cells: whole numbers → int cells, other
-  /// numbers → double cells, everything else → text.
-  List<xlsx.CellValue?> _row(List<dynamic> cells) =>
-      cells.map<xlsx.CellValue?>((v) {
-        if (v is int) return xlsx.IntCellValue(v);
-        if (v is num) {
-          return v == v.roundToDouble()
-              ? xlsx.IntCellValue(v.toInt())
-              : xlsx.DoubleCellValue(v.toDouble());
-        }
-        return xlsx.TextCellValue('$v');
-      }).toList();
+  /// Day-of-month for a `yyyy-MM-dd` date → 0-based row index in a category
+  /// sheet's date grid (day 1 → rowIndex 1 = row 2; the total sits at row 33).
+  static int _dayRow(String date) =>
+      (DateTime.tryParse(date)?.day ?? 1).clamp(1, 31).toInt();
 
-  /// Excel sheet-name rules: ≤31 chars, none of []\/?*: , and unique.
-  String _safeSheetName(String raw) {
-    var s = raw.replaceAll(RegExp(r'[\[\]\\/\?\*:]'), ' ').trim();
-    if (s.isEmpty) s = 'Sheet';
-    if (s.length > 31) s = s.substring(0, 31).trim();
-    return s;
-  }
-
-  String _uniqueSheetName(String base, Set<String> used) {
-    var name = base;
-    var n = 2;
-    while (used.any((u) => u.toLowerCase() == name.toLowerCase())) {
-      final suffix = ' ($n)';
-      final maxBase = 31 - suffix.length;
-      name =
-          (base.length > maxBase ? base.substring(0, maxBase) : base) + suffix;
-      n++;
+  /// Adds [amount]/[desc] into a sheet's date-grid block at [rowIndex],
+  /// accumulating the amount (and appending the description) when that day's row
+  /// already holds an entry.
+  void _addEntry(
+    xlsx.Sheet sheet, {
+    required int rowIndex,
+    required int descCol,
+    required int amtCol,
+    required String desc,
+    required num amount,
+  }) {
+    final amtIdx =
+        xlsx.CellIndex.indexByColumnRow(columnIndex: amtCol, rowIndex: rowIndex);
+    final existing = sheet.cell(amtIdx).value;
+    num prev = 0;
+    if (existing is xlsx.IntCellValue) prev = existing.value;
+    if (existing is xlsx.DoubleCellValue) prev = existing.value;
+    final total = prev + amount;
+    sheet.updateCell(
+      amtIdx,
+      total == total.roundToDouble()
+          ? xlsx.IntCellValue(total.toInt())
+          : xlsx.DoubleCellValue(total.toDouble()),
+    );
+    if (desc.isNotEmpty) {
+      final descIdx = xlsx.CellIndex.indexByColumnRow(
+          columnIndex: descCol, rowIndex: rowIndex);
+      final exDesc = sheet.cell(descIdx).value;
+      final prevDesc =
+          exDesc is xlsx.TextCellValue ? exDesc.value.toString() : '';
+      sheet.updateCell(descIdx,
+          xlsx.TextCellValue(prevDesc.isEmpty ? desc : '$prevDesc, $desc'));
     }
-    used.add(name);
-    return name;
   }
 
-  /// Builds a multi-sheet workbook mirroring the user's ExpenseSheet layout:
-  /// an `MM` summary (Income / Expenses / Savings + per-category totals) plus
-  /// one sheet per category filled with its transactions (S.No/Date/Description/
-  /// Amount + Total).
+  /// Injects the app's expenses into the matching category sheets of the bundled
+  /// ExpenseSheet template; the template's own SUM / cross-sheet formulas then
+  /// roll the totals up into the `MM` master sheet automatically. Maps common app
+  /// categories onto the right date-grid block (best-effort) — unmapped
+  /// categories and the remaining sheets keep their exact blank layout.
+  void _fillTemplate(xlsx.Excel excel, ReportData data) {
+    // app category (lowercased) → (template sheet, description column, amount column)
+    const targets = <String, (String, int, int)>{
+      'medical': ('Medical', 1, 2),
+      'healthcare': ('Medical', 1, 2),
+      'health': ('Medical', 1, 2),
+      'medicine': ('Medical', 1, 2),
+      'travel': ('Travel', 1, 2),
+      'transport': ('Travel', 1, 2),
+      'fuel': ('Travel', 1, 2),
+      'cab': ('Travel', 1, 2),
+      'education': ('Education', 1, 2),
+      'training': ('Education', 1, 2),
+      'tuition': ('Education', 1, 2),
+      'groceries': ('Groceries & Vegtables', 5, 6),
+      'grocery': ('Groceries & Vegtables', 5, 6),
+      'vegetables': ('Groceries & Vegtables', 9, 10),
+      'fruits': ('Groceries & Vegtables', 9, 10),
+      'food': ('Snacks & enterinment', 5, 6),
+      'snacks': ('Snacks & enterinment', 5, 6),
+      'dining': ('Snacks & enterinment', 5, 6),
+      'restaurant': ('Snacks & enterinment', 5, 6),
+      'shopping': ('Snacks & enterinment', 9, 10),
+      'entertainment': ('Snacks & enterinment', 17, 18),
+      'movie': ('Snacks & enterinment', 17, 18),
+    };
+    for (final t in data.all) {
+      if (t.isIncome) continue;
+      final target = targets[t.category.trim().toLowerCase()];
+      if (target == null) continue;
+      final sheet = excel.tables[target.$1];
+      if (sheet == null) continue;
+      _addEntry(
+        sheet,
+        rowIndex: _dayRow(t.date),
+        descCol: target.$2,
+        amtCol: target.$3,
+        desc: _describe(t),
+        amount: t.amount,
+      );
+    }
+  }
+
+  /// Exports a faithful clone of the bundled ExpenseSheet template (every sheet,
+  /// column, label and formula preserved) with the app's expenses injected into
+  /// the matching category sheets. Saved to Downloads on Android, shared on iOS.
   Future<void> _exportXlsx(ReportData data) async {
     setState(() => _exporting = true);
     try {
-      final excel = xlsx.Excel.createExcel();
-      final first = excel.sheets.keys.first;
-      if (first != 'MM') excel.rename(first, 'MM');
-      final rangeLabel = '${_df.format(_start)} to ${_df.format(_end)}';
-
-      // ── MM: monthly summary ──
-      final mm = excel['MM'];
-      mm.appendRow(_row(const ['Monthly Balance Sheet']));
-      mm.appendRow(_row(['Range', rangeLabel]));
-      mm.appendRow(_row(const ['']));
-      mm.appendRow(_row(['Income', data.income]));
-      mm.appendRow(_row(['Expenses', data.expense]));
-      mm.appendRow(_row(['Savings (Net)', data.net]));
-      mm.appendRow(_row(const ['']));
-      mm.appendRow(_row(const ['Expenses by category', 'Amount']));
-      for (final cat in data.categories) {
-        mm.appendRow(_row([cat.category, cat.amount]));
-      }
-      mm.appendRow(_row(['Total Expenses', data.expense]));
-
-      // ── One sheet per category, filled with its transactions ──
-      final byCat = <String, List<TransactionModel>>{};
-      for (final t in data.all) {
-        final key = t.category.trim().isEmpty ? 'Other' : t.category.trim();
-        (byCat[key] ??= []).add(t);
-      }
-      final totals = {
-        for (final e in byCat.entries)
-          e.key: e.value.fold<num>(0, (s, t) => s + t.amount)
-      };
-      final catNames = byCat.keys.toList()
-        ..sort((a, b) => totals[b]!.compareTo(totals[a]!));
-
-      final used = <String>{'MM'};
-      for (final cat in catNames) {
-        final sheet = excel[_uniqueSheetName(_safeSheetName(cat), used)];
-        sheet.appendRow(_row(const ['S.No', 'Date', 'Description', 'Amount']));
-        final txns = [...byCat[cat]!]..sort((a, b) => a.date.compareTo(b.date));
-        var i = 1;
-        for (final t in txns) {
-          final desc = _describe(t);
-          sheet.appendRow(
-              _row([i, t.date, desc.isEmpty ? cat : desc, t.amount]));
-          i++;
-        }
-        sheet.appendRow(_row(['', '', 'Total', totals[cat]!]));
-      }
+      final tpl =
+          await rootBundle.load('assets/templates/expense_sheet_template.xlsx');
+      final excel = xlsx.Excel.decodeBytes(
+          tpl.buffer.asUint8List(tpl.offsetInBytes, tpl.lengthInBytes));
+      _fillTemplate(excel, data);
 
       final bytes = excel.encode();
       if (bytes == null) throw Exception('Could not build the workbook');
-      final dir = await getTemporaryDirectory();
-      final path = '${dir.path}/wealthify_report.xlsx';
-      await File(path).writeAsBytes(bytes);
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [
-            XFile(path,
-                mimeType:
-                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-          ],
-          subject: 'Wealthify report',
-        ),
-      );
+      const fileName = 'wealthify_report.xlsx';
+      const mime =
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+      if (Platform.isAndroid) {
+        // Real download: write straight into the public Downloads folder via a
+        // native MethodChannel (MediaStore) — not the share sheet.
+        await const MethodChannel('wealthify/downloads').invokeMethod(
+          'saveToDownloads',
+          {'bytes': Uint8List.fromList(bytes), 'fileName': fileName, 'mime': mime},
+        );
+        if (mounted) showAppSnack(context, 'Saved to Downloads');
+      } else {
+        // iOS / others: share sheet (offers "Save to Files").
+        final dir = await getTemporaryDirectory();
+        final path = '${dir.path}/$fileName';
+        await File(path).writeAsBytes(bytes);
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(path, mimeType: mime)],
+            subject: 'Wealthify report',
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) showAppSnack(context, errorMessage(e), error: true);
     } finally {

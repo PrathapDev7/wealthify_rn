@@ -8,8 +8,14 @@ import '../models/transaction_model.dart';
 typedef ExpenseResult = ({List<TransactionModel> items, num total});
 
 class TransactionsRepository {
-  TransactionsRepository(this._api);
+  TransactionsRepository(this._api, this._ref);
   final ApiClient _api;
+  final Ref _ref;
+
+  /// Bumps the shared refresh signal so the always-alive shell tabs (Home /
+  /// Transactions / Analytics) refetch after a mutation instead of showing
+  /// stale cached data. See [dataRefreshProvider].
+  void _signalChange() => _ref.read(dataRefreshProvider.notifier).bump();
 
   Future<StatsModel> getStats() async {
     final res = await _api.dio.get('get-stats');
@@ -38,19 +44,37 @@ class TransactionsRepository {
         .toList();
   }
 
-  Future<void> addExpense(Map<String, dynamic> data) =>
-      _api.dio.post('add-expense', data: data);
-  Future<void> updateExpense(String id, Map<String, dynamic> data) =>
-      _api.dio.put('update-expense/$id', data: data);
-  Future<void> deleteExpense(String id) => _api.dio.delete('delete-expense/$id');
+  Future<void> addExpense(Map<String, dynamic> data) async {
+    await _api.dio.post('add-expense', data: data);
+    _signalChange();
+  }
 
-  Future<void> addIncome(Map<String, dynamic> data) =>
-      _api.dio.post('add-income', data: data);
-  Future<void> updateIncome(String id, Map<String, dynamic> data) =>
-      _api.dio.put('update-income/$id', data: data);
-  Future<void> deleteIncome(String id) => _api.dio.delete('delete-income/$id');
+  Future<void> updateExpense(String id, Map<String, dynamic> data) async {
+    await _api.dio.put('update-expense/$id', data: data);
+    _signalChange();
+  }
+
+  Future<void> deleteExpense(String id) async {
+    await _api.dio.delete('delete-expense/$id');
+    _signalChange();
+  }
+
+  Future<void> addIncome(Map<String, dynamic> data) async {
+    await _api.dio.post('add-income', data: data);
+    _signalChange();
+  }
+
+  Future<void> updateIncome(String id, Map<String, dynamic> data) async {
+    await _api.dio.put('update-income/$id', data: data);
+    _signalChange();
+  }
+
+  Future<void> deleteIncome(String id) async {
+    await _api.dio.delete('delete-income/$id');
+    _signalChange();
+  }
 }
 
 final transactionsRepositoryProvider = Provider<TransactionsRepository>(
-  (ref) => TransactionsRepository(ref.read(apiClientProvider)),
+  (ref) => TransactionsRepository(ref.read(apiClientProvider), ref),
 );

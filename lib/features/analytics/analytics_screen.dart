@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/providers.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
@@ -119,6 +120,7 @@ DateTime? _parseDate(String raw) {
 /// totals, per-period buckets and the expense-by-category breakdown.
 final analyticsDataProvider =
     FutureProvider.autoDispose.family<AnalyticsData, AnalyticsRange>((ref, range) async {
+  ref.watch(dataRefreshProvider); // refetch after any transaction mutation
   final repo = ref.read(transactionsRepositoryProvider);
   final window = _dateRange(range);
   final query = {

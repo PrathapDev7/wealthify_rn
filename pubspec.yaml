@@ -108,6 +108,7 @@ flutter:
     - assets/img/logo/
     - assets/wealthify/glyph_256/
     - assets/wealthify/tile_128/
+    - assets/templates/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

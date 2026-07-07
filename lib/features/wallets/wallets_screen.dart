@@ -20,7 +20,7 @@ class WalletsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
-    ref.watch(preferencesProvider);
+    final prefs = ref.watch(preferencesProvider);
     final money = ref.read(preferencesProvider.notifier).money;
     final async = ref.watch(walletsListProvider);
 
@@ -40,6 +40,27 @@ class WalletsScreen extends ConsumerWidget {
               ),
               data: (wallets) {
                 final total = wallets.fold<num>(0, (sum, w) => sum + w.balance);
+                final stored = prefs.defaultWallet;
+                // A single wallet is always the default; otherwise honour the
+                // stored choice while it still points to an existing wallet.
+                final defaultId = wallets.length == 1
+                    ? wallets.first.id
+                    : (stored != null && wallets.any((w) => w.id == stored)
+                        ? stored
+                        : null);
+                // Persist the implicit single-wallet default so the dashboard
+                // and the add-transaction picker stay in sync. Deferred past the
+                // current frame to avoid mutating provider state during build.
+                if (wallets.length == 1 && stored != wallets.first.id) {
+                  final id = wallets.first.id;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      ref
+                          .read(preferencesProvider.notifier)
+                          .setDefaultWallet(id);
+                    }
+                  });
+                }
                 return RefreshIndicator(
                   onRefresh: () => ref.refresh(walletsListProvider.future),
                   child: ListView(
@@ -77,34 +98,51 @@ class WalletsScreen extends ConsumerWidget {
                               'Add a cash, bank, card or wallet account to track balances separately.',
                         )
                       else
-                        ...wallets.map((w) => Padding(
-                              padding:
-                                  const EdgeInsets.only(bottom: AppSpacing.lg),
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () => context.push(Routes.editWallet,
-                                    extra: w),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    WalletCardVisual(
-                                        wallet: w,
-                                        balanceText: money(w.balance)),
-                                    const SizedBox(height: AppSpacing.xs),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: AppSpacing.xs),
-                                      child: Text(
-                                        'in ${money(w.income)} · out ${money(w.expense)}',
-                                        style: AppText.caption
-                                            .copyWith(color: c.textSubtle),
-                                      ),
-                                    ),
-                                  ],
+                        ...wallets.map((w) {
+                          final isDefault = w.id == defaultId;
+                          return Padding(
+                            padding:
+                                const EdgeInsets.only(bottom: AppSpacing.lg),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Only the card opens the editor — the row below
+                                // keeps its own tap target for "Set as default".
+                                GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () => context.push(Routes.editWallet,
+                                      extra: w),
+                                  child: WalletCardVisual(
+                                      wallet: w,
+                                      balanceText: money(w.balance)),
                                 ),
-                              ),
-                            )),
+                                const SizedBox(height: AppSpacing.xs),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.xs),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          'in ${money(w.income)} · out ${money(w.expense)}',
+                                          style: AppText.caption
+                                              .copyWith(color: c.textSubtle),
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      _DefaultControl(
+                                        isDefault: isDefault,
+                                        onSet: () => ref
+                                            .read(preferencesProvider.notifier)
+                                            .setDefaultWallet(w.id),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
                       const SizedBox(height: AppSpacing.sm),
                       PillButton(
                         label: 'Add wallet',
@@ -116,6 +154,54 @@ class WalletsScreen extends ConsumerWidget {
               },
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Per-wallet trailing control: a "Default" badge for the active default wallet,
+/// or a tappable "Set as default" affordance for the rest.
+class _DefaultControl extends StatelessWidget {
+  const _DefaultControl({required this.isDefault, this.onSet});
+
+  final bool isDefault;
+  final VoidCallback? onSet;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    if (isDefault) {
+      return Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
+        decoration: BoxDecoration(
+          color: c.primarySoft,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.star_rounded, size: 14, color: c.primary),
+            const SizedBox(width: 4),
+            Text('Default',
+                style: AppText.caption
+                    .copyWith(color: c.primary, fontWeight: FontWeight.w700)),
+          ],
+        ),
+      );
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onSet,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.star_outline_rounded, size: 14, color: c.textSubtle),
+          const SizedBox(width: 4),
+          Text('Set as default',
+              style: AppText.caption
+                  .copyWith(color: c.textSubtle, fontWeight: FontWeight.w600)),
         ],
       ),
     );
