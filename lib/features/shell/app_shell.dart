@@ -148,7 +148,7 @@ class AppShell extends ConsumerWidget {
                 _QuickAddCard(
                   icon: Icons.restaurant_rounded,
                   color: c.warning,
-                  label: 'Log a Meal',
+                  label: 'What Did You Eat?',
                   subtitle: 'Track what you ate today',
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -211,7 +211,7 @@ class AppShell extends ConsumerWidget {
         subtitle: 'Tell us what you had — we\'ll work out the rest',
         fieldHint: 'e.g. 100g peanuts, 2 eggs, 200g rice',
         maxLines: 2,
-        buttonLabel: 'Log Meal',
+        buttonLabel: 'Save Meal',
         emptyErrorText: 'Please enter what you ate',
         loadingMessages: const [
           'Analyzing your food entry...',

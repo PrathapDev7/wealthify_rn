@@ -10,7 +10,7 @@ import 'buttons.dart';
 
 /// Success sheet shown after a meal is logged — lists the parsed items with
 /// their nutrition breakdown. Shared between the full Calorie Tracker screen
-/// and the shell's Quick Add "Log a Meal" flow so both end the same way.
+/// and the shell's Quick Add "What Did You Eat?" flow so both end the same way.
 class MealAddedSheet extends StatelessWidget {
   final List<MealItem> items;
 
