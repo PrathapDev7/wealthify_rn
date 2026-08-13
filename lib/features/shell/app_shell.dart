@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/router/routes.dart';
@@ -57,44 +58,98 @@ class AppShell extends StatelessWidget {
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: c.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _AddOption(
-                icon: Icons.arrow_upward,
-                color: c.negative,
-                label: 'Add Expense',
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  context.push('${Routes.addTransaction}?type=expense');
-                },
-              ),
-              _AddOption(
-                icon: Icons.arrow_downward,
-                color: c.accentDark,
-                label: 'Add Income',
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  context.push('${Routes.addTransaction}?type=income');
-                },
-              ),
-              _AddOption(
-                icon: Icons.pie_chart_outline,
-                color: c.primary,
-                label: 'Set Budget',
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  context.push(Routes.setBudget);
-                },
-              ),
-            ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: c.overlay,
+      builder: (sheetContext) => Container(
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(AppRadius.xl2)),
+          boxShadow: AppShadows.xl,
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+                    decoration: BoxDecoration(
+                      color: c.borderStrong,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                  ),
+                ),
+                Text('Quick Add',
+                    style: AppText.title.copyWith(color: c.textStrong)),
+                const SizedBox(height: AppSpacing.xxs),
+                Text('What would you like to add?',
+                    style: AppText.body.copyWith(color: c.textMuted)),
+                const SizedBox(height: AppSpacing.xl),
+                _QuickAddCard(
+                  icon: Icons.arrow_upward_rounded,
+                  color: c.negative,
+                  label: 'Add Expense',
+                  subtitle: 'Log a purchase or bill',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    context.push('${Routes.addTransaction}?type=expense');
+                  },
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _QuickAddCard(
+                  icon: Icons.arrow_downward_rounded,
+                  color: c.primary,
+                  label: 'Add Income',
+                  subtitle: 'Record money you\'ve received',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    context.push('${Routes.addTransaction}?type=income');
+                  },
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _QuickAddCard(
+                  icon: Icons.pie_chart_rounded,
+                  color: c.info,
+                  label: 'Set Budget',
+                  subtitle: 'Plan spending for a category',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    context.push(Routes.setBudget);
+                  },
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _QuickAddCard(
+                  icon: Icons.bookmark_rounded,
+                  color: c.pink,
+                  label: 'Add to Wishlist',
+                  subtitle: 'Save something you want to buy',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    context.push(Routes.wishlist);
+                  },
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _QuickAddCard(
+                  icon: Icons.monitor_heart_rounded,
+                  color: c.warning,
+                  label: 'Log Calories',
+                  subtitle: 'Track a meal or snack',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    context.push(Routes.calories);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -102,26 +157,81 @@ class AppShell extends StatelessWidget {
   }
 }
 
-class _AddOption extends StatelessWidget {
-  const _AddOption(
-      {required this.icon,
-      required this.color,
-      required this.label,
-      required this.onTap});
+class _QuickAddCard extends StatelessWidget {
+  const _QuickAddCard({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
   final IconData icon;
   final Color color;
   final String label;
+  final String subtitle;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return ListTile(
-      onTap: onTap,
-      leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.14),
-          child: Icon(icon, color: color)),
-      title: Text(label, style: AppText.bodyMedium.copyWith(color: c.text)),
+    return Material(
+      color: c.surfaceSoft,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        splashColor: color.withValues(alpha: 0.12),
+        highlightColor: color.withValues(alpha: 0.06),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: c.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [color, color.withValues(alpha: 0.75)],
+                  ),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.35),
+                      offset: const Offset(0, 6),
+                      blurRadius: 14,
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label,
+                        style:
+                            AppText.bodyStrong.copyWith(color: c.textStrong)),
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        style: AppText.bodySm.copyWith(color: c.textMuted)),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: c.textSubtle, size: 22),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
