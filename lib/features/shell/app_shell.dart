@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
+import '../../core/providers.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/widgets.dart';
+import '../../data/models/calorie_entry.dart';
+import '../../data/models/wishlist_item_model.dart';
+import '../../data/repositories/wishlist_repository.dart';
 
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.navigationShell});
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
     return Scaffold(
       extendBody: true,
@@ -47,14 +54,14 @@ class AppShell extends StatelessWidget {
         ),
         child: IconButton(
           icon: const Icon(Icons.add, color: Colors.white, size: 28),
-          onPressed: () => _showAddSheet(context),
+          onPressed: () => _showAddSheet(context, ref),
         ),
       ),
       bottomNavigationBar: _NavBar(shell: navigationShell),
     );
   }
 
-  void _showAddSheet(BuildContext context) {
+  void _showAddSheet(BuildContext context, WidgetRef ref) {
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -134,18 +141,18 @@ class AppShell extends StatelessWidget {
                   subtitle: 'Save something you want to buy',
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    context.push(Routes.wishlist);
+                    _quickAddWishlistItem(context, ref);
                   },
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 _QuickAddCard(
-                  icon: Icons.monitor_heart_rounded,
+                  icon: Icons.restaurant_rounded,
                   color: c.warning,
-                  label: 'Log Calories',
-                  subtitle: 'Track a meal or snack',
+                  label: 'Log a Meal',
+                  subtitle: 'Track what you ate today',
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    context.push(Routes.calories);
+                    _quickLogMeal(context, ref);
                   },
                 ),
               ],
@@ -154,6 +161,85 @@ class AppShell extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _quickAddWishlistItem(BuildContext context, WidgetRef ref) async {
+    final result = await showModalBottomSheet<WishlistItemModel>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => QuickAddSheet(
+        icon: Icons.bookmark_rounded,
+        color: context.colors.pink,
+        title: 'Add to Wishlist',
+        subtitle: 'Save something you want to buy later',
+        fieldLabel: 'Item name',
+        fieldHint: 'What do you want to buy?',
+        buttonLabel: 'Save item',
+        emptyErrorText: 'Item name is required',
+        onSubmit: (ctx, value) async {
+          final item = WishlistItemModel(
+            id: DateTime.now().microsecondsSinceEpoch.toString(),
+            title: value,
+            estimatedAmount: null,
+            priority: 'Medium',
+            category: 'Other',
+            targetDate: null,
+            notes: '',
+            isPurchased: false,
+            createdAt: DateTime.now(),
+          );
+          await ref.read(wishlistRepositoryProvider).saveItem(item);
+          return item;
+        },
+      ),
+    );
+    if (result != null && context.mounted) {
+      showAppSnack(context, 'Added to wishlist');
+    }
+  }
+
+  Future<void> _quickLogMeal(BuildContext context, WidgetRef ref) async {
+    final result = await showModalBottomSheet<List<MealItem>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => QuickAddSheet(
+        icon: Icons.restaurant_rounded,
+        color: context.colors.warning,
+        title: 'What Did You Eat?',
+        subtitle: 'Tell us what you had — we\'ll work out the rest',
+        fieldHint: 'e.g. 100g peanuts, 2 eggs, 200g rice',
+        maxLines: 2,
+        buttonLabel: 'Log Meal',
+        emptyErrorText: 'Please enter what you ate',
+        loadingMessages: const [
+          'Analyzing your food entry...',
+          'Identifying ingredients...',
+          'Calculating nutrition values...',
+          'Almost done...',
+        ],
+        onSubmit: (ctx, value) async {
+          final repo = ref.read(caloriesRepositoryProvider);
+          final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+          final addRes = await repo.addCaloriesEntry(date: dateStr);
+          final entryId = addRes['entryId'] as String;
+          final processed = await repo.processFoodText(entryId, value);
+          return (processed['addedItems'] as List?)
+                  ?.map((m) => MealItem.fromJson(m as Map<String, dynamic>))
+                  .toList() ??
+              <MealItem>[];
+        },
+      ),
+    );
+    if (result != null && result.isNotEmpty && context.mounted) {
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => MealAddedSheet(items: result),
+      );
+    }
   }
 }
 

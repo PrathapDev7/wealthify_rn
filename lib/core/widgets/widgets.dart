@@ -3,6 +3,8 @@ export 'app_card.dart';
 export 'app_text_field.dart';
 export 'buttons.dart';
 export 'gradient_scaffold.dart';
+export 'meal_added_sheet.dart';
 export 'misc.dart';
 export 'numeric_keypad.dart';
+export 'quick_add_sheet.dart';
 export 'wealthify_icon.dart';

@@ -21,6 +21,7 @@ class AppTextField extends StatelessWidget {
     this.onTap,
     this.fillColor,
     this.borderColor,
+    this.autofocus = false,
   });
 
   final TextEditingController? controller;
@@ -35,6 +36,7 @@ class AppTextField extends StatelessWidget {
   final int maxLines;
   final bool readOnly;
   final VoidCallback? onTap;
+  final bool autofocus;
 
   /// Overrides for the input's background/border — falls back to the
   /// default input tokens when omitted.
@@ -62,6 +64,7 @@ class AppTextField extends StatelessWidget {
           ),
           child: TextField(
             controller: controller,
+            autofocus: autofocus,
             obscureText: obscureText,
             keyboardType: keyboardType,
             onChanged: onChanged,
