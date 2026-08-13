@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../core/storage/prefs.dart';
 import '../../core/utils/currency.dart';
+import '../../data/models/wallet_model.dart';
 
 class Preferences {
   const Preferences({
@@ -93,6 +94,22 @@ class PreferencesController extends Notifier<Preferences> {
       defaultWallet: walletId,
       weekStart: state.weekStart,
     ));
+  }
+
+  /// Mirrors the server's primary wallet into [Preferences.defaultWallet] so
+  /// the add-transaction picker and dashboard follow the server's choice.
+  /// No-op when the current default already matches.
+  void syncDefaultFromWallets(List<WalletModel> wallets) {
+    WalletModel? primary;
+    for (final w in wallets) {
+      if (w.isPrimary) {
+        primary = w;
+        break;
+      }
+    }
+    if (primary != null) {
+      setDefaultWallet(primary.id);
+    }
   }
 
   /// Formats a value using the active currency symbol.

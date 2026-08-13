@@ -102,7 +102,7 @@ class LocalNotifications {
       channelName,
       importance: Importance.high,
       priority: Priority.high,
-      color: const Color(0xFF7C4DFF),
+      color: const Color(0xFF1B8855),
     );
     // Force foreground presentation on iOS/macOS (show the banner, play the
     // sound, and update the badge even when Wealthify is the active app).

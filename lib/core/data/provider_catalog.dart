@@ -141,7 +141,7 @@ class ProviderAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = provider;
-    final bg = p?.color ?? color ?? const Color(0xFF6C5CE7);
+    final bg = p?.color ?? color ?? const Color(0xFF1B8855);
     final text = p?.short ?? _initials(label);
     final showIcon = text.isEmpty && icon != null;
 

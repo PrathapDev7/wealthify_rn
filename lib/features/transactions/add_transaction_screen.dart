@@ -95,13 +95,22 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       if (!mounted) return;
       setState(() {
         _wallets = wallets;
-        // Drop a stale default that no longer maps to a wallet.
+        // Drop a stale default that no longer maps to a wallet, then fall back
+        // to the server's primary wallet.
         if (_account != null && !wallets.any((w) => w.id == _account)) {
           _account = null;
         }
+        if (_account == null) {
+          for (final w in wallets) {
+            if (w.isPrimary) {
+              _account = w.id;
+              break;
+            }
+          }
+        }
       });
     } catch (_) {
-      // Wallets are optional — ignore load failures.
+      // Wallet loading failure — the picker simply won't pre-select.
     }
   }
 
@@ -183,6 +192,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       showAppSnack(context, 'Select a category', error: true);
       return;
     }
+    if (_account == null || _account!.trim().isEmpty) {
+      showAppSnack(context, 'Select a wallet', error: true);
+      return;
+    }
 
     final sub = _subCategory?.trim() ?? '';
     final payload = <String, dynamic>{
@@ -191,7 +204,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       'date': DateFormat('yyyy-MM-dd').format(_date),
       'type': income ? 'income' : 'self',
       'sub_category': sub,
-      if (_account != null && _account!.isNotEmpty) 'account': _account,
+      'account': _account,
       'title': _category,
     };
 
@@ -291,7 +304,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   ),
                 ],
 
-                // Wallet / account picker (only when wallets exist).
+                // Wallet / account picker — required for every transaction.
                 if (_wallets.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.lg),
                   Text('Wallet',
@@ -301,6 +314,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     wallets: _wallets,
                     selectedId: _account,
                     enabled: !_saving,
+                    showNone: false,
                     onSelect: (id) => setState(() => _account = id),
                   ),
                 ],

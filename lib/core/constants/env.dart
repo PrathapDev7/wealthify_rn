@@ -9,7 +9,7 @@ abstract class Env {
   // app at your local backend (e.g. from `ngrok http 5000`). Or pass
   // --dart-define=API_BASE_URL=... at run time (that wins over this). Leave ''
   // to use the hosted backend. Keep this '' in commits.
-  static const String _devTunnel = 'https://corset-unsigned-composed.ngrok-free.app/api/v1/';
+  static const String _devTunnel = '';
 
   static const String _hosted =
       'https://expense-tracker-be-3rvm.onrender.com/api/v1/';

@@ -16,6 +16,7 @@ abstract class AppText {
   static TextStyle get subtitle => _p(16, FontWeight.w700);
   static TextStyle get body => _p(14, FontWeight.w400, height: 1.45);
   static TextStyle get bodyMedium => _p(14, FontWeight.w600);
+  static TextStyle get bodyLarge => _p(16, FontWeight.w700, height: 1.4);
   static TextStyle get bodyStrong => _p(14, FontWeight.w700);
   static TextStyle get bodySm => _p(12, FontWeight.w400, height: 1.4);
   static TextStyle get caption => _p(11, FontWeight.w500, height: 1.35);

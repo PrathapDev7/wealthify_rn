@@ -25,6 +25,7 @@ import '../../features/notifications/notifications_screen.dart';
 import '../../features/onboarding/welcome_screen.dart';
 import '../../features/preferences/preferences_screen.dart';
 import '../../features/premium/premium_screen.dart';
+import '../../features/calories/calorie_screen.dart';
 import '../../features/recurring/edit_recurring_screen.dart';
 import '../../features/recurring/recurring_screen.dart';
 import '../../features/reports/reports_screen.dart';
@@ -36,6 +37,7 @@ import '../../features/transactions/transactions_screen.dart';
 import '../../features/wallets/edit_wallet_screen.dart';
 import '../../features/wallets/select_provider_screen.dart';
 import '../../features/wallets/wallets_screen.dart';
+import '../../features/wishlist/wishlist_screen.dart';
 import '../providers.dart';
 import '../storage/prefs.dart';
 import 'routes.dart';
@@ -70,32 +72,45 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
         branches: [
-          StatefulShellBranch(routes: [
-            GoRoute(
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.dashboard,
-                builder: (_, _) => const DashboardScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
+                builder: (_, _) => const DashboardScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.transactions,
-                builder: (_, _) => const TransactionsScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
+                builder: (_, _) => const TransactionsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.analytics,
-                builder: (_, _) => const AnalyticsScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
+                builder: (_, _) => const AnalyticsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.account,
-                builder: (_, _) => const AccountScreen()),
-          ]),
+                builder: (_, _) => const AccountScreen(),
+              ),
+            ],
+          ),
         ],
       ),
       GoRoute(
         path: Routes.addTransaction,
         builder: (_, state) => AddTransactionScreen(
-            type: state.uri.queryParameters['type'] ?? 'expense'),
+          type: state.uri.queryParameters['type'] ?? 'expense',
+        ),
       ),
       GoRoute(
         path: Routes.transactionDetail,
@@ -105,14 +120,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.selectCategory,
         builder: (_, state) => SelectCategoryScreen(
-            type: state.uri.queryParameters['type'] ?? 'expense'),
+          type: state.uri.queryParameters['type'] ?? 'expense',
+        ),
       ),
       GoRoute(
         path: Routes.selectProvider,
         builder: (_, state) => SelectProviderScreen(
-            type: state.uri.queryParameters['type'] ?? 'bank'),
+          type: state.uri.queryParameters['type'] ?? 'bank',
+        ),
       ),
       GoRoute(path: Routes.budgets, builder: (_, _) => const BudgetsScreen()),
+      GoRoute(path: Routes.wishlist, builder: (_, _) => const WishlistScreen()),
       GoRoute(
         path: Routes.setBudget,
         builder: (_, state) =>
@@ -124,7 +142,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) =>
             EditWalletScreen(wallet: state.extra as WalletModel?),
       ),
-      GoRoute(path: Routes.recurring, builder: (_, _) => const RecurringScreen()),
+      GoRoute(
+        path: Routes.recurring,
+        builder: (_, _) => const RecurringScreen(),
+      ),
       GoRoute(
         path: Routes.editRecurring,
         builder: (_, state) =>
@@ -133,12 +154,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.goals, builder: (_, _) => const GoalsScreen()),
       GoRoute(
         path: Routes.goalDetail,
-        builder: (_, state) => GoalDetailScreen(goal: state.extra as GoalModel?),
+        builder: (_, state) =>
+            GoalDetailScreen(goal: state.extra as GoalModel?),
       ),
       GoRoute(path: Routes.insights, builder: (_, _) => const InsightsScreen()),
       GoRoute(
-          path: Routes.manageCategories,
-          builder: (_, _) => const ManageCategoriesScreen()),
+        path: Routes.manageCategories,
+        builder: (_, _) => const ManageCategoriesScreen(),
+      ),
       GoRoute(
         path: Routes.editCategory,
         builder: (_, state) {
@@ -151,13 +174,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: Routes.reports, builder: (_, _) => const ReportsScreen()),
       GoRoute(
-          path: Routes.preferences,
-          builder: (_, _) => const PreferencesScreen()),
+        path: Routes.preferences,
+        builder: (_, _) => const PreferencesScreen(),
+      ),
       GoRoute(
-          path: Routes.notifications,
-          builder: (_, _) => const NotificationsScreen()),
+        path: Routes.notifications,
+        builder: (_, _) => const NotificationsScreen(),
+      ),
       GoRoute(path: Routes.security, builder: (_, _) => const SecurityScreen()),
       GoRoute(path: Routes.premium, builder: (_, _) => const PremiumScreen()),
+      GoRoute(path: Routes.calories, builder: (_, _) => const CalorieScreen()),
     ],
   );
 });

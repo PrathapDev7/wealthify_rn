@@ -70,9 +70,21 @@ class _TransactionDetailScreenState
     try {
       final wallets = await ref.read(walletsRepositoryProvider).getWallets();
       if (!mounted) return;
-      setState(() => _wallets = wallets);
+      setState(() {
+        _wallets = wallets;
+        // Pre-select the server's primary wallet when this transaction has no
+        // wallet yet, so saving keeps it wallet-linked.
+        if (_account == null && wallets.isNotEmpty) {
+          for (final w in wallets) {
+            if (w.isPrimary) {
+              _account = w.id;
+              break;
+            }
+          }
+        }
+      });
     } catch (_) {
-      // Wallets are optional — ignore load failures.
+      // Wallet loading failure — the picker simply won't pre-select.
     }
   }
 
@@ -126,13 +138,17 @@ class _TransactionDetailScreenState
       showAppSnack(context, 'Use date format YYYY-MM-DD', error: true);
       return;
     }
+    if (_account == null || _account!.trim().isEmpty) {
+      showAppSnack(context, 'Select a wallet', error: true);
+      return;
+    }
 
     final isIncome = _txn.isIncome;
     final payload = <String, dynamic>{
       'amount': parsed,
       'category': _category.trim(),
       'date': DateFormat('yyyy-MM-dd').format(_parsedDate!),
-      'account': _account ?? '',
+      'account': _account,
       if (isIncome)
         'title': _category.trim()
       else ...{

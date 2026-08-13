@@ -34,7 +34,7 @@ class AppCard extends StatelessWidget {
         boxShadow: AppShadows.sm,
         border: isDark ? Border.all(color: c.border, width: 0.5) : null,
       ),
-      child: child,
+      child: Material(type: MaterialType.transparency, child: child),
     );
     if (onTap == null) return card;
     return GestureDetector(onTap: onTap, child: card);

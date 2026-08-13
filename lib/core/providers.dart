@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'network/api_client.dart';
 import 'storage/prefs.dart';
 import 'storage/secure_store.dart';
+import '../data/repositories/calories_repository.dart';
 
 /// Overridden in `main()` after async initialization.
 final prefsProvider = Provider<Prefs>(
@@ -16,6 +17,10 @@ final secureStoreProvider = Provider<SecureStore>(
 
 final apiClientProvider = Provider<ApiClient>(
   (ref) => ApiClient(ref.read(secureStoreProvider)),
+);
+
+final caloriesRepositoryProvider = Provider<CaloriesRepository>(
+  (ref) => CaloriesRepository(ref.read(apiClientProvider)),
 );
 
 /// Monotonic counter bumped whenever transaction data is mutated (add / edit /

@@ -13,9 +13,12 @@ import '../../core/widgets/buttons.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import '../../core/widgets/misc.dart';
 import '../../data/models/recurring_model.dart';
+import '../../data/models/wallet_model.dart';
 import '../../data/repositories/recurring_repository.dart';
+import '../../data/repositories/wallets_repository.dart';
 import '../auth/auth_screen.dart';
 import '../transactions/widgets/category_chips.dart';
+import '../wallets/widgets/wallet_picker.dart';
 
 const _kinds = ['expense', 'income'];
 const _kindLabels = {'expense': 'Expense', 'income': 'Income'};
@@ -47,6 +50,8 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
   late final TextEditingController _interval;
   late final TextEditingController _description;
   String _category = '';
+  String? _account; // selected wallet id
+  List<WalletModel> _wallets = const [];
   late String _kind;
   late String _frequency;
   DateTime? _startDate;
@@ -67,6 +72,30 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
     _frequency = r?.frequency ?? 'monthly';
     _startDate = _parseDate(r?.startDate);
     _endDate = _parseDate(r?.endDate);
+    _account = r?.account;
+    _loadWallets();
+  }
+
+  Future<void> _loadWallets() async {
+    try {
+      final wallets = await ref.read(walletsRepositoryProvider).getWallets();
+      if (!mounted) return;
+      setState(() {
+        _wallets = wallets;
+        // Pre-select the server's primary wallet when the rule has none.
+        if (_account == null || !wallets.any((w) => w.id == _account)) {
+          _account = null;
+          for (final w in wallets) {
+            if (w.isPrimary) {
+              _account = w.id;
+              break;
+            }
+          }
+        }
+      });
+    } catch (_) {
+      // Wallet loading failure — the picker simply won't pre-select.
+    }
   }
 
   static DateTime? _parseDate(String? value) {
@@ -128,6 +157,10 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
       showAppSnack(context, 'Pick a start date', error: true);
       return;
     }
+    if (_account == null || _account!.trim().isEmpty) {
+      showAppSnack(context, 'Select a wallet', error: true);
+      return;
+    }
 
     final desc = _description.text.trim();
     final payload = <String, dynamic>{
@@ -138,6 +171,7 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
       'interval': int.tryParse(_interval.text.trim()) ?? 1,
       'startDate': DateFormat('yyyy-MM-dd').format(_startDate!),
       'description': desc,
+      'account': _account,
       if (_endDate != null) 'endDate': DateFormat('yyyy-MM-dd').format(_endDate!),
       if (_kind == 'income') 'title': category,
     };
@@ -262,6 +296,18 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
                         hint: 'Add a note',
                         maxLines: 3,
                       ),
+                      if (_wallets.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        Text('Wallet',
+                            style: AppText.label.copyWith(color: c.textSubtle)),
+                        const SizedBox(height: AppSpacing.sm),
+                        WalletPicker(
+                          wallets: _wallets,
+                          selectedId: _account,
+                          enabled: !_saving,
+                          onSelect: (id) => setState(() => _account = id),
+                        ),
+                      ],
                     ],
                   ),
                 ),

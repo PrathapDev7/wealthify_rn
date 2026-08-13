@@ -64,7 +64,8 @@ Color? parseHexColor(String? hex) {
 }
 
 /// Resolved accent color for a wallet: catalog provider → stored color → brand.
-Color walletAccent(WalletModel w, {Color fallback = const Color(0xFF6C5CE7)}) =>
+Color walletAccent(WalletModel w,
+        {Color fallback = const Color(0xFF1B8855)}) =>
     providerById(w.provider)?.color ?? parseHexColor(w.color) ?? fallback;
 
 /// `#RRGGBB` string for a [Color] (alpha dropped).

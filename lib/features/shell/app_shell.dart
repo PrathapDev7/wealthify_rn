@@ -28,6 +28,7 @@ class AppShell extends StatelessWidget {
               c.lavenderWashMid,
               c.lavenderWashBottom,
             ],
+            stops: const [0.0, 0.5, 0.75, 1.0],
           ),
         ),
         child: SafeArea(bottom: false, child: navigationShell),

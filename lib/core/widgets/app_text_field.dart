@@ -19,6 +19,8 @@ class AppTextField extends StatelessWidget {
     this.maxLines = 1,
     this.readOnly = false,
     this.onTap,
+    this.fillColor,
+    this.borderColor,
   });
 
   final TextEditingController? controller;
@@ -34,6 +36,11 @@ class AppTextField extends StatelessWidget {
   final bool readOnly;
   final VoidCallback? onTap;
 
+  /// Overrides for the input's background/border — falls back to the
+  /// default input tokens when omitted.
+  final Color? fillColor;
+  final Color? borderColor;
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -46,10 +53,12 @@ class AppTextField extends StatelessWidget {
         ],
         Container(
           decoration: BoxDecoration(
-            color: c.inputBackground,
+            color: fillColor ?? c.inputBackground,
             borderRadius: BorderRadius.circular(AppRadius.sm),
             border: Border.all(
-                color: errorText != null ? c.negative : c.inputBorder),
+                color: errorText != null
+                    ? c.negative
+                    : borderColor ?? c.inputBorder),
           ),
           child: TextField(
             controller: controller,

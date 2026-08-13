@@ -16,6 +16,7 @@ class WalletModel {
     this.balance = 0,
     this.income = 0,
     this.expense = 0,
+    this.isPrimary = false,
   });
 
   final String id;
@@ -34,6 +35,7 @@ class WalletModel {
   final num balance; // computed server-side
   final num income;
   final num expense;
+  final bool isPrimary; // server-authoritative default wallet
 
   bool get isCard => kind == 'card';
 
@@ -54,6 +56,7 @@ class WalletModel {
         balance: (j['balance'] ?? 0) as num,
         income: (j['income'] ?? 0) as num,
         expense: (j['expense'] ?? 0) as num,
+        isPrimary: j['isPrimary'] == true,
       );
 }
 

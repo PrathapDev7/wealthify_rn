@@ -20,7 +20,6 @@ class WalletsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
-    final prefs = ref.watch(preferencesProvider);
     final money = ref.read(preferencesProvider.notifier).money;
     final async = ref.watch(walletsListProvider);
 
@@ -40,27 +39,15 @@ class WalletsScreen extends ConsumerWidget {
               ),
               data: (wallets) {
                 final total = wallets.fold<num>(0, (sum, w) => sum + w.balance);
-                final stored = prefs.defaultWallet;
-                // A single wallet is always the default; otherwise honour the
-                // stored choice while it still points to an existing wallet.
-                final defaultId = wallets.length == 1
-                    ? wallets.first.id
-                    : (stored != null && wallets.any((w) => w.id == stored)
-                        ? stored
-                        : null);
-                // Persist the implicit single-wallet default so the dashboard
-                // and the add-transaction picker stay in sync. Deferred past the
-                // current frame to avoid mutating provider state during build.
-                if (wallets.length == 1 && stored != wallets.first.id) {
-                  final id = wallets.first.id;
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (context.mounted) {
-                      ref
-                          .read(preferencesProvider.notifier)
-                          .setDefaultWallet(id);
-                    }
-                  });
-                }
+                // Keep the local default pref in sync with the server's
+                // primary wallet so pickers default to the right account.
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) {
+                    ref
+                        .read(preferencesProvider.notifier)
+                        .syncDefaultFromWallets(wallets);
+                  }
+                });
                 return RefreshIndicator(
                   onRefresh: () => ref.refresh(walletsListProvider.future),
                   child: ListView(
@@ -99,7 +86,7 @@ class WalletsScreen extends ConsumerWidget {
                         )
                       else
                         ...wallets.map((w) {
-                          final isDefault = w.id == defaultId;
+                          final isPrimary = w.isPrimary;
                           return Padding(
                             padding:
                                 const EdgeInsets.only(bottom: AppSpacing.lg),
@@ -107,7 +94,7 @@ class WalletsScreen extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 // Only the card opens the editor — the row below
-                                // keeps its own tap target for "Set as default".
+                                // keeps its own tap target for "Set as primary".
                                 GestureDetector(
                                   behavior: HitTestBehavior.opaque,
                                   onTap: () => context.push(Routes.editWallet,
@@ -131,10 +118,19 @@ class WalletsScreen extends ConsumerWidget {
                                       ),
                                       const SizedBox(width: AppSpacing.sm),
                                       _DefaultControl(
-                                        isDefault: isDefault,
-                                        onSet: () => ref
-                                            .read(preferencesProvider.notifier)
-                                            .setDefaultWallet(w.id),
+                                        isDefault: isPrimary,
+                                        onSet: () async {
+                                          await ref
+                                              .read(walletsRepositoryProvider)
+                                              .setPrimaryWallet(w.id);
+                                          if (context.mounted) {
+                                            ref
+                                                .read(preferencesProvider
+                                                    .notifier)
+                                                .setDefaultWallet(w.id);
+                                            ref.invalidate(walletsListProvider);
+                                          }
+                                        },
                                       ),
                                     ],
                                   ),
@@ -160,8 +156,8 @@ class WalletsScreen extends ConsumerWidget {
   }
 }
 
-/// Per-wallet trailing control: a "Default" badge for the active default wallet,
-/// or a tappable "Set as default" affordance for the rest.
+/// Per-wallet trailing control: a "Primary" badge for the active primary wallet,
+/// or a tappable "Set as primary" affordance for the rest.
 class _DefaultControl extends StatelessWidget {
   const _DefaultControl({required this.isDefault, this.onSet});
 
@@ -184,7 +180,7 @@ class _DefaultControl extends StatelessWidget {
           children: [
             Icon(Icons.star_rounded, size: 14, color: c.primary),
             const SizedBox(width: 4),
-            Text('Default',
+            Text('Primary',
                 style: AppText.caption
                     .copyWith(color: c.primary, fontWeight: FontWeight.w700)),
           ],
@@ -199,7 +195,7 @@ class _DefaultControl extends StatelessWidget {
         children: [
           Icon(Icons.star_outline_rounded, size: 14, color: c.textSubtle),
           const SizedBox(width: 4),
-          Text('Set as default',
+          Text('Set as primary',
               style: AppText.caption
                   .copyWith(color: c.textSubtle, fontWeight: FontWeight.w600)),
         ],

@@ -17,6 +17,7 @@ class PillButton extends StatelessWidget {
     this.loading = false,
     this.leading,
     this.expand = true,
+    this.loadingLabel,
   });
 
   final String label;
@@ -25,6 +26,10 @@ class PillButton extends StatelessWidget {
   final bool loading;
   final Widget? leading;
   final bool expand;
+
+  /// When set, shown next to the spinner while [loading] is true instead of
+  /// a bare spinner — lets a button surface progress text on itself.
+  final String? loadingLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +44,26 @@ class PillButton extends StatelessWidget {
     };
 
     final content = loading
-        ? SizedBox(
-            height: 20,
-            width: 20,
-            child: CircularProgressIndicator(strokeWidth: 2.2, color: fg),
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                height: 18,
+                width: 18,
+                child: CircularProgressIndicator(strokeWidth: 2.2, color: fg),
+              ),
+              if (loadingLabel != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Flexible(
+                  child: Text(
+                    loadingLabel!,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.button.copyWith(color: fg),
+                  ),
+                ),
+              ],
+            ],
           )
         : Row(
             mainAxisSize: MainAxisSize.min,
@@ -66,8 +87,7 @@ class PillButton extends StatelessWidget {
               : const EdgeInsets.symmetric(horizontal: AppSpacing.xl2),
           decoration: BoxDecoration(
             gradient: isPrimary
-                ? LinearGradient(
-                    colors: [c.primaryGradientStart, c.primaryGradientEnd])
+                ? LinearGradient(colors: [c.primaryDark, c.primaryDarker])
                 : null,
             color: switch (variant) {
               PillVariant.primary => null,
@@ -78,7 +98,7 @@ class PillButton extends StatelessWidget {
             border: variant == PillVariant.secondary
                 ? Border.all(color: c.border)
                 : null,
-            boxShadow: isPrimary ? AppShadows.primaryGlow : null,
+            boxShadow: null,
           ),
           child: content,
         ),

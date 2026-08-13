@@ -1,6 +1,7 @@
 /// Spacing & radius scales ported from `legacy_rn/src/styles/tokens.ts`.
 abstract class AppSpacing {
   static const double none = 0;
+  static const double xxs = 2;
   static const double xs = 4;
   static const double sm = 8;
   static const double md = 12;

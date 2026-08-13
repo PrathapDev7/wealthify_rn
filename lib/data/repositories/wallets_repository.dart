@@ -22,6 +22,8 @@ class WalletsRepository {
   Future<void> updateWallet(String id, Map<String, dynamic> data) =>
       _api.dio.put('update-wallet/$id', data: data);
   Future<void> deleteWallet(String id) => _api.dio.delete('delete-wallet/$id');
+  Future<void> setPrimaryWallet(String id) =>
+      _api.dio.put('update-wallet/$id', data: {'isPrimary': true});
 }
 
 final walletsRepositoryProvider = Provider<WalletsRepository>(

@@ -28,7 +28,7 @@ class AuthScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
-  bool _isRegister = true;
+  bool _isRegister = false;
   bool _obscure = true;
   final _mobile = TextEditingController();
   final _password = TextEditingController();

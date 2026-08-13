@@ -44,12 +44,19 @@ class AccountScreen extends ConsumerWidget {
         .join();
 
     return ListView(
-      padding:
-          const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.md, AppSpacing.xl, 120),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xl,
+        120,
+      ),
       children: [
         Center(
-            child: Text('Account',
-                style: AppText.screenTitle.copyWith(color: c.text))),
+          child: Text(
+            'Account',
+            style: AppText.screenTitle.copyWith(color: c.text),
+          ),
+        ),
         const SizedBox(height: AppSpacing.lg),
         AppCard(
           child: Row(
@@ -59,22 +66,30 @@ class AccountScreen extends ConsumerWidget {
                 height: 54,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                      colors: [c.primaryGradientStart, c.primaryGradientEnd]),
+                    colors: [c.primaryGradientStart, c.primaryGradientEnd],
+                  ),
                   borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Center(
-                    child: Text(initials.isEmpty ? '?' : initials,
-                        style: AppText.title.copyWith(color: Colors.white))),
+                  child: Text(
+                    initials.isEmpty ? '?' : initials,
+                    style: AppText.title.copyWith(color: Colors.white),
+                  ),
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(user?.username ?? '—',
-                        style: AppText.bodyMedium.copyWith(color: c.text)),
-                    Text('+91 ${user?.mobile ?? '—'}',
-                        style: AppText.bodySm.copyWith(color: c.textSubtle)),
+                    Text(
+                      user?.username ?? '—',
+                      style: AppText.bodyMedium.copyWith(color: c.text),
+                    ),
+                    Text(
+                      '+91 ${user?.mobile ?? '—'}',
+                      style: AppText.bodySm.copyWith(color: c.textSubtle),
+                    ),
                   ],
                 ),
               ),
@@ -82,14 +97,20 @@ class AccountScreen extends ConsumerWidget {
                 onTap: () => _editName(context, ref),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
                   decoration: BoxDecoration(
                     color: c.primarySoft,
                     borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
-                  child: Text('Edit',
-                      style: AppText.bodySm.copyWith(
-                          color: c.primary, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    'Edit',
+                    style: AppText.bodySm.copyWith(
+                      color: c.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -102,7 +123,8 @@ class AccountScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                  colors: [c.primaryGradientStart, c.primaryGradientEnd]),
+                colors: [c.primaryGradientStart, c.primaryGradientEnd],
+              ),
               borderRadius: BorderRadius.circular(AppRadius.md),
               boxShadow: AppShadows.primaryGlow,
             ),
@@ -114,11 +136,14 @@ class AccountScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Premium Account',
-                          style: AppText.subtitle.copyWith(color: Colors.white)),
-                      Text('Unlock advanced insights',
-                          style: AppText.caption
-                              .copyWith(color: Colors.white70)),
+                      Text(
+                        'Premium Account',
+                        style: AppText.subtitle.copyWith(color: Colors.white),
+                      ),
+                      Text(
+                        'Unlock advanced insights',
+                        style: AppText.caption.copyWith(color: Colors.white70),
+                      ),
                     ],
                   ),
                 ),
@@ -129,56 +154,112 @@ class AccountScreen extends ConsumerWidget {
         ),
         _section(c, 'Money'),
         _group(c, [
-          _Row(Icons.pie_chart_outline, 'Budgets',
-              () => context.push(Routes.budgets)),
-          _Row(Icons.sell_outlined, 'Manage Categories',
-              () => context.push(Routes.manageCategories)),
-          _Row(Icons.autorenew, 'Recurring',
-              () => context.push(Routes.recurring)),
-          _Row(Icons.flag_outlined, 'Savings Goals',
-              () => context.push(Routes.goals)),
-          _Row(Icons.account_balance_wallet_outlined, 'Wallets',
-              () => context.push(Routes.wallets)),
+          _Row(
+            Icons.pie_chart_outline,
+            'Budgets',
+            () => context.push(Routes.budgets),
+          ),
+          _Row(
+            Icons.bookmark_border,
+            'Wishlist',
+            () => context.push(Routes.wishlist),
+          ),
+          _Row(
+            Icons.monitor_heart_outlined,
+            'Calorie Tracking',
+            () => context.push(Routes.calories),
+          ),
+          _Row(
+            Icons.sell_outlined,
+            'Manage Categories',
+            () => context.push(Routes.manageCategories),
+          ),
+          _Row(
+            Icons.autorenew,
+            'Recurring',
+            () => context.push(Routes.recurring),
+          ),
+          _Row(
+            Icons.flag_outlined,
+            'Savings Goals',
+            () => context.push(Routes.goals),
+          ),
+          _Row(
+            Icons.account_balance_wallet_outlined,
+            'Wallets',
+            () => context.push(Routes.wallets),
+          ),
         ]),
         _section(c, 'Reports & Insights'),
         _group(c, [
-          _Row(Icons.insights_outlined, 'Insights',
-              () => context.push(Routes.insights)),
-          _Row(Icons.description_outlined, 'Reports & Export',
-              () => context.push(Routes.reports)),
+          _Row(
+            Icons.insights_outlined,
+            'Insights',
+            () => context.push(Routes.insights),
+          ),
+          _Row(
+            Icons.description_outlined,
+            'Reports & Export',
+            () => context.push(Routes.reports),
+          ),
         ]),
         _section(c, 'Account Settings'),
         _group(c, [
-          _Row(Icons.person_outline, 'Account Information',
-              () => _editName(context, ref)),
-          _Row(Icons.key_outlined, 'Change Password',
-              () => _changePassword(context, ref)),
+          _Row(
+            Icons.person_outline,
+            'Account Information',
+            () => _editName(context, ref),
+          ),
+          _Row(
+            Icons.key_outlined,
+            'Change Password',
+            () => _changePassword(context, ref),
+          ),
         ]),
         _section(c, 'Settings'),
         _group(c, [
-          _Row(Icons.settings_outlined, 'Preferences',
-              () => context.push(Routes.preferences)),
-          _Row(Icons.notifications_outlined, 'Reminders',
-              () => context.push(Routes.notifications)),
-          _Row(Icons.lock_outline, 'App Lock',
-              () => context.push(Routes.security)),
-          _Row(Icons.delete_outline, 'Reset local app data',
-              () => _resetLocalData(context, ref),
-              danger: true),
-          _Row(Icons.help_outline, 'Help & Support',
-              () => showAppSnack(context, 'Coming soon')),
+          _Row(
+            Icons.settings_outlined,
+            'Preferences',
+            () => context.push(Routes.preferences),
+          ),
+          _Row(
+            Icons.notifications_outlined,
+            'Reminders',
+            () => context.push(Routes.notifications),
+          ),
+          _Row(
+            Icons.lock_outline,
+            'App Lock',
+            () => context.push(Routes.security),
+          ),
+          _Row(
+            Icons.delete_outline,
+            'Reset local app data',
+            () => _resetLocalData(context, ref),
+            danger: true,
+          ),
+          _Row(
+            Icons.help_outline,
+            'Help & Support',
+            () => showAppSnack(context, 'Coming soon'),
+          ),
           _Row(Icons.info_outline, 'About', () => _about(context)),
         ]),
         const SizedBox(height: AppSpacing.xl),
         OutlinedButton.icon(
           onPressed: () => _logout(context, ref),
           icon: Icon(Icons.logout, color: c.negative, size: 18),
-          label: Text('Logout', style: AppText.button.copyWith(color: c.negative)),
+          label: Text(
+            'Logout',
+            style: AppText.button.copyWith(color: c.negative),
+          ),
           style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(50),
             side: BorderSide(color: c.negativeSoft),
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.pill)),
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
           ),
         ),
       ],
@@ -186,9 +267,9 @@ class AccountScreen extends ConsumerWidget {
   }
 
   Widget _section(AppColors c, String label) => Padding(
-        padding: const EdgeInsets.only(top: AppSpacing.xl2, bottom: AppSpacing.sm),
-        child: Text(label, style: AppText.label.copyWith(color: c.textSubtle)),
-      );
+    padding: const EdgeInsets.only(top: AppSpacing.xl2, bottom: AppSpacing.sm),
+    child: Text(label, style: AppText.label.copyWith(color: c.textSubtle)),
+  );
 
   Widget _group(AppColors c, List<_Row> rows) {
     return AppCard(
@@ -197,11 +278,16 @@ class AccountScreen extends ConsumerWidget {
         children: [
           for (var i = 0; i < rows.length; i++) ...[
             ListTile(
-              leading: Icon(rows[i].icon,
-                  color: rows[i].danger ? c.negative : c.text),
-              title: Text(rows[i].label,
-                  style: AppText.bodyMedium
-                      .copyWith(color: rows[i].danger ? c.negative : c.text)),
+              leading: Icon(
+                rows[i].icon,
+                color: rows[i].danger ? c.negative : c.text,
+              ),
+              title: Text(
+                rows[i].label,
+                style: AppText.bodyMedium.copyWith(
+                  color: rows[i].danger ? c.negative : c.text,
+                ),
+              ),
               trailing: Icon(Icons.chevron_right, color: c.textSubtle),
               onTap: rows[i].onTap,
             ),
@@ -226,8 +312,10 @@ class AccountScreen extends ConsumerWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           backgroundColor: c.surface,
-          title: Text('Account information',
-              style: AppText.subtitle.copyWith(color: c.text)),
+          title: Text(
+            'Account information',
+            style: AppText.subtitle.copyWith(color: c.text),
+          ),
           content: AppTextField(
             controller: controller,
             label: 'Name',
@@ -236,8 +324,10 @@ class AccountScreen extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: saving ? null : () => Navigator.of(ctx).pop(),
-              child: Text('Cancel',
-                  style: AppText.button.copyWith(color: c.textSubtle)),
+              child: Text(
+                'Cancel',
+                style: AppText.button.copyWith(color: c.textSubtle),
+              ),
             ),
             PillButton(
               label: 'Save',
@@ -292,8 +382,10 @@ class AccountScreen extends ConsumerWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           backgroundColor: c.surface,
-          title: Text('Update password',
-              style: AppText.subtitle.copyWith(color: c.text)),
+          title: Text(
+            'Update password',
+            style: AppText.subtitle.copyWith(color: c.text),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -327,8 +419,10 @@ class AccountScreen extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: saving ? null : () => Navigator.of(ctx).pop(),
-              child: Text('Close',
-                  style: AppText.button.copyWith(color: c.textSubtle)),
+              child: Text(
+                'Close',
+                style: AppText.button.copyWith(color: c.textSubtle),
+              ),
             ),
             PillButton(
               label: 'Save',
@@ -341,24 +435,35 @@ class AccountScreen extends ConsumerWidget {
                       final newVal = newPw.text;
                       final confirmVal = confirmPw.text;
                       if (oldVal.isEmpty) {
-                        showAppSnack(ctx, 'Please enter old password',
-                            error: true);
+                        showAppSnack(
+                          ctx,
+                          'Please enter old password',
+                          error: true,
+                        );
                         return;
                       }
                       if (newVal.isEmpty) {
-                        showAppSnack(ctx, 'Please enter new password',
-                            error: true);
+                        showAppSnack(
+                          ctx,
+                          'Please enter new password',
+                          error: true,
+                        );
                         return;
                       }
                       if (confirmVal.isEmpty) {
-                        showAppSnack(ctx, 'Please confirm new password',
-                            error: true);
+                        showAppSnack(
+                          ctx,
+                          'Please confirm new password',
+                          error: true,
+                        );
                         return;
                       }
                       if (confirmVal != newVal) {
-                        showAppSnack(ctx,
-                            'New password should match with confirm password',
-                            error: true);
+                        showAppSnack(
+                          ctx,
+                          'New password should match with confirm password',
+                          error: true,
+                        );
                         return;
                       }
                       setState(() => saving = true);
@@ -371,7 +476,9 @@ class AccountScreen extends ConsumerWidget {
                         if (ctx.mounted) Navigator.of(ctx).pop();
                         if (context.mounted) {
                           showAppSnack(
-                              context, 'Password updated successfully');
+                            context,
+                            'Password updated successfully',
+                          );
                         }
                       } catch (e) {
                         setState(() => saving = false);
@@ -398,8 +505,10 @@ class AccountScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: c.surface,
-        title: Text('Reset local app data',
-            style: AppText.subtitle.copyWith(color: c.text)),
+        title: Text(
+          'Reset local app data',
+          style: AppText.subtitle.copyWith(color: c.text),
+        ),
         content: Text(
           'Reset local app data on this device? This clears saved login, '
           'onboarding, tour, and cached profile data.',
@@ -408,13 +517,17 @@ class AccountScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Keep data',
-                style: AppText.button.copyWith(color: c.textSubtle)),
+            child: Text(
+              'Keep data',
+              style: AppText.button.copyWith(color: c.textSubtle),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Reset data',
-                style: AppText.button.copyWith(color: c.negative)),
+            child: Text(
+              'Reset data',
+              style: AppText.button.copyWith(color: c.negative),
+            ),
           ),
         ],
       ),
@@ -445,13 +558,14 @@ class AccountScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: c.surface,
         title: Text('About', style: AppText.subtitle.copyWith(color: c.text)),
-        content:
-            Text('Wealthify v1.0', style: AppText.body.copyWith(color: c.text)),
+        content: Text(
+          'Wealthify v1.0',
+          style: AppText.body.copyWith(color: c.text),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child:
-                Text('OK', style: AppText.button.copyWith(color: c.primary)),
+            child: Text('OK', style: AppText.button.copyWith(color: c.primary)),
           ),
         ],
       ),
@@ -467,18 +581,24 @@ class AccountScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: c.surface,
         title: Text('Log out', style: AppText.subtitle.copyWith(color: c.text)),
-        content: Text('Are you sure you want to log out?',
-            style: AppText.bodySm.copyWith(color: c.textSubtle)),
+        content: Text(
+          'Are you sure you want to log out?',
+          style: AppText.bodySm.copyWith(color: c.textSubtle),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Cancel',
-                style: AppText.button.copyWith(color: c.textSubtle)),
+            child: Text(
+              'Cancel',
+              style: AppText.button.copyWith(color: c.textSubtle),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Log me out',
-                style: AppText.button.copyWith(color: c.negative)),
+            child: Text(
+              'Log me out',
+              style: AppText.button.copyWith(color: c.negative),
+            ),
           ),
         ],
       ),

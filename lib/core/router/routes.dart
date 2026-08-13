@@ -16,6 +16,7 @@ abstract class Routes {
   static const selectCategory = '/select-category';
   static const selectProvider = '/select-provider';
   static const budgets = '/budgets';
+  static const wishlist = '/wishlist';
   static const setBudget = '/set-budget';
   static const wallets = '/wallets';
   static const editWallet = '/edit-wallet';
@@ -31,4 +32,5 @@ abstract class Routes {
   static const notifications = '/notifications';
   static const security = '/security';
   static const premium = '/premium';
+  static const calories = '/calories';
 }

@@ -14,12 +14,14 @@ class WalletPicker extends StatelessWidget {
     required this.selectedId,
     required this.enabled,
     required this.onSelect,
+    this.showNone = true,
   });
 
   final List<WalletModel> wallets;
   final String? selectedId;
   final bool enabled;
   final ValueChanged<String?> onSelect;
+  final bool showNone;
 
   @override
   Widget build(BuildContext context) {
@@ -27,12 +29,14 @@ class WalletPicker extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          AppChip(
-            label: 'None',
-            selected: selectedId == null,
-            onTap: enabled ? () => onSelect(null) : null,
-          ),
-          const SizedBox(width: AppSpacing.sm),
+          if (showNone) ...[
+            AppChip(
+              label: 'None',
+              selected: selectedId == null,
+              onTap: enabled ? () => onSelect(null) : null,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+          ],
           for (final w in wallets) ...[
             AppChip(
               label: w.name,
