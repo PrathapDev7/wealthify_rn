@@ -248,7 +248,7 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
                   const SizedBox(height: AppSpacing.xl),
 
                   // Compact hero + macro summary
-                  if (_dailyTotals != null && _dailyTotals!.calories > 0) ...[
+                  if (_dailyTotals != null) ...[
                     _CalorieHeroCard(
                         totals: _dailyTotals!, onEditGoal: _editGoals),
                     const SizedBox(height: AppSpacing.md),
@@ -1106,6 +1106,7 @@ class _EditGoalSheetState extends ConsumerState<_EditGoalSheet> {
   late final TextEditingController _sugar;
   late final TextEditingController _fat;
   late final TextEditingController _protein;
+  bool _calculated = false;
 
   @override
   void initState() {
@@ -1148,6 +1149,7 @@ class _EditGoalSheetState extends ConsumerState<_EditGoalSheet> {
       _sugar.text = '${goals['sugarTarget']}';
       _fat.text = '${goals['fatTarget']}';
       _protein.text = '${goals['proteinTarget']}';
+      _calculated = true;
     });
     if (mounted) showAppSnack(context, 'Goals calculated — review and save below');
   }
@@ -1178,71 +1180,73 @@ class _EditGoalSheetState extends ConsumerState<_EditGoalSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [c.primaryGradientStart, c.primaryGradientEnd],
+            if (!_calculated) ...[
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [c.primaryGradientStart, c.primaryGradientEnd],
+                  ),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  boxShadow: AppShadows.primaryGlow,
                 ),
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                boxShadow: AppShadows.primaryGlow,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
-                    child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 18),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Calculate for me',
-                            style: AppText.bodyMedium
-                                .copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
-                        Text('Based on your age, height, weight & activity',
-                            style: AppText.caption
-                                .copyWith(color: Colors.white.withValues(alpha: 0.85))),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  GestureDetector(
-                    onTap: _openAutoCalculate,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                      ),
-                      child: Text('Calculate',
-                          style: AppText.bodySm
-                              .copyWith(color: c.primaryDarker, fontWeight: FontWeight.w700)),
+                          color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
+                      child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 18),
                     ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Calculate for me',
+                              style: AppText.bodyMedium
+                                  .copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                          Text('Based on your age, height, weight & activity',
+                              style: AppText.caption
+                                  .copyWith(color: Colors.white.withValues(alpha: 0.85))),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    GestureDetector(
+                      onTap: _openAutoCalculate,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: Text('Calculate',
+                            style: AppText.bodySm
+                                .copyWith(color: c.primaryDarker, fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                children: [
+                  Expanded(child: Divider(color: c.divider)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                    child: Text('or enter manually',
+                        style: AppText.caption.copyWith(color: c.textSubtle)),
                   ),
+                  Expanded(child: Divider(color: c.divider)),
                 ],
               ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Row(
-              children: [
-                Expanded(child: Divider(color: c.divider)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                  child: Text('or enter manually',
-                      style: AppText.caption.copyWith(color: c.textSubtle)),
-                ),
-                Expanded(child: Divider(color: c.divider)),
-              ],
-            ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             AppTextField(
               controller: _calorie,
