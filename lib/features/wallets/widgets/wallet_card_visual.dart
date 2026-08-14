@@ -33,9 +33,12 @@ class WalletCardVisual extends StatelessWidget {
     final holder = (wallet.holderName?.trim().isNotEmpty ?? false)
         ? wallet.holderName!.trim()
         : (holderFallback?.trim() ?? '');
+    final last4 = wallet.last4?.trim() ?? '';
     final sub = wallet.isCard && (wallet.cardType?.isNotEmpty ?? false)
         ? '${_cap(wallet.cardType!)} card'
-        : kindLabel(wallet.kind);
+        : last4.isNotEmpty
+            ? 'Ending with $last4'
+            : kindLabel(wallet.kind);
     const white = Colors.white;
 
     return Container(
