@@ -48,12 +48,9 @@ class DashboardScreen extends ConsumerWidget {
             AppSpacing.xl,
             AppSpacing.sm,
           ),
-          child: Align(
-            alignment: Alignment.center,
-            child: AppSwitcher(
-              active: activeApp,
-              onChanged: (app) => ref.read(activeAppProvider.notifier).set(app),
-            ),
+          child: AppSwitcher(
+            active: activeApp,
+            onChanged: (app) => ref.read(activeAppProvider.notifier).set(app),
           ),
         ),
         Expanded(
