@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/providers.dart';
 import '../../core/router/routes.dart';
@@ -176,35 +175,6 @@ class _WealthifyDashboard extends ConsumerWidget {
               120,
             ),
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CircleIconButton(
-                    icon: Icons.settings_outlined,
-                    onTap: () => context.push(Routes.preferences),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
-                    decoration: BoxDecoration(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                      border: Border.all(color: c.border),
-                    ),
-                    child: Text(
-                      DateFormat('EEE, dd MMM').format(DateTime.now()),
-                      style: AppText.bodySm.copyWith(color: c.text),
-                    ),
-                  ),
-                  CircleIconButton(
-                    icon: Icons.notifications_outlined,
-                    onTap: () => context.push(Routes.notifications),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xl2),
               if (showCarousel)
                 _WalletCarousel(
                   wallets: wallets,
