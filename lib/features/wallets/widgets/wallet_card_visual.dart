@@ -15,11 +15,15 @@ class WalletCardVisual extends StatelessWidget {
     required this.wallet,
     this.balanceText,
     this.holderFallback,
+    this.compact = false,
   });
 
   final WalletModel wallet;
   final String? balanceText;
   final String? holderFallback; // e.g. profile name when the wallet has none
+  // Dashboard-friendly layout: balance sits inline with the icon/title and
+  // the holder row is dropped, instead of the full holder/balance footer.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -35,19 +39,19 @@ class WalletCardVisual extends StatelessWidget {
     const white = Colors.white;
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(compact ? 16 : 18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [accent, _darken(accent)],
         ),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(compact ? 16 : 18),
         boxShadow: [
           BoxShadow(
             color: accent.withValues(alpha: 0.35),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            blurRadius: compact ? 12 : 16,
+            offset: Offset(0, compact ? 6 : 8),
           ),
         ],
       ),
@@ -55,7 +59,8 @@ class WalletCardVisual extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+                compact ? CrossAxisAlignment.center : CrossAxisAlignment.start,
             children: [
               Container(
                 width: 44,
@@ -85,25 +90,32 @@ class WalletCardVisual extends StatelessWidget {
                   ],
                 ),
               ),
+              if (compact && balanceText != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                _stack('BALANCE', balanceText!, white, end: true),
+              ],
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: compact ? AppSpacing.md : AppSpacing.lg),
           Text(
             maskedNumber(wallet.last4),
-            style: AppText.subtitle.copyWith(color: white, letterSpacing: 2.2),
+            style: (compact ? AppText.bodyStrong : AppText.subtitle)
+                .copyWith(color: white, letterSpacing: compact ? 1.6 : 2.2),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: _stack('HOLDER', holder.isEmpty ? '—' : holder, white,
-                    end: false),
-              ),
-              if (balanceText != null)
-                _stack('BALANCE', balanceText!, white, end: true),
-            ],
-          ),
+          if (!compact) ...[
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: _stack('HOLDER', holder.isEmpty ? '—' : holder, white,
+                      end: false),
+                ),
+                if (balanceText != null)
+                  _stack('BALANCE', balanceText!, white, end: true),
+              ],
+            ),
+          ],
         ],
       ),
     );
