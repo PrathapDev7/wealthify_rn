@@ -15,11 +15,13 @@ class WalletCardVisual extends StatelessWidget {
     required this.wallet,
     this.balanceText,
     this.holderFallback,
+    this.compact = false,
   });
 
   final WalletModel wallet;
   final String? balanceText;
   final String? holderFallback; // e.g. profile name when the wallet has none
+  final bool compact; // tighter padding/type scale for space-constrained spots (e.g. dashboard)
 
   @override
   Widget build(BuildContext context) {
@@ -33,21 +35,22 @@ class WalletCardVisual extends StatelessWidget {
         ? '${_cap(wallet.cardType!)} card'
         : kindLabel(wallet.kind);
     const white = Colors.white;
+    final avatarSize = compact ? 34.0 : 44.0;
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(compact ? 14 : 18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [accent, _darken(accent)],
         ),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(compact ? 16 : 18),
         boxShadow: [
           BoxShadow(
             color: accent.withValues(alpha: 0.35),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            blurRadius: compact ? 12 : 16,
+            offset: Offset(0, compact ? 6 : 8),
           ),
         ],
       ),
@@ -58,18 +61,19 @@ class WalletCardVisual extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: avatarSize,
+                height: avatarSize,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(compact ? 10 : 12),
                 ),
                 child: provider != null
-                    ? ProviderAvatar(provider: provider, size: 34)
-                    : Icon(kindIcon(wallet.kind), color: accent, size: 22),
+                    ? ProviderAvatar(provider: provider, size: compact ? 26 : 34)
+                    : Icon(kindIcon(wallet.kind),
+                        color: accent, size: compact ? 18 : 22),
               ),
-              const SizedBox(width: AppSpacing.md),
+              SizedBox(width: compact ? AppSpacing.sm : AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,29 +83,32 @@ class WalletCardVisual extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: AppText.bodyMedium.copyWith(
                             color: white, fontWeight: FontWeight.w700)),
-                    Text(sub,
-                        style: AppText.caption
-                            .copyWith(color: white.withValues(alpha: 0.78))),
+                    if (!compact)
+                      Text(sub,
+                          style: AppText.caption
+                              .copyWith(color: white.withValues(alpha: 0.78))),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: compact ? AppSpacing.sm : AppSpacing.lg),
           Text(
             maskedNumber(wallet.last4),
-            style: AppText.subtitle.copyWith(color: white, letterSpacing: 2.2),
+            style: (compact ? AppText.bodyStrong : AppText.subtitle)
+                .copyWith(color: white, letterSpacing: compact ? 1.6 : 2.2),
           ),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: compact ? AppSpacing.sm : AppSpacing.md),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
                 child: _stack('HOLDER', holder.isEmpty ? '—' : holder, white,
-                    end: false),
+                    end: false, compact: compact),
               ),
               if (balanceText != null)
-                _stack('BALANCE', balanceText!, white, end: true),
+                _stack('BALANCE', balanceText!, white,
+                    end: true, compact: compact),
             ],
           ),
         ],
@@ -109,7 +116,8 @@ class WalletCardVisual extends StatelessWidget {
     );
   }
 
-  Widget _stack(String label, String value, Color white, {required bool end}) {
+  Widget _stack(String label, String value, Color white,
+      {required bool end, required bool compact}) {
     return Column(
       crossAxisAlignment:
           end ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -117,7 +125,7 @@ class WalletCardVisual extends StatelessWidget {
         Text(label,
             style: TextStyle(
               color: white.withValues(alpha: 0.6),
-              fontSize: 9,
+              fontSize: compact ? 8 : 9,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.2,
             )),
