@@ -182,7 +182,6 @@ class _WealthifyDashboard extends ConsumerWidget {
                     ? WalletCardVisual(
                         wallet: primaryWallet,
                         balanceText: walletText,
-                        compact: true,
                       )
                     : AppCard(
                         child: Row(
