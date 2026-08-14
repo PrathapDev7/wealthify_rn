@@ -157,32 +157,6 @@ class _WealthifyDashboard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.xl2),
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      'This Month Spend',
-                      style: AppText.label.copyWith(color: c.textSubtle),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    _AnimatedMoney(
-                      value: stats.totalExpenses,
-                      money: money,
-                      style: AppText.displayLg.copyWith(color: c.text),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      balance >= 0
-                          ? "You're under by ${money(balance)}"
-                          : 'Over by ${money(balance.abs())}',
-                      style: AppText.bodySm.copyWith(
-                        color: balance >= 0 ? c.accentDark : c.negative,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xl2),
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => context.push(
@@ -230,6 +204,32 @@ class _WealthifyDashboard extends ConsumerWidget {
                           ],
                         ),
                       ),
+              ),
+              const SizedBox(height: AppSpacing.xl2),
+              Center(
+                child: Column(
+                  children: [
+                    Text(
+                      'This Month Spend',
+                      style: AppText.label.copyWith(color: c.textSubtle),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    _AnimatedMoney(
+                      value: stats.totalExpenses,
+                      money: money,
+                      style: AppText.displayLg.copyWith(color: c.text),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      balance >= 0
+                          ? "You're under by ${money(balance)}"
+                          : 'Over by ${money(balance.abs())}',
+                      style: AppText.bodySm.copyWith(
+                        color: balance >= 0 ? c.accentDark : c.negative,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
               if (overall != null && overall > 0)
