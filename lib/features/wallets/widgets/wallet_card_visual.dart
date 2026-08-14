@@ -96,13 +96,12 @@ class WalletCardVisual extends StatelessWidget {
               ],
             ],
           ),
-          SizedBox(height: compact ? AppSpacing.md : AppSpacing.lg),
-          Text(
-            maskedNumber(wallet.last4),
-            style: (compact ? AppText.bodyStrong : AppText.subtitle)
-                .copyWith(color: white, letterSpacing: compact ? 1.6 : 2.2),
-          ),
           if (!compact) ...[
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              maskedNumber(wallet.last4),
+              style: AppText.subtitle.copyWith(color: white, letterSpacing: 2.2),
+            ),
             const SizedBox(height: AppSpacing.md),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
