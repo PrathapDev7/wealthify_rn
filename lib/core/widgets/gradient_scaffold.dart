@@ -69,7 +69,7 @@ class ScreenHeader extends StatelessWidget {
       child: Row(
         children: [
           CircleIconButton(
-            icon: Icons.chevron_left,
+            icon: Icons.arrow_back_ios_new_rounded,
             onTap: onBack ?? () => Navigator.of(context).maybePop(),
           ),
           Expanded(
