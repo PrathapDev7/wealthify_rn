@@ -33,4 +33,6 @@ abstract class Routes {
   static const security = '/security';
   static const premium = '/premium';
   static const calories = '/calories';
+  static const calorieHistory = '/calorie-history';
+  static const weightTracker = '/weight-tracker';
 }

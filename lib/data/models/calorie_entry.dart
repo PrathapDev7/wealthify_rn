@@ -99,6 +99,7 @@ class HealthProfile {
   final double? weightKg;
   final String activityLevel; // sedentary | light | moderate | active | very_active
   final String goal; // lose | maintain | gain
+  final double? targetWeightKg;
 
   const HealthProfile({
     this.age,
@@ -107,6 +108,7 @@ class HealthProfile {
     this.weightKg,
     this.activityLevel = 'moderate',
     this.goal = 'maintain',
+    this.targetWeightKg,
   });
 
   factory HealthProfile.fromJson(Map<String, dynamic>? json) {
@@ -118,6 +120,7 @@ class HealthProfile {
       weightKg: (json['weightKg'] as num?)?.toDouble(),
       activityLevel: json['activityLevel'] as String? ?? 'moderate',
       goal: json['goal'] as String? ?? 'maintain',
+      targetWeightKg: (json['targetWeightKg'] as num?)?.toDouble(),
     );
   }
 }

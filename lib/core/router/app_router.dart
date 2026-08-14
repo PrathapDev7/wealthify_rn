@@ -25,7 +25,9 @@ import '../../features/notifications/notifications_screen.dart';
 import '../../features/onboarding/welcome_screen.dart';
 import '../../features/preferences/preferences_screen.dart';
 import '../../features/premium/premium_screen.dart';
+import '../../features/calories/calorie_history_screen.dart';
 import '../../features/calories/calorie_screen.dart';
+import '../../features/weight/weight_screen.dart';
 import '../../features/recurring/edit_recurring_screen.dart';
 import '../../features/recurring/recurring_screen.dart';
 import '../../features/reports/reports_screen.dart';
@@ -184,6 +186,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.security, builder: (_, _) => const SecurityScreen()),
       GoRoute(path: Routes.premium, builder: (_, _) => const PremiumScreen()),
       GoRoute(path: Routes.calories, builder: (_, _) => const CalorieScreen()),
+      GoRoute(
+        path: Routes.calorieHistory,
+        builder: (_, _) => const CalorieHistoryScreen(),
+      ),
+      GoRoute(
+        path: Routes.weightTracker,
+        builder: (_, _) => const WeightScreen(),
+      ),
     ],
   );
 });

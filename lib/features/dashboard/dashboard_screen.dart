@@ -18,9 +18,9 @@ import '../../data/models/wallet_model.dart';
 import '../../data/repositories/budgets_repository.dart';
 import '../../data/repositories/transactions_repository.dart';
 import '../../data/repositories/wallets_repository.dart';
-import '../calories/calorie_screen.dart';
 import '../preferences/preferences_controller.dart';
 import '../wallets/widgets/wallet_card_visual.dart';
+import 'healthify_home.dart';
 
 final dashboardDataProvider =
     FutureProvider.autoDispose<(StatsModel, BudgetModel)>((ref) async {
@@ -85,7 +85,7 @@ class DashboardScreen extends ConsumerWidget {
         ),
         Expanded(
           child: activeApp == ActiveApp.healthify
-              ? const CalorieScreen(embedded: true)
+              ? const HealthifyHome()
               : const _WealthifyDashboard(),
         ),
       ],

@@ -65,4 +65,42 @@ class CaloriesRepository {
     });
     return res.data;
   }
+
+  Future<Map<String, dynamic>> getCalorieHistory({String? from, String? to}) async {
+    final res = await _api.dio.get('get-calorie-history', queryParameters: {
+      if (from != null) 'from': from,
+      if (to != null) 'to': to,
+    });
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> addWeightEntry({
+    required double weightKg,
+    String? date,
+  }) async {
+    final res = await _api.dio.post('add-weight-entry', data: {
+      'weightKg': weightKg,
+      if (date != null) 'date': date,
+    });
+    return res.data;
+  }
+
+  Future<Map<String, dynamic>> getWeightHistory({String? from, String? to}) async {
+    final res = await _api.dio.get('get-weight-history', queryParameters: {
+      if (from != null) 'from': from,
+      if (to != null) 'to': to,
+    });
+    return res.data;
+  }
+
+  Future<void> deleteWeightEntry(String id) async {
+    await _api.dio.delete('delete-weight-entry/$id');
+  }
+
+  Future<Map<String, dynamic>> updateTargetWeight(double targetWeightKg) async {
+    final res = await _api.dio.put('update-target-weight', data: {
+      'targetWeightKg': targetWeightKg,
+    });
+    return res.data;
+  }
 }

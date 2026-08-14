@@ -8,7 +8,8 @@ import '../data/repositories/calories_repository.dart';
 
 /// Overridden in `main()` after async initialization.
 final prefsProvider = Provider<Prefs>(
-  (ref) => throw UnimplementedError('prefsProvider must be overridden in main()'),
+  (ref) =>
+      throw UnimplementedError('prefsProvider must be overridden in main()'),
 );
 
 final secureStoreProvider = Provider<SecureStore>(
@@ -30,8 +31,9 @@ final caloriesRepositoryProvider = Provider<CaloriesRepository>(
 /// refresh. Those providers `ref.watch(dataRefreshProvider)` so a bump forces a
 /// refetch; mutations bump it via [DataRefreshNotifier.bump] (see
 /// `TransactionsRepository`).
-final dataRefreshProvider =
-    NotifierProvider<DataRefreshNotifier, int>(DataRefreshNotifier.new);
+final dataRefreshProvider = NotifierProvider<DataRefreshNotifier, int>(
+  DataRefreshNotifier.new,
+);
 
 class DataRefreshNotifier extends Notifier<int> {
   @override
@@ -39,4 +41,19 @@ class DataRefreshNotifier extends Notifier<int> {
 
   /// Signals that shared data changed; watchers refetch.
   void bump() => state++;
+}
+
+/// Which app the Home tab's top switcher currently shows: the finance app
+/// (Wealthify) or the calorie tracker (Healthify).
+enum ActiveApp { wealthify, healthify }
+
+final activeAppProvider = NotifierProvider<ActiveAppController, ActiveApp>(
+  ActiveAppController.new,
+);
+
+class ActiveAppController extends Notifier<ActiveApp> {
+  @override
+  ActiveApp build() => ActiveApp.wealthify;
+
+  void set(ActiveApp app) => state = app;
 }

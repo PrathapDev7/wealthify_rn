@@ -17,7 +17,13 @@ import '../../data/models/calorie_entry.dart';
 String errorMessage(Object e) => e.toString();
 
 class CalorieScreen extends ConsumerStatefulWidget {
-  const CalorieScreen({super.key});
+  const CalorieScreen({super.key, this.embedded = false});
+
+  /// When true, renders without the outer [GradientScaffold]/[ScreenHeader]
+  /// chrome so it can be dropped in as a tab body (the Healthify side of the
+  /// Home switcher) instead of being pushed as its own route.
+  final bool embedded;
+
   @override
   ConsumerState<CalorieScreen> createState() => _CalorieScreenState();
 }
@@ -55,16 +61,21 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
       final res = await repo.getDailyCalories(date: dateStr);
       if (mounted) {
         setState(() {
-          _mealItems = (res['mealItems'] as List?)
+          _mealItems =
+              (res['mealItems'] as List?)
                   ?.map((m) => MealItem.fromJson(m as Map<String, dynamic>))
                   .toList() ??
               [];
-          final totals =
-              Map<String, dynamic>.from(res['dailyTotals'] as Map? ?? {});
+          final totals = Map<String, dynamic>.from(
+            res['dailyTotals'] as Map? ?? {},
+          );
           final targets = res['dailyTargets'] as Map?;
-          if (targets != null) totals.addAll(Map<String, dynamic>.from(targets));
+          if (targets != null)
+            totals.addAll(Map<String, dynamic>.from(targets));
           _dailyTotals = DailyTotals.fromJson(totals);
-          _healthProfile = HealthProfile.fromJson(res['healthProfile'] as Map<String, dynamic>?);
+          _healthProfile = HealthProfile.fromJson(
+            res['healthProfile'] as Map<String, dynamic>?,
+          );
         });
       }
     } catch (e) {
@@ -97,7 +108,8 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
       _startLoadingMessages();
       final result = await repo.processFoodText(_entryId!, text);
       _stopLoadingMessages();
-      final added = (result['addedItems'] as List?)
+      final added =
+          (result['addedItems'] as List?)
               ?.map((m) => MealItem.fromJson(m as Map<String, dynamic>))
               .toList() ??
           [];
@@ -140,8 +152,10 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text('Delete',
-                style: TextStyle(color: context.colors.negative)),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: context.colors.negative),
+            ),
           ),
         ],
       ),
@@ -224,68 +238,84 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
   Widget build(BuildContext context) {
     final c = context.colors;
     final groups = _mealsByType;
+    final content = Expanded(
+      child: RefreshIndicator(
+        onRefresh: _fetchCalories,
+        color: c.primary,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            0,
+            AppSpacing.xl,
+            AppSpacing.xl4,
+          ),
+          children: [
+            _HorizontalDatePicker(
+              selectedDate: _selectedDate,
+              onDateSelected: (date) {
+                setState(() => _selectedDate = date);
+                _fetchCalories();
+              },
+              onTodayTap: _goToToday,
+              onPrevTap: () => _moveDate(-1),
+              onNextTap: () => _moveDate(1),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+
+            // Compact hero + macro summary
+            if (_dailyTotals != null) ...[
+              _CalorieHeroCard(totals: _dailyTotals!, onEditGoal: _editGoals),
+              const SizedBox(height: AppSpacing.md),
+              _MacroStatsRow(totals: _dailyTotals!),
+              const SizedBox(height: AppSpacing.xl),
+            ],
+
+            // Input area
+            _FoodInputCard(
+              controller: _textController,
+              loading: _isLoading,
+              loadingMessage: _loadingMessage,
+              onSubmit: _isLoading ? null : _analyzeFood,
+            ),
+
+            const SizedBox(height: AppSpacing.xl2),
+            const SectionHeader("Today's Meals"),
+            const SizedBox(height: AppSpacing.md),
+            if (_mealItems.isEmpty && !_isLoading)
+              const EmptyState(
+                icon: Icons.restaurant_menu_outlined,
+                title: 'No meals logged yet',
+                message: 'Log what you ate above to start tracking today.',
+              )
+            else
+              ...MealType.values
+                  .where((t) => groups[t]?.isNotEmpty ?? false)
+                  .map(
+                    (type) => _MealGroupCard(
+                      mealType: type,
+                      items: groups[type]!,
+                      onDeleteItem: _deleteItem,
+                    ),
+                  ),
+          ],
+        ),
+      ),
+    );
+
+    if (widget.embedded) {
+      return Column(
+        children: [
+          const SizedBox(height: AppSpacing.sm),
+          content,
+        ],
+      );
+    }
+
     return GradientScaffold(
       child: Column(
         children: [
           const ScreenHeader(title: 'Calorie Tracker'),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _fetchCalories,
-              color: c.primary,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.xl4),
-                children: [
-                  _HorizontalDatePicker(
-                    selectedDate: _selectedDate,
-                    onDateSelected: (date) {
-                      setState(() => _selectedDate = date);
-                      _fetchCalories();
-                    },
-                    onTodayTap: _goToToday,
-                    onPrevTap: () => _moveDate(-1),
-                    onNextTap: () => _moveDate(1),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-
-                  // Compact hero + macro summary
-                  if (_dailyTotals != null) ...[
-                    _CalorieHeroCard(
-                        totals: _dailyTotals!, onEditGoal: _editGoals),
-                    const SizedBox(height: AppSpacing.md),
-                    _MacroStatsRow(totals: _dailyTotals!),
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
-
-                  // Input area
-                  _FoodInputCard(
-                    controller: _textController,
-                    loading: _isLoading,
-                    loadingMessage: _loadingMessage,
-                    onSubmit: _isLoading ? null : _analyzeFood,
-                  ),
-
-                  const SizedBox(height: AppSpacing.xl2),
-                  const SectionHeader("Today's Meals"),
-                  const SizedBox(height: AppSpacing.md),
-                  if (_mealItems.isEmpty && !_isLoading)
-                    const EmptyState(
-                      icon: Icons.restaurant_menu_outlined,
-                      title: 'No meals logged yet',
-                      message: 'Log what you ate above to start tracking today.',
-                    )
-                  else
-                    ...MealType.values
-                        .where((t) => groups[t]?.isNotEmpty ?? false)
-                        .map((type) => _MealGroupCard(
-                              mealType: type,
-                              items: groups[type]!,
-                              onDeleteItem: _deleteItem,
-                            )),
-                ],
-              ),
-            ),
-          ),
+          content,
         ],
       ),
     );
@@ -325,8 +355,10 @@ class _FoodInputCard extends StatelessWidget {
             children: [
               Icon(Icons.edit_note_rounded, size: 18, color: c.primary),
               const SizedBox(width: AppSpacing.xs),
-              Text('What did you eat?',
-                  style: AppText.label.copyWith(color: c.textSubtle)),
+              Text(
+                'What did you eat?',
+                style: AppText.label.copyWith(color: c.textSubtle),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -343,8 +375,11 @@ class _FoodInputCard extends StatelessWidget {
             loading: loading,
             loadingLabel: loading ? loadingMessage : null,
             onPressed: onSubmit,
-            leading: Icon(Icons.add_circle_outline,
-                size: 18, color: c.textOnPrimary),
+            leading: Icon(
+              Icons.add_circle_outline,
+              size: 18,
+              color: c.textOnPrimary,
+            ),
           ),
         ],
       ),
@@ -387,58 +422,70 @@ class _HorizontalDatePicker extends StatelessWidget {
               onTap: onTodayTap,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.xs,
+                ),
                 decoration: BoxDecoration(
                   color: c.primarySoft,
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
-                child: Text('Today',
-                    style: AppText.bodySm
-                        .copyWith(color: c.primary, fontWeight: FontWeight.w600)),
+                child: Text(
+                  'Today',
+                  style: AppText.bodySm.copyWith(
+                    color: c.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
             CircleIconButton(
-                icon: Icons.chevron_left,
-                size: 32,
-                iconSize: 18,
-                onTap: onPrevTap),
+              icon: Icons.chevron_left,
+              size: 32,
+              iconSize: 18,
+              onTap: onPrevTap,
+            ),
             const SizedBox(width: AppSpacing.xs),
             CircleIconButton(
-                icon: Icons.chevron_right,
-                size: 32,
-                iconSize: 18,
-                onTap: onNextTap),
+              icon: Icons.chevron_right,
+              size: 32,
+              iconSize: 18,
+              onTap: onNextTap,
+            ),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
         // Weekday initials
         Row(
           children: days
-              .map((day) => Expanded(
-                    child: Center(
-                      child: Text(
-                        (day['abbrev'] as String).substring(0, 1),
-                        style: AppText.caption.copyWith(color: c.textSubtle),
-                      ),
+              .map(
+                (day) => Expanded(
+                  child: Center(
+                    child: Text(
+                      (day['abbrev'] as String).substring(0, 1),
+                      style: AppText.caption.copyWith(color: c.textSubtle),
                     ),
-                  ))
+                  ),
+                ),
+              )
               .toList(),
         ),
         const SizedBox(height: AppSpacing.sm),
         // Date circles
         Row(
           children: days
-              .map((day) => Expanded(
-                    child: Center(
-                      child: _DateBadge(
-                        day: day['day'] as int,
-                        isSelected: (day['key'] as String) == selectedKey,
-                        isToday: (day['key'] as String) == todayKey,
-                        onTap: () => onDateSelected(day['date'] as DateTime),
-                      ),
+              .map(
+                (day) => Expanded(
+                  child: Center(
+                    child: _DateBadge(
+                      day: day['day'] as int,
+                      isSelected: (day['key'] as String) == selectedKey,
+                      isToday: (day['key'] as String) == todayKey,
+                      onTap: () => onDateSelected(day['date'] as DateTime),
                     ),
-                  ))
+                  ),
+                ),
+              )
               .toList(),
         ),
       ],
@@ -448,7 +495,11 @@ class _HorizontalDatePicker extends StatelessWidget {
   List<Map<String, dynamic>> _getWeekDays(DateTime date) {
     final days = <Map<String, dynamic>>[];
     // Start from the Monday of the current week
-    final startOfWeek = DateTime(date.year, date.month, date.day - date.weekday + 1);
+    final startOfWeek = DateTime(
+      date.year,
+      date.month,
+      date.day - date.weekday + 1,
+    );
     for (int i = 0; i < 7; i++) {
       final dayDate = startOfWeek.add(Duration(days: i));
       days.add({
@@ -489,8 +540,9 @@ class _DateBadge extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient:
-              isSelected ? LinearGradient(colors: [c.primaryDark, c.primaryDarker]) : null,
+          gradient: isSelected
+              ? LinearGradient(colors: [c.primaryDark, c.primaryDarker])
+              : null,
           color: isSelected
               ? null
               : (isToday ? c.primarySoft : Colors.transparent),
@@ -500,18 +552,17 @@ class _DateBadge extends StatelessWidget {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                      color: c.primary.withValues(alpha: 0.35),
-                      blurRadius: 14,
-                      offset: const Offset(0, 6))
+                    color: c.primary.withValues(alpha: 0.35),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
                 ]
               : null,
         ),
         child: Text(
           '$day',
           style: AppText.bodyMedium.copyWith(
-            color: isSelected
-                ? Colors.white
-                : (isToday ? c.primary : c.text),
+            color: isSelected ? Colors.white : (isToday ? c.primary : c.text),
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -532,7 +583,9 @@ class _CalorieHeroCard extends StatelessWidget {
     final c = context.colors;
     final target = totals.calorieTarget;
     final hasTarget = target != null && target > 0;
-    final pct = hasTarget ? (totals.calories / target * 100).clamp(0.0, 100.0) : 100.0;
+    final pct = hasTarget
+        ? (totals.calories / target * 100).clamp(0.0, 100.0)
+        : 100.0;
     final left = totals.caloriesLeft;
     final over = hasTarget && left < 0;
     final accent = over ? c.negative : c.primary;
@@ -562,7 +615,11 @@ class _CalorieHeroCard extends StatelessWidget {
                     centerSpaceColor: Colors.transparent,
                     sections: [
                       PieChartSectionData(
-                          value: pct, color: accent, radius: 8, showTitle: false),
+                        value: pct,
+                        color: accent,
+                        radius: 8,
+                        showTitle: false,
+                      ),
                       PieChartSectionData(
                         value: 100 - pct,
                         color: accent.withValues(alpha: 0.15),
@@ -577,7 +634,10 @@ class _CalorieHeroCard extends StatelessWidget {
                   children: [
                     _AnimatedCount(
                       value: left.abs(),
-                      style: AppText.bodyLarge.copyWith(color: c.text, fontWeight: FontWeight.w800),
+                      style: AppText.bodyLarge.copyWith(
+                        color: c.text,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     Text(
                       over ? 'over' : 'left',
@@ -596,27 +656,41 @@ class _CalorieHeroCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.local_fire_department_rounded, size: 16, color: accent),
+                    Icon(
+                      Icons.local_fire_department_rounded,
+                      size: 16,
+                      color: accent,
+                    ),
                     const SizedBox(width: AppSpacing.xs),
-                    Text('Daily Calories',
-                        style: AppText.bodyMedium.copyWith(color: c.text)),
+                    Text(
+                      'Daily Calories',
+                      style: AppText.bodyMedium.copyWith(color: c.text),
+                    ),
                     const Spacer(),
                     if (hasTarget)
-                      Text('${pct.round()}%',
-                          style: AppText.caption.copyWith(color: c.textSubtle)),
+                      Text(
+                        '${pct.round()}%',
+                        style: AppText.caption.copyWith(color: c.textSubtle),
+                      ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Row(
                   children: [
-                    Expanded(child: _heroStat(c, 'Consumed', '${totals.calories}')),
+                    Expanded(
+                      child: _heroStat(c, 'Consumed', '${totals.calories}'),
+                    ),
                     Container(width: 1, height: 26, color: c.divider),
                     Expanded(
                       child: Row(
                         children: [
                           Expanded(
-                              child: _heroStat(
-                                  c, 'Goal', hasTarget ? '$target' : '—')),
+                            child: _heroStat(
+                              c,
+                              'Goal',
+                              hasTarget ? '$target' : '—',
+                            ),
+                          ),
                           GestureDetector(
                             onTap: onEditGoal,
                             child: Container(
@@ -625,8 +699,11 @@ class _CalorieHeroCard extends StatelessWidget {
                                 color: c.primarySoft,
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(Icons.edit_rounded,
-                                  size: 12, color: c.primary),
+                              child: Icon(
+                                Icons.edit_rounded,
+                                size: 12,
+                                color: c.primary,
+                              ),
                             ),
                           ),
                         ],
@@ -643,16 +720,21 @@ class _CalorieHeroCard extends StatelessWidget {
   }
 
   Widget _heroStat(AppColors c, String label, String value) => Padding(
-        padding: const EdgeInsets.only(left: AppSpacing.sm),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(value,
-                style: AppText.bodyMedium.copyWith(color: c.text, fontWeight: FontWeight.w700)),
-            Text(label, style: AppText.caption.copyWith(color: c.textSubtle)),
-          ],
+    padding: const EdgeInsets.only(left: AppSpacing.sm),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: AppText.bodyMedium.copyWith(
+            color: c.text,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-      );
+        Text(label, style: AppText.caption.copyWith(color: c.textSubtle)),
+      ],
+    ),
+  );
 }
 
 /// Counts a value up from 0 on mount/update, mirroring the dashboard's
@@ -752,19 +834,30 @@ class _MacroMiniCard extends StatelessWidget {
               Container(
                 width: 24,
                 height: 24,
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.14), shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
                 child: Icon(icon, size: 13, color: color),
               ),
               const SizedBox(width: AppSpacing.xs),
               Expanded(
-                child: Text(label,
-                    style: AppText.bodySm.copyWith(color: c.text, fontWeight: FontWeight.w600),
-                    overflow: TextOverflow.ellipsis),
+                child: Text(
+                  label,
+                  style: AppText.bodySm.copyWith(
+                    color: c.text,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text('$value/${target ?? 0}g', style: AppText.caption.copyWith(color: c.textSubtle)),
+          Text(
+            '$value/${target ?? 0}g',
+            style: AppText.caption.copyWith(color: c.textSubtle),
+          ),
           const SizedBox(height: AppSpacing.xs),
           AppProgressBar(value: progress / 100, color: color, height: 4),
         ],
@@ -795,12 +888,14 @@ class _MealGroupCard extends StatelessWidget {
     };
     final target = mealType.targetCalories;
     final totalCalories = items.fold<int>(0, (sum, m) => sum + m.calories);
-    final progress = target == 0 ? 0.0 : (totalCalories / target).clamp(0.0, 1.0);
+    final progress = target == 0
+        ? 0.0
+        : (totalCalories / target).clamp(0.0, 1.0);
     final status = items.any((m) => m.mealStatus == MealStatus.inProgress)
         ? MealStatus.inProgress
         : items.every((m) => m.mealStatus == MealStatus.completed)
-            ? MealStatus.completed
-            : MealStatus.pending;
+        ? MealStatus.completed
+        : MealStatus.pending;
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -812,30 +907,52 @@ class _MealGroupCard extends StatelessWidget {
               Container(
                 width: 40,
                 height: 40,
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
-                child: Center(child: Text(mealType.emoji, style: const TextStyle(fontSize: 18))),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    mealType.emoji,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(mealType.label,
-                        style: AppText.bodyMedium.copyWith(color: c.text, fontWeight: FontWeight.w600)),
+                    Text(
+                      mealType.label,
+                      style: AppText.bodyMedium.copyWith(
+                        color: c.text,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text('$totalCalories / $target kcal', style: AppText.bodySm.copyWith(color: c.textSubtle)),
+                    Text(
+                      '$totalCalories / $target kcal',
+                      style: AppText.bodySm.copyWith(color: c.textSubtle),
+                    ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xxs),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xxs,
+                ),
                 decoration: BoxDecoration(
                   color: status.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
                 child: Text(
                   status.label,
-                  style: AppText.caption.copyWith(color: status.color, fontWeight: FontWeight.w600),
+                  style: AppText.caption.copyWith(
+                    color: status.color,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -845,7 +962,10 @@ class _MealGroupCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           for (var i = 0; i < items.length; i++) ...[
             if (i > 0) Divider(height: AppSpacing.lg, color: c.divider),
-            _MealItemRow(item: items[i], onDelete: () => onDeleteItem(items[i].id)),
+            _MealItemRow(
+              item: items[i],
+              onDelete: () => onDeleteItem(items[i].id),
+            ),
           ],
         ],
       ),
@@ -882,20 +1002,37 @@ class _MealItemRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.foodName,
-                    style: AppText.bodySm.copyWith(color: c.text, fontWeight: FontWeight.w600)),
+                Text(
+                  item.foodName,
+                  style: AppText.bodySm.copyWith(
+                    color: c.text,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 if (item.portion != null && item.portion!.isNotEmpty) ...[
                   const SizedBox(height: 2),
-                  Text(item.portion!, style: AppText.caption.copyWith(color: c.textSubtle)),
+                  Text(
+                    item.portion!,
+                    style: AppText.caption.copyWith(color: c.textSubtle),
+                  ),
                 ],
               ],
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Text('${item.calories} kcal',
-              style: AppText.bodySm.copyWith(color: c.warning, fontWeight: FontWeight.w600)),
+          Text(
+            '${item.calories} kcal',
+            style: AppText.bodySm.copyWith(
+              color: c.warning,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(width: AppSpacing.sm),
-          Icon(Icons.drag_indicator_rounded, size: 14, color: c.textPlaceholder),
+          Icon(
+            Icons.drag_indicator_rounded,
+            size: 14,
+            color: c.textPlaceholder,
+          ),
         ],
       ),
     );
@@ -914,10 +1051,17 @@ class _ItemNutritionSheet extends StatelessWidget {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, bottom + AppSpacing.xl),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.xl,
+        bottom + AppSpacing.xl,
+      ),
       decoration: BoxDecoration(
         color: c.background,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadius.lg),
+        ),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -929,12 +1073,22 @@ class _ItemNutritionSheet extends StatelessWidget {
                 Container(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(color: c.primarySoft, shape: BoxShape.circle),
-                  child: Icon(Icons.restaurant_rounded, color: c.primary, size: 20),
+                  decoration: BoxDecoration(
+                    color: c.primarySoft,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.restaurant_rounded,
+                    color: c.primary,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
-                  child: Text('Nutrition details', style: AppText.title.copyWith(color: c.text)),
+                  child: Text(
+                    'Nutrition details',
+                    style: AppText.title.copyWith(color: c.text),
+                  ),
                 ),
                 IconButton(
                   tooltip: 'Close',
@@ -1024,7 +1178,8 @@ class _EditGoalSheetState extends ConsumerState<_EditGoalSheet> {
       _protein.text = '${goals['proteinTarget']}';
       _calculated = true;
     });
-    if (mounted) showAppSnack(context, 'Goals calculated — review and save below');
+    if (mounted)
+      showAppSnack(context, 'Goals calculated — review and save below');
   }
 
   @override
@@ -1032,10 +1187,17 @@ class _EditGoalSheetState extends ConsumerState<_EditGoalSheet> {
     final c = context.colors;
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     return Container(
-      padding: EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, bottom + AppSpacing.xl),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.xl,
+        bottom + AppSpacing.xl,
+      ),
       decoration: BoxDecoration(
         color: c.background,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadius.lg),
+        ),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -1045,7 +1207,10 @@ class _EditGoalSheetState extends ConsumerState<_EditGoalSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Edit daily goal', style: AppText.title.copyWith(color: c.text)),
+                Text(
+                  'Edit daily goal',
+                  style: AppText.title.copyWith(color: c.text),
+                ),
                 IconButton(
                   tooltip: 'Close',
                   onPressed: () => Navigator.of(context).pop(),
@@ -1072,20 +1237,33 @@ class _EditGoalSheetState extends ConsumerState<_EditGoalSheet> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
-                      child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 18),
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Calculate for me',
-                              style: AppText.bodyMedium
-                                  .copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
-                          Text('Based on your age, height, weight & activity',
-                              style: AppText.caption
-                                  .copyWith(color: Colors.white.withValues(alpha: 0.85))),
+                          Text(
+                            'Calculate for me',
+                            style: AppText.bodyMedium.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            'Based on your age, height, weight & activity',
+                            style: AppText.caption.copyWith(
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1094,14 +1272,20 @@ class _EditGoalSheetState extends ConsumerState<_EditGoalSheet> {
                       onTap: _openAutoCalculate,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(AppRadius.pill),
                         ),
-                        child: Text('Calculate',
-                            style: AppText.bodySm
-                                .copyWith(color: c.primaryDarker, fontWeight: FontWeight.w700)),
+                        child: Text(
+                          'Calculate',
+                          style: AppText.bodySm.copyWith(
+                            color: c.primaryDarker,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -1112,9 +1296,13 @@ class _EditGoalSheetState extends ConsumerState<_EditGoalSheet> {
                 children: [
                   Expanded(child: Divider(color: c.divider)),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                    child: Text('or enter manually',
-                        style: AppText.caption.copyWith(color: c.textSubtle)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
+                    child: Text(
+                      'or enter manually',
+                      style: AppText.caption.copyWith(color: c.textSubtle),
+                    ),
                   ),
                   Expanded(child: Divider(color: c.divider)),
                 ],
@@ -1169,7 +1357,8 @@ class _HealthProfileSheet extends ConsumerStatefulWidget {
   const _HealthProfileSheet({this.initial});
 
   @override
-  ConsumerState<_HealthProfileSheet> createState() => _HealthProfileSheetState();
+  ConsumerState<_HealthProfileSheet> createState() =>
+      _HealthProfileSheetState();
 }
 
 class _HealthProfileSheetState extends ConsumerState<_HealthProfileSheet> {
@@ -1182,7 +1371,14 @@ class _HealthProfileSheetState extends ConsumerState<_HealthProfileSheet> {
   bool _loading = false;
   int _step = 0;
 
-  static const _steps = ['gender', 'age', 'height', 'weight', 'activity', 'goal'];
+  static const _steps = [
+    'gender',
+    'age',
+    'height',
+    'weight',
+    'activity',
+    'goal',
+  ];
 
   static const _genders = [
     ('male', 'Male', Icons.male_rounded),
@@ -1194,11 +1390,26 @@ class _HealthProfileSheetState extends ConsumerState<_HealthProfileSheet> {
     ('light', 'Light', '1-3 days/week', Icons.directions_walk_rounded),
     ('moderate', 'Moderate', '3-5 days/week', Icons.directions_run_rounded),
     ('active', 'Active', '6-7 days/week', Icons.fitness_center_rounded),
-    ('very_active', 'Very active', 'Athlete / physical job', Icons.whatshot_rounded),
+    (
+      'very_active',
+      'Very active',
+      'Athlete / physical job',
+      Icons.whatshot_rounded,
+    ),
   ];
   static const _goals = [
-    ('lose', 'Lose weight', 'Trim down at a steady pace', Icons.trending_down_rounded),
-    ('maintain', 'Maintain', 'Stay around your current weight', Icons.balance_rounded),
+    (
+      'lose',
+      'Lose weight',
+      'Trim down at a steady pace',
+      Icons.trending_down_rounded,
+    ),
+    (
+      'maintain',
+      'Maintain',
+      'Stay around your current weight',
+      Icons.balance_rounded,
+    ),
     ('gain', 'Gain weight', 'Build up gradually', Icons.trending_up_rounded),
   ];
 
@@ -1207,8 +1418,12 @@ class _HealthProfileSheetState extends ConsumerState<_HealthProfileSheet> {
     super.initState();
     final p = widget.initial;
     _age = TextEditingController(text: p?.age != null ? '${p!.age}' : '');
-    _height = TextEditingController(text: p?.heightCm != null ? '${p!.heightCm!.round()}' : '');
-    _weight = TextEditingController(text: p?.weightKg != null ? '${p!.weightKg!.round()}' : '');
+    _height = TextEditingController(
+      text: p?.heightCm != null ? '${p!.heightCm!.round()}' : '',
+    );
+    _weight = TextEditingController(
+      text: p?.weightKg != null ? '${p!.weightKg!.round()}' : '',
+    );
     _gender = p?.gender;
     _activityLevel = p?.activityLevel ?? 'moderate';
     _goal = p?.goal ?? 'maintain';
@@ -1223,12 +1438,14 @@ class _HealthProfileSheetState extends ConsumerState<_HealthProfileSheet> {
   }
 
   bool get _stepValid => switch (_steps[_step]) {
-        'gender' => _gender != null,
-        'age' => (int.tryParse(_age.text) ?? 0) > 0 && (int.tryParse(_age.text) ?? 0) <= 120,
-        'height' => (double.tryParse(_height.text) ?? 0) > 0,
-        'weight' => (double.tryParse(_weight.text) ?? 0) > 0,
-        _ => true,
-      };
+    'gender' => _gender != null,
+    'age' =>
+      (int.tryParse(_age.text) ?? 0) > 0 &&
+          (int.tryParse(_age.text) ?? 0) <= 120,
+    'height' => (double.tryParse(_height.text) ?? 0) > 0,
+    'weight' => (double.tryParse(_weight.text) ?? 0) > 0,
+    _ => true,
+  };
 
   void _back() {
     if (_step == 0) {
@@ -1251,7 +1468,8 @@ class _HealthProfileSheetState extends ConsumerState<_HealthProfileSheet> {
     final age = int.tryParse(_age.text);
     final height = double.tryParse(_height.text);
     final weight = double.tryParse(_weight.text);
-    if (_gender == null || age == null || height == null || weight == null) return;
+    if (_gender == null || age == null || height == null || weight == null)
+      return;
 
     setState(() => _loading = true);
     try {
@@ -1284,10 +1502,17 @@ class _HealthProfileSheetState extends ConsumerState<_HealthProfileSheet> {
     final isLast = _step == _steps.length - 1;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, bottom + AppSpacing.xl),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.xl,
+        bottom + AppSpacing.xl,
+      ),
       decoration: BoxDecoration(
         color: c.background,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadius.lg),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1296,7 +1521,9 @@ class _HealthProfileSheetState extends ConsumerState<_HealthProfileSheet> {
           Row(
             children: [
               CircleIconButton(
-                icon: _step == 0 ? Icons.close_rounded : Icons.arrow_back_ios_new_rounded,
+                icon: _step == 0
+                    ? Icons.close_rounded
+                    : Icons.arrow_back_ios_new_rounded,
                 iconSize: _step == 0 ? 20 : 16,
                 size: 36,
                 onTap: _back,
@@ -1329,15 +1556,17 @@ class _HealthProfileSheetState extends ConsumerState<_HealthProfileSheet> {
             transitionBuilder: (child, animation) => FadeTransition(
               opacity: animation,
               child: SlideTransition(
-                position: Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero)
-                    .animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+                position:
+                    Tween<Offset>(
+                      begin: const Offset(0, 0.06),
+                      end: Offset.zero,
+                    ).animate(
+                      CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                    ),
                 child: child,
               ),
             ),
-            child: KeyedSubtree(
-              key: ValueKey(_step),
-              child: _buildStep(c),
-            ),
+            child: KeyedSubtree(key: ValueKey(_step), child: _buildStep(c)),
           ),
           const SizedBox(height: AppSpacing.xl2),
           PillButton(
@@ -1345,8 +1574,11 @@ class _HealthProfileSheetState extends ConsumerState<_HealthProfileSheet> {
             loading: _loading,
             loadingLabel: _loading ? 'Calculating...' : null,
             onPressed: _loading || !_stepValid ? null : _next,
-            leading: Icon(isLast ? Icons.auto_awesome_rounded : Icons.arrow_forward_rounded,
-                size: 18, color: c.textOnPrimary),
+            leading: Icon(
+              isLast ? Icons.auto_awesome_rounded : Icons.arrow_forward_rounded,
+              size: 18,
+              color: c.textOnPrimary,
+            ),
           ),
         ],
       ),
@@ -1356,82 +1588,97 @@ class _HealthProfileSheetState extends ConsumerState<_HealthProfileSheet> {
   Widget _buildStep(AppColors c) {
     return switch (_steps[_step]) {
       'gender' => _QuestionStep(
-          icon: Icons.person_rounded,
-          title: "What's your gender?",
-          subtitle: 'This helps us tailor your calorie needs',
-          child: Column(
-            children: _genders
-                .map((g) => Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: _OptionCard(
-                        icon: g.$3,
-                        label: g.$2,
-                        selected: _gender == g.$1,
-                        onTap: () => setState(() => _gender = g.$1),
-                      ),
-                    ))
-                .toList(),
-          ),
+        icon: Icons.person_rounded,
+        title: "What's your gender?",
+        subtitle: 'This helps us tailor your calorie needs',
+        child: Column(
+          children: _genders
+              .map(
+                (g) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: _OptionCard(
+                    icon: g.$3,
+                    label: g.$2,
+                    selected: _gender == g.$1,
+                    onTap: () => setState(() => _gender = g.$1),
+                  ),
+                ),
+              )
+              .toList(),
         ),
+      ),
       'age' => _QuestionStep(
-          icon: Icons.cake_rounded,
-          title: 'How old are you?',
-          subtitle: 'Age affects your metabolic rate',
-          child: _NumberField(
-              controller: _age, suffix: 'years', onChanged: (_) => setState(() {})),
+        icon: Icons.cake_rounded,
+        title: 'How old are you?',
+        subtitle: 'Age affects your metabolic rate',
+        child: _NumberField(
+          controller: _age,
+          suffix: 'years',
+          onChanged: (_) => setState(() {}),
         ),
+      ),
       'height' => _QuestionStep(
-          icon: Icons.height_rounded,
-          title: "What's your height?",
-          subtitle: 'In centimeters',
-          child: _NumberField(
-              controller: _height, suffix: 'cm', onChanged: (_) => setState(() {})),
+        icon: Icons.height_rounded,
+        title: "What's your height?",
+        subtitle: 'In centimeters',
+        child: _NumberField(
+          controller: _height,
+          suffix: 'cm',
+          onChanged: (_) => setState(() {}),
         ),
+      ),
       'weight' => _QuestionStep(
-          icon: Icons.monitor_weight_rounded,
-          title: "What's your weight?",
-          subtitle: 'In kilograms',
-          child: _NumberField(
-              controller: _weight, suffix: 'kg', onChanged: (_) => setState(() {})),
+        icon: Icons.monitor_weight_rounded,
+        title: "What's your weight?",
+        subtitle: 'In kilograms',
+        child: _NumberField(
+          controller: _weight,
+          suffix: 'kg',
+          onChanged: (_) => setState(() {}),
         ),
+      ),
       'activity' => _QuestionStep(
-          icon: Icons.directions_run_rounded,
-          title: 'How active are you?',
-          subtitle: 'Your typical week, on average',
-          child: Column(
-            children: _activityLevels
-                .map((a) => Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: _OptionCard(
-                        icon: a.$4,
-                        label: a.$2,
-                        description: a.$3,
-                        selected: _activityLevel == a.$1,
-                        onTap: () => setState(() => _activityLevel = a.$1),
-                      ),
-                    ))
-                .toList(),
-          ),
+        icon: Icons.directions_run_rounded,
+        title: 'How active are you?',
+        subtitle: 'Your typical week, on average',
+        child: Column(
+          children: _activityLevels
+              .map(
+                (a) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: _OptionCard(
+                    icon: a.$4,
+                    label: a.$2,
+                    description: a.$3,
+                    selected: _activityLevel == a.$1,
+                    onTap: () => setState(() => _activityLevel = a.$1),
+                  ),
+                ),
+              )
+              .toList(),
         ),
+      ),
       _ => _QuestionStep(
-          icon: Icons.flag_rounded,
-          title: "What's your goal?",
-          subtitle: 'We will shape your targets around this',
-          child: Column(
-            children: _goals
-                .map((g) => Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: _OptionCard(
-                        icon: g.$4,
-                        label: g.$2,
-                        description: g.$3,
-                        selected: _goal == g.$1,
-                        onTap: () => setState(() => _goal = g.$1),
-                      ),
-                    ))
-                .toList(),
-          ),
+        icon: Icons.flag_rounded,
+        title: "What's your goal?",
+        subtitle: 'We will shape your targets around this',
+        child: Column(
+          children: _goals
+              .map(
+                (g) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: _OptionCard(
+                    icon: g.$4,
+                    label: g.$2,
+                    description: g.$3,
+                    selected: _goal == g.$1,
+                    onTap: () => setState(() => _goal = g.$1),
+                  ),
+                ),
+              )
+              .toList(),
         ),
+      ),
     };
   }
 }
@@ -1463,7 +1710,9 @@ class _QuestionStep extends StatelessWidget {
           height: 52,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [c.primaryGradientStart, c.primaryGradientEnd]),
+            gradient: LinearGradient(
+              colors: [c.primaryGradientStart, c.primaryGradientEnd],
+            ),
             shape: BoxShape.circle,
             boxShadow: AppShadows.primaryGlow,
           ),
@@ -1509,7 +1758,10 @@ class _OptionCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? c.primarySoft : c.surface,
           borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: selected ? c.primary : c.border, width: selected ? 1.6 : 1),
+          border: Border.all(
+            color: selected ? c.primary : c.border,
+            width: selected ? 1.6 : 1,
+          ),
           boxShadow: selected ? AppShadows.sm : null,
         ),
         child: Row(
@@ -1522,7 +1774,11 @@ class _OptionCard extends StatelessWidget {
                 color: selected ? c.primary : c.surfaceMuted,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 20, color: selected ? Colors.white : c.textSubtle),
+              child: Icon(
+                icon,
+                size: 20,
+                color: selected ? Colors.white : c.textSubtle,
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -1530,15 +1786,23 @@ class _OptionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(label,
-                      style:
-                          AppText.bodyMedium.copyWith(color: c.text, fontWeight: FontWeight.w600)),
+                  Text(
+                    label,
+                    style: AppText.bodyMedium.copyWith(
+                      color: c.text,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   if (description != null)
-                    Text(description!, style: AppText.caption.copyWith(color: c.textSubtle)),
+                    Text(
+                      description!,
+                      style: AppText.caption.copyWith(color: c.textSubtle),
+                    ),
                 ],
               ),
             ),
-            if (selected) Icon(Icons.check_circle_rounded, color: c.primary, size: 20),
+            if (selected)
+              Icon(Icons.check_circle_rounded, color: c.primary, size: 20),
           ],
         ),
       ),
@@ -1549,7 +1813,11 @@ class _OptionCard extends StatelessWidget {
 /// Big centered number entry with +/- steppers, for age/height/weight
 /// questions — one field per screen instead of a row of cramped inputs.
 class _NumberField extends StatelessWidget {
-  const _NumberField({required this.controller, required this.suffix, required this.onChanged});
+  const _NumberField({
+    required this.controller,
+    required this.suffix,
+    required this.onChanged,
+  });
 
   final TextEditingController controller;
   final String suffix;
@@ -1588,12 +1856,21 @@ class _NumberField extends StatelessWidget {
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
                     onChanged: onChanged,
-                    style: AppText.title.copyWith(color: c.text, fontWeight: FontWeight.w800),
-                    decoration: const InputDecoration(isDense: true, border: InputBorder.none),
+                    style: AppText.title.copyWith(
+                      color: c.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 4),
-                Text(suffix, style: AppText.bodySm.copyWith(color: c.textSubtle)),
+                Text(
+                  suffix,
+                  style: AppText.bodySm.copyWith(color: c.textSubtle),
+                ),
               ],
             ),
           ),
