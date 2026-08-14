@@ -74,12 +74,22 @@ class _WealthifyDashboard extends ConsumerWidget {
     final async = ref.watch(dashboardDataProvider);
 
     // The chosen default ("primary") wallet, if any, drives the wallet-card icon.
+    // Prefer the locally-synced default; fall back to the server's isPrimary
+    // flag so the card shows even before the user has opened the Wallets tab.
     final wallets = ref.watch(walletsListProvider).asData?.value ?? const [];
     final defaultWalletId = prefs.defaultWallet;
     WalletModel? primaryWallet;
     if (defaultWalletId != null && defaultWalletId.isNotEmpty) {
       for (final w in wallets) {
         if (w.id == defaultWalletId) {
+          primaryWallet = w;
+          break;
+        }
+      }
+    }
+    if (primaryWallet == null) {
+      for (final w in wallets) {
+        if (w.isPrimary) {
           primaryWallet = w;
           break;
         }
