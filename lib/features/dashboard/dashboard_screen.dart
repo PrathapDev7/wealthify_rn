@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_switcher.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/misc.dart';
 import '../../core/widgets/transaction_row.dart';
@@ -18,19 +19,55 @@ import '../../data/models/wallet_model.dart';
 import '../../data/repositories/budgets_repository.dart';
 import '../../data/repositories/transactions_repository.dart';
 import '../../data/repositories/wallets_repository.dart';
+import '../calories/calorie_screen.dart';
 import '../preferences/preferences_controller.dart';
-import '../wallets/wallet_ui.dart';
+import '../wallets/widgets/wallet_card_visual.dart';
 
 final dashboardDataProvider =
     FutureProvider.autoDispose<(StatsModel, BudgetModel)>((ref) async {
-  ref.watch(dataRefreshProvider); // refetch after any transaction mutation
-  final stats = await ref.read(transactionsRepositoryProvider).getStats();
-  final budget = await ref.read(budgetsRepositoryProvider).getBudgets();
-  return (stats, budget);
-});
+      ref.watch(dataRefreshProvider); // refetch after any transaction mutation
+      final stats = await ref.read(transactionsRepositoryProvider).getStats();
+      final budget = await ref.read(budgetsRepositoryProvider).getBudgets();
+      return (stats, budget);
+    });
 
+/// Home tab root: a persistent Wealthify/Healthify switcher pinned above
+/// either the finance dashboard or the calorie tracker.
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeApp = ref.watch(activeAppProvider);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.md,
+            AppSpacing.xl,
+            AppSpacing.sm,
+          ),
+          child: Align(
+            alignment: Alignment.center,
+            child: AppSwitcher(
+              active: activeApp,
+              onChanged: (app) => ref.read(activeAppProvider.notifier).set(app),
+            ),
+          ),
+        ),
+        Expanded(
+          child: activeApp == ActiveApp.healthify
+              ? const CalorieScreen(embedded: true)
+              : const _WealthifyDashboard(),
+        ),
+      ],
+    );
+  }
+}
+
+class _WealthifyDashboard extends ConsumerWidget {
+  const _WealthifyDashboard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -66,7 +103,8 @@ class DashboardScreen extends ConsumerWidget {
         final recent = stats.allData.take(6).toList();
         final overall = budget.overall;
         final balance = stats.balance;
-        final isFirstRun = recent.isEmpty &&
+        final isFirstRun =
+            recent.isEmpty &&
             stats.totalIncomes == 0 &&
             stats.totalExpenses == 0;
         final walletText = isFirstRun
@@ -77,36 +115,48 @@ class DashboardScreen extends ConsumerWidget {
           onRefresh: () => ref.refresh(dashboardDataProvider.future),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xl, AppSpacing.md, AppSpacing.xl, 120),
+              AppSpacing.xl,
+              AppSpacing.md,
+              AppSpacing.xl,
+              120,
+            ),
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   CircleIconButton(
-                      icon: Icons.settings_outlined,
-                      onTap: () => context.push(Routes.preferences)),
+                    icon: Icons.settings_outlined,
+                    onTap: () => context.push(Routes.preferences),
+                  ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
                     decoration: BoxDecoration(
                       color: c.surface,
                       borderRadius: BorderRadius.circular(AppRadius.pill),
                       border: Border.all(color: c.border),
                     ),
-                    child: Text(DateFormat('EEE, dd MMM').format(DateTime.now()),
-                        style: AppText.bodySm.copyWith(color: c.text)),
+                    child: Text(
+                      DateFormat('EEE, dd MMM').format(DateTime.now()),
+                      style: AppText.bodySm.copyWith(color: c.text),
+                    ),
                   ),
                   CircleIconButton(
-                      icon: Icons.notifications_outlined,
-                      onTap: () => context.push(Routes.notifications)),
+                    icon: Icons.notifications_outlined,
+                    onTap: () => context.push(Routes.notifications),
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.xl2),
               Center(
                 child: Column(
                   children: [
-                    Text('This Month Spend',
-                        style: AppText.label.copyWith(color: c.textSubtle)),
+                    Text(
+                      'This Month Spend',
+                      style: AppText.label.copyWith(color: c.textSubtle),
+                    ),
                     const SizedBox(height: AppSpacing.xs),
                     _AnimatedMoney(
                       value: stats.totalExpenses,
@@ -119,45 +169,59 @@ class DashboardScreen extends ConsumerWidget {
                           ? "You're under by ${money(balance)}"
                           : 'Over by ${money(balance.abs())}',
                       style: AppText.bodySm.copyWith(
-                          color: balance >= 0 ? c.accentDark : c.negative),
+                        color: balance >= 0 ? c.accentDark : c.negative,
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: AppSpacing.xl2),
-              AppCard(
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () => context.push(
-                    isFirstRun ? Routes.setBudget : Routes.analytics),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                          color: c.primarySoft, shape: BoxShape.circle),
-                      child: Center(
-                        child: Icon(
-                          // Reflect the chosen wallet's kind (wallet/bank/card);
-                          // fall back to a generic wallet icon when none is set.
-                          primaryWallet != null
-                              ? kindIcon(primaryWallet.kind)
-                              : Icons.account_balance_wallet_outlined,
-                          size: 24,
-                          color: c.primary,
+                  isFirstRun ? Routes.setBudget : Routes.analytics,
+                ),
+                child: primaryWallet != null
+                    ? WalletCardVisual(
+                        wallet: primaryWallet,
+                        balanceText: walletText,
+                      )
+                    : AppCard(
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: c.primarySoft,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  Icons.account_balance_wallet_outlined,
+                                  size: 24,
+                                  color: c.primary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Text(
+                                'Spending Wallet',
+                                style:
+                                    AppText.subtitle.copyWith(color: c.text),
+                              ),
+                            ),
+                            Text(
+                              walletText,
+                              style: AppText.subtitle.copyWith(color: c.text),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Icon(Icons.chevron_right,
+                                size: 18, color: c.textSubtle),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Text('Spending Wallet',
-                          style: AppText.subtitle.copyWith(color: c.text)),
-                    ),
-                    Text(walletText,
-                        style: AppText.subtitle.copyWith(color: c.text)),
-                    const SizedBox(width: AppSpacing.sm),
-                    Icon(Icons.chevron_right, size: 18, color: c.textSubtle),
-                  ],
-                ),
               ),
               const SizedBox(height: AppSpacing.md),
               if (overall != null && overall > 0)
@@ -169,43 +233,55 @@ class DashboardScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Budget',
-                              style: AppText.subtitle.copyWith(color: c.text)),
                           Text(
-                              '${money(stats.totalExpenses)} of ${money(overall)}',
-                              style: AppText.bodySm.copyWith(color: c.textSubtle)),
+                            'Budget',
+                            style: AppText.subtitle.copyWith(color: c.text),
+                          ),
+                          Text(
+                            '${money(stats.totalExpenses)} of ${money(overall)}',
+                            style: AppText.bodySm.copyWith(color: c.textSubtle),
+                          ),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      Text('This month',
-                          style: AppText.caption.copyWith(color: c.textSubtle)),
+                      Text(
+                        'This month',
+                        style: AppText.caption.copyWith(color: c.textSubtle),
+                      ),
                       const SizedBox(height: AppSpacing.sm),
                       AppProgressBar(
-                          value: overall == 0
-                              ? 0
-                              : (stats.totalExpenses / overall).toDouble()),
+                        value: overall == 0
+                            ? 0
+                            : (stats.totalExpenses / overall).toDouble(),
+                      ),
                     ],
                   ),
                 ),
               const SizedBox(height: AppSpacing.xl),
-              SectionHeader('Recent Transactions',
-                  actionLabel: 'See All',
-                  onAction: () => context.go(Routes.transactions)),
+              SectionHeader(
+                'Recent Transactions',
+                actionLabel: 'See All',
+                onAction: () => context.go(Routes.transactions),
+              ),
               const SizedBox(height: AppSpacing.md),
               if (recent.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl2),
-                  child: Text('No transactions yet',
-                      textAlign: TextAlign.center,
-                      style: AppText.bodySm.copyWith(color: c.textSubtle)),
+                  child: Text(
+                    'No transactions yet',
+                    textAlign: TextAlign.center,
+                    style: AppText.bodySm.copyWith(color: c.textSubtle),
+                  ),
                 )
               else
-                ...recent.map((t) => TransactionRow(
-                      txn: t,
-                      money: money,
-                      onTap: () =>
-                          context.push(Routes.transactionDetail, extra: t),
-                    )),
+                ...recent.map(
+                  (t) => TransactionRow(
+                    txn: t,
+                    money: money,
+                    onTap: () =>
+                        context.push(Routes.transactionDetail, extra: t),
+                  ),
+                ),
             ],
           ),
         );
@@ -216,8 +292,11 @@ class DashboardScreen extends ConsumerWidget {
 
 /// Counts the value up from 0 on mount, mirroring RN's `AnimatedCounter`.
 class _AnimatedMoney extends StatelessWidget {
-  const _AnimatedMoney(
-      {required this.value, required this.money, required this.style});
+  const _AnimatedMoney({
+    required this.value,
+    required this.money,
+    required this.style,
+  });
 
   final num value;
   final String Function(num?) money;
