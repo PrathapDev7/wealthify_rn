@@ -31,6 +31,37 @@ final dashboardDataProvider =
       return (stats, budget);
     });
 
+/// Wallet the dashboard's stats/recent-transactions are scoped to when the
+/// wallet card switches to carousel mode (more than one wallet). Null falls
+/// back to the primary wallet.
+final dashboardWalletFilterProvider =
+    NotifierProvider.autoDispose<DashboardWalletFilterController, String?>(
+      DashboardWalletFilterController.new,
+    );
+
+class DashboardWalletFilterController extends AutoDisposeNotifier<String?> {
+  @override
+  String? build() => null;
+
+  void select(String walletId) => state = walletId;
+}
+
+/// Narrows [stats] (already this-month-only from the server) down to just
+/// [walletId]'s entries, recomputing totals from the filtered transactions.
+StatsModel _statsForWallet(StatsModel stats, String walletId) {
+  final items = stats.allData.where((t) => t.account == walletId).toList();
+  final incomes =
+      items.where((t) => t.isIncome).fold<num>(0, (sum, t) => sum + t.amount);
+  final expenses = items
+      .where((t) => !t.isIncome)
+      .fold<num>(0, (sum, t) => sum + t.amount);
+  return StatsModel(
+    allData: items,
+    totalIncomes: incomes,
+    totalExpenses: expenses,
+  );
+}
+
 /// Home tab root: a persistent Wealthify/Healthify switcher pinned above
 /// either the finance dashboard or the calorie tracker.
 class DashboardScreen extends ConsumerWidget {
@@ -107,16 +138,33 @@ class _WealthifyDashboard extends ConsumerWidget {
       ),
       data: (data) {
         final (stats, budget) = data;
-        final recent = stats.allData.take(6).toList();
         final overall = budget.overall;
-        final balance = stats.balance;
+        // First-run detection stays global — a wallet with no activity this
+        // month shouldn't itself look like a brand-new account.
         final isFirstRun =
-            recent.isEmpty &&
+            stats.allData.isEmpty &&
             stats.totalIncomes == 0 &&
             stats.totalExpenses == 0;
-        final walletText = isFirstRun
+
+        String balanceTextFor(num walletBalance) => isFirstRun
             ? 'Set Budget'
-            : '${balance < 0 ? '-' : ''}${money(balance.abs())}';
+            : '${walletBalance < 0 ? '-' : ''}${money(walletBalance.abs())}';
+
+        // More than one wallet → the card becomes a carousel, and whichever
+        // wallet is centered scopes the spend/balance/recent-transactions
+        // sections below to just that wallet's entries.
+        final showCarousel = wallets.length > 1;
+        final selectedWalletId = showCarousel
+            ? (ref.watch(dashboardWalletFilterProvider) ??
+                primaryWallet?.id ??
+                wallets.first.id)
+            : null;
+        final displayStats = selectedWalletId != null
+            ? _statsForWallet(stats, selectedWalletId)
+            : stats;
+        final recent = displayStats.allData.take(6).toList();
+        final balance = displayStats.balance;
+        final walletText = balanceTextFor(balance);
 
         return RefreshIndicator(
           onRefresh: () => ref.refresh(dashboardDataProvider.future),
@@ -157,54 +205,69 @@ class _WealthifyDashboard extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.xl2),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => context.push(
-                  isFirstRun ? Routes.setBudget : Routes.analytics,
-                ),
-                child: primaryWallet != null
-                    ? WalletCardVisual(
-                        wallet: primaryWallet,
-                        balanceText: walletText,
-                        compact: true,
-                      )
-                    : AppCard(
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 42,
-                              height: 42,
-                              decoration: BoxDecoration(
-                                color: c.primarySoft,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Icon(
-                                  Icons.account_balance_wallet_outlined,
-                                  size: 24,
-                                  color: c.primary,
+              if (showCarousel)
+                _WalletCarousel(
+                  wallets: wallets,
+                  selectedWalletId: selectedWalletId!,
+                  balanceTextFor: (w) => balanceTextFor(
+                    _statsForWallet(stats, w.id).balance,
+                  ),
+                  onTap: () => context.push(
+                    isFirstRun ? Routes.setBudget : Routes.analytics,
+                  ),
+                  onWalletChanged: (id) =>
+                      ref.read(dashboardWalletFilterProvider.notifier).select(id),
+                )
+              else
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => context.push(
+                    isFirstRun ? Routes.setBudget : Routes.analytics,
+                  ),
+                  child: primaryWallet != null
+                      ? WalletCardVisual(
+                          wallet: primaryWallet,
+                          balanceText: walletText,
+                          compact: true,
+                        )
+                      : AppCard(
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: c.primarySoft,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.account_balance_wallet_outlined,
+                                    size: 24,
+                                    color: c.primary,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Text(
-                                'Spending Wallet',
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: Text(
+                                  'Spending Wallet',
+                                  style:
+                                      AppText.subtitle.copyWith(color: c.text),
+                                ),
+                              ),
+                              Text(
+                                walletText,
                                 style:
                                     AppText.subtitle.copyWith(color: c.text),
                               ),
-                            ),
-                            Text(
-                              walletText,
-                              style: AppText.subtitle.copyWith(color: c.text),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Icon(Icons.chevron_right,
-                                size: 18, color: c.textSubtle),
-                          ],
+                              const SizedBox(width: AppSpacing.sm),
+                              Icon(Icons.chevron_right,
+                                  size: 18, color: c.textSubtle),
+                            ],
+                          ),
                         ),
-                      ),
-              ),
+                ),
               const SizedBox(height: AppSpacing.xl2),
               Center(
                 child: Column(
@@ -215,7 +278,7 @@ class _WealthifyDashboard extends ConsumerWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     _AnimatedMoney(
-                      value: stats.totalExpenses,
+                      value: displayStats.totalExpenses,
                       money: money,
                       style: AppText.displayLg.copyWith(color: c.text),
                     ),
@@ -246,7 +309,7 @@ class _WealthifyDashboard extends ConsumerWidget {
                             style: AppText.subtitle.copyWith(color: c.text),
                           ),
                           Text(
-                            '${money(stats.totalExpenses)} of ${money(overall)}',
+                            '${money(displayStats.totalExpenses)} of ${money(overall)}',
                             style: AppText.bodySm.copyWith(color: c.textSubtle),
                           ),
                         ],
@@ -260,7 +323,8 @@ class _WealthifyDashboard extends ConsumerWidget {
                       AppProgressBar(
                         value: overall == 0
                             ? 0
-                            : (stats.totalExpenses / overall).toDouble(),
+                            : (displayStats.totalExpenses / overall)
+                                .toDouble(),
                       ),
                     ],
                   ),
@@ -317,6 +381,107 @@ class _AnimatedMoney extends StatelessWidget {
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeInOut,
       builder: (_, v, _) => Text(money(v.floorToDouble()), style: style),
+    );
+  }
+}
+
+/// Loops infinitely through [wallets]' compact cards; the centered wallet
+/// scopes the dashboard's stats/recent-transactions sections via
+/// [onWalletChanged].
+class _WalletCarousel extends StatefulWidget {
+  const _WalletCarousel({
+    required this.wallets,
+    required this.selectedWalletId,
+    required this.balanceTextFor,
+    required this.onTap,
+    required this.onWalletChanged,
+  });
+
+  final List<WalletModel> wallets;
+  final String selectedWalletId;
+  final String Function(WalletModel) balanceTextFor;
+  final VoidCallback onTap;
+  final ValueChanged<String> onWalletChanged;
+
+  @override
+  State<_WalletCarousel> createState() => _WalletCarouselState();
+}
+
+class _WalletCarouselState extends State<_WalletCarousel> {
+  // Large virtual page count with modulo indexing simulates an infinite
+  // loop — PageView has no native loop mode.
+  static const _loopSpan = 2000;
+
+  late final PageController _controller;
+  late int _index;
+
+  @override
+  void initState() {
+    super.initState();
+    final n = widget.wallets.length;
+    final start = widget.wallets.indexWhere((w) => w.id == widget.selectedWalletId);
+    _index = start < 0 ? 0 : start;
+    _controller = PageController(
+      initialPage: (n * (_loopSpan ~/ 2)) + _index,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final n = widget.wallets.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 84,
+          child: PageView.builder(
+            controller: _controller,
+            itemCount: n * _loopSpan,
+            onPageChanged: (i) {
+              final idx = i % n;
+              final wallet = widget.wallets[idx];
+              setState(() => _index = idx);
+              widget.onWalletChanged(wallet.id);
+            },
+            itemBuilder: (_, i) {
+              final wallet = widget.wallets[i % n];
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onTap,
+                child: WalletCardVisual(
+                  wallet: wallet,
+                  balanceText: widget.balanceTextFor(wallet),
+                  compact: true,
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            n,
+            (i) => AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: i == _index ? 18 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: i == _index ? c.primary : c.border,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
