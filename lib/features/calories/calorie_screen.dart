@@ -14,10 +14,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/calorie_entry.dart';
 
-String errorMessage(Object e) {
-  if (e is Exception) return e.toString();
-  return 'Something went wrong';
-}
+String errorMessage(Object e) => e.toString();
 
 class CalorieScreen extends ConsumerStatefulWidget {
   const CalorieScreen({super.key});
@@ -92,7 +89,11 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
       final repo = ref.read(caloriesRepositoryProvider);
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
       final addRes = await repo.addCaloriesEntry(date: dateStr);
-      _entryId = addRes['entryId'];
+      final entryId = addRes['entryId'] as String?;
+      if (entryId == null) {
+        throw Exception('Could not start meal entry. Please try again.');
+      }
+      _entryId = entryId;
       _startLoadingMessages();
       final result = await repo.processFoodText(_entryId!, text);
       _stopLoadingMessages();

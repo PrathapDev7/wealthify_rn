@@ -223,7 +223,10 @@ class AppShell extends ConsumerWidget {
           final repo = ref.read(caloriesRepositoryProvider);
           final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
           final addRes = await repo.addCaloriesEntry(date: dateStr);
-          final entryId = addRes['entryId'] as String;
+          final entryId = addRes['entryId'] as String?;
+          if (entryId == null) {
+            throw Exception('Could not start meal entry. Please try again.');
+          }
           final processed = await repo.processFoodText(entryId, value);
           return (processed['addedItems'] as List?)
                   ?.map((m) => MealItem.fromJson(m as Map<String, dynamic>))

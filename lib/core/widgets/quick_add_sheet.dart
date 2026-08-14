@@ -102,8 +102,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
     } catch (e) {
       _stopLoadingMessages();
       if (mounted) {
-        final message = e is Exception ? e.toString() : 'Something went wrong';
-        showAppSnack(context, message, error: true);
+        showAppSnack(context, e.toString(), error: true);
         setState(() => _loading = false);
       }
     }
