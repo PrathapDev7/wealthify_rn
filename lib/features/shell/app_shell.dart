@@ -160,6 +160,17 @@ class AppShell extends ConsumerWidget {
                       _quickLogMeal(context, ref);
                     },
                   ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _QuickAddCard(
+                    icon: Icons.monitor_weight_rounded,
+                    color: c.info,
+                    label: 'Weight Today?',
+                    subtitle: "Log today's weight",
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _quickLogWeight(context, ref);
+                    },
+                  ),
                 ],
               ],
             ),
@@ -252,6 +263,35 @@ class AppShell extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         builder: (_) => MealAddedSheet(items: result.items, pendingMessage: result.pendingMessage),
       );
+    }
+  }
+
+  Future<void> _quickLogWeight(BuildContext context, WidgetRef ref) async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => QuickAddSheet(
+        icon: Icons.monitor_weight_rounded,
+        color: context.colors.info,
+        title: 'Weight Today?',
+        subtitle: "Log today's weight — logging again today just updates it",
+        fieldLabel: 'Weight (kg)',
+        fieldHint: 'e.g. 72.5',
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        buttonLabel: 'Log weight',
+        emptyErrorText: 'Enter a valid weight',
+        onSubmit: (ctx, value) async {
+          final weightKg = double.tryParse(value);
+          if (weightKg == null || weightKg <= 0) {
+            throw Exception('Enter a valid weight');
+          }
+          return ref.read(caloriesRepositoryProvider).addWeightEntry(weightKg: weightKg);
+        },
+      ),
+    );
+    if (result != null && context.mounted) {
+      showAppSnack(context, 'Weight logged');
     }
   }
 }
