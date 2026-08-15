@@ -63,6 +63,8 @@ class AppShell extends ConsumerWidget {
 
   void _showAddSheet(BuildContext context, WidgetRef ref) {
     final c = context.colors;
+    final activeApp = ref.read(activeAppProvider);
+    final isWealthify = activeApp == ActiveApp.wealthify;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -101,39 +103,41 @@ class AppShell extends ConsumerWidget {
                 Text('What would you like to add?',
                     style: AppText.body.copyWith(color: c.textMuted)),
                 const SizedBox(height: AppSpacing.xl),
-                _QuickAddCard(
-                  icon: Icons.arrow_upward_rounded,
-                  color: c.negative,
-                  label: 'Add Expense',
-                  subtitle: 'Log a purchase or bill',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    context.push('${Routes.addTransaction}?type=expense');
-                  },
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                _QuickAddCard(
-                  icon: Icons.arrow_downward_rounded,
-                  color: c.primary,
-                  label: 'Add Income',
-                  subtitle: 'Record money you\'ve received',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    context.push('${Routes.addTransaction}?type=income');
-                  },
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                _QuickAddCard(
-                  icon: Icons.pie_chart_rounded,
-                  color: c.info,
-                  label: 'Set Budget',
-                  subtitle: 'Plan spending for a category',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    context.push(Routes.setBudget);
-                  },
-                ),
-                const SizedBox(height: AppSpacing.sm),
+                if (isWealthify) ...[
+                  _QuickAddCard(
+                    icon: Icons.arrow_upward_rounded,
+                    color: c.negative,
+                    label: 'Add Expense',
+                    subtitle: 'Log a purchase or bill',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      context.push('${Routes.addTransaction}?type=expense');
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _QuickAddCard(
+                    icon: Icons.arrow_downward_rounded,
+                    color: c.primary,
+                    label: 'Add Income',
+                    subtitle: 'Record money you\'ve received',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      context.push('${Routes.addTransaction}?type=income');
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _QuickAddCard(
+                    icon: Icons.pie_chart_rounded,
+                    color: c.info,
+                    label: 'Set Budget',
+                    subtitle: 'Plan spending for a category',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      context.push(Routes.setBudget);
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
                 _QuickAddCard(
                   icon: Icons.bookmark_rounded,
                   color: c.pink,
@@ -144,17 +148,19 @@ class AppShell extends ConsumerWidget {
                     _quickAddWishlistItem(context, ref);
                   },
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                _QuickAddCard(
-                  icon: Icons.restaurant_rounded,
-                  color: c.warning,
-                  label: 'What Did You Eat?',
-                  subtitle: 'Track what you ate today',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _quickLogMeal(context, ref);
-                  },
-                ),
+                if (!isWealthify) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _QuickAddCard(
+                    icon: Icons.restaurant_rounded,
+                    color: c.warning,
+                    label: 'What Did You Eat?',
+                    subtitle: 'Track what you ate today',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _quickLogMeal(context, ref);
+                    },
+                  ),
+                ],
               ],
             ),
           ),
@@ -200,7 +206,7 @@ class AppShell extends ConsumerWidget {
   }
 
   Future<void> _quickLogMeal(BuildContext context, WidgetRef ref) async {
-    final result = await showModalBottomSheet<List<MealItem>>(
+    final result = await showModalBottomSheet<({List<MealItem> items, String? pendingMessage})>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -228,19 +234,23 @@ class AppShell extends ConsumerWidget {
             throw Exception('Could not start meal entry. Please try again.');
           }
           final processed = await repo.processFoodText(entryId, value);
-          return (processed['addedItems'] as List?)
+          final items = (processed['addedItems'] as List?)
                   ?.map((m) => MealItem.fromJson(m as Map<String, dynamic>))
                   .toList() ??
               <MealItem>[];
+          final pendingMessage = processed['status'] == 'pending'
+              ? processed['message'] as String? ?? 'Nutrition data will be added shortly.'
+              : null;
+          return (items: items, pendingMessage: pendingMessage);
         },
       ),
     );
-    if (result != null && result.isNotEmpty && context.mounted) {
+    if (result != null && (result.items.isNotEmpty || result.pendingMessage != null) && context.mounted) {
       showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (_) => MealAddedSheet(items: result),
+        builder: (_) => MealAddedSheet(items: result.items, pendingMessage: result.pendingMessage),
       );
     }
   }
