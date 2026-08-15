@@ -5,7 +5,7 @@ import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_typography.dart';
 
-/// Two-segment pill switcher pinned to the top of Home, letting the user
+/// Two-segment switcher pinned to the top of Home, letting the user
 /// flip between the finance app (Wealthify) and the calorie tracker
 /// (Healthify) — mirrors the JioHotstar/Tadka app-switcher pattern.
 class AppSwitcher extends StatelessWidget {
@@ -19,18 +19,11 @@ class AppSwitcher extends StatelessWidget {
     final c = context.colors;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(6),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: c.surfaceMuted,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: c.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -82,18 +75,18 @@ class _SwitcherSegment extends StatelessWidget {
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
           gradient: selected ? LinearGradient(colors: gradient) : null,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
+          borderRadius: BorderRadius.circular(AppRadius.xs),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: gradient.first.withValues(alpha: 0.4),
-                    blurRadius: 14,
-                    offset: const Offset(0, 5),
+                    color: gradient.first.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ]
               : null,
@@ -101,13 +94,13 @@ class _SwitcherSegment extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 19, color: selected ? Colors.white : c.textSubtle),
-            const SizedBox(width: 8),
+            Icon(icon, size: 17, color: selected ? Colors.white : c.textSubtle),
+            const SizedBox(width: 6),
             Text(
               label,
-              style: AppText.bodyLarge.copyWith(
+              style: AppText.bodyMedium.copyWith(
                 color: selected ? Colors.white : c.textSubtle,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
