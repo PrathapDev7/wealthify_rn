@@ -38,7 +38,7 @@ final dashboardWalletFilterProvider =
       DashboardWalletFilterController.new,
     );
 
-class DashboardWalletFilterController extends AutoDisposeNotifier<String?> {
+class DashboardWalletFilterController extends Notifier<String?> {
   @override
   String? build() => null;
 
@@ -73,9 +73,9 @@ class DashboardScreen extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl,
             AppSpacing.md,
-            AppSpacing.xl,
+            AppSpacing.md,
+            AppSpacing.md,
             AppSpacing.sm,
           ),
           child: AppSwitcher(
