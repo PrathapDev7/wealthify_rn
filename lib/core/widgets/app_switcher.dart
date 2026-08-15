@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../providers.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart';
-import '../theme/app_typography.dart';
 
 /// Two-segment switcher pinned to the top of Home, letting the user
 /// flip between the finance app (Wealthify) and the calorie tracker
@@ -98,10 +98,11 @@ class _SwitcherSegment extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               label,
-              style: AppText.bodyLarge.copyWith(
-                color: selected ? Colors.white : c.textSubtle,
-                fontWeight: FontWeight.w400,
+              style: GoogleFonts.poppins(
                 fontSize: 21,
+                fontWeight: FontWeight.w400,
+                height: 1.4,
+                color: selected ? Colors.white : c.textSubtle,
               ),
             ),
           ],
