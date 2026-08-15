@@ -99,8 +99,8 @@ class _SwitcherSegment extends StatelessWidget {
             Text(
               label,
               style: GoogleFonts.poppins(
-                fontSize: 21,
-                fontWeight: FontWeight.w400,
+                fontSize: 17,
+                fontWeight: FontWeight.w500,
                 height: 1.4,
                 color: selected ? Colors.white : c.textSubtle,
               ),
