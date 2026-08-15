@@ -57,7 +57,7 @@ class _HealthifySubNav extends StatelessWidget {
 
   static const _tabs = [
     (_HealthifyTab.today, 'Today', Icons.restaurant_rounded),
-    (_HealthifyTab.history, 'History', Icons.show_chart_rounded),
+    (_HealthifyTab.history, 'Statistics', Icons.show_chart_rounded),
     (_HealthifyTab.weight, 'Weight', Icons.monitor_weight_rounded),
   ];
 
