@@ -100,8 +100,8 @@ class _SwitcherSegment extends StatelessWidget {
               label,
               style: AppText.bodyLarge.copyWith(
                 color: selected ? Colors.white : c.textSubtle,
-                fontWeight: FontWeight.w500,
-                fontSize: 26,
+                fontWeight: FontWeight.w400,
+                fontSize: 21,
               ),
             ),
           ],
