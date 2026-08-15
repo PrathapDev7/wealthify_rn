@@ -94,11 +94,11 @@ class _SwitcherSegment extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 17, color: selected ? Colors.white : c.textSubtle),
-            const SizedBox(width: 6),
+            Icon(icon, size: 20, color: selected ? Colors.white : c.textSubtle),
+            const SizedBox(width: 8),
             Text(
               label,
-              style: AppText.bodyMedium.copyWith(
+              style: AppText.bodyLarge.copyWith(
                 color: selected ? Colors.white : c.textSubtle,
                 fontWeight: FontWeight.w500,
               ),
