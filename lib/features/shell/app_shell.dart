@@ -421,7 +421,7 @@ class _NavBar extends ConsumerWidget {
               children: [
                 for (final item in items)
                   SizedBox(
-                    width: 44,
+                    width: 56,
                     height: AppSpacing.navBarHeight,
                     child: _NavItem(
                       icon: item.icon,
