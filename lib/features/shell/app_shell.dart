@@ -402,39 +402,41 @@ class _NavBar extends ConsumerWidget {
       (icon: Icons.bar_chart_outlined, activeIcon: Icons.bar_chart, branchIndex: 2),
       (icon: Icons.person_outline, activeIcon: Icons.person, branchIndex: 3),
     ];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
-      child: Container(
-        height: AppSpacing.navBarHeight,
-        decoration: BoxDecoration(
-          color: c.deepPurple,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          boxShadow: AppShadows.xl,
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              for (final item in items)
-                SizedBox(
-                  width: 44,
-                  height: AppSpacing.navBarHeight,
-                  child: _NavItem(
-                    icon: item.icon,
-                    activeIcon: item.activeIcon,
-                    selected: item.branchIndex != null &&
-                        shell.currentIndex == item.branchIndex,
-                    activeColor: activeColor,
-                    iconColor: c.textOnPrimary,
-                    onTap: item.branchIndex != null
-                        ? () => shell.goBranch(item.branchIndex!,
-                            initialLocation: item.branchIndex == shell.currentIndex)
-                        : onAdd,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+        child: Container(
+          height: AppSpacing.navBarHeight,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          decoration: BoxDecoration(
+            color: c.deepPurple,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            boxShadow: AppShadows.xl,
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final item in items)
+                  SizedBox(
+                    width: 44,
+                    height: AppSpacing.navBarHeight,
+                    child: _NavItem(
+                      icon: item.icon,
+                      activeIcon: item.activeIcon,
+                      selected: item.branchIndex != null &&
+                          shell.currentIndex == item.branchIndex,
+                      activeColor: activeColor,
+                      iconColor: c.textOnPrimary,
+                      onTap: item.branchIndex != null
+                          ? () => shell.goBranch(item.branchIndex!,
+                              initialLocation: item.branchIndex == shell.currentIndex)
+                          : onAdd,
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
