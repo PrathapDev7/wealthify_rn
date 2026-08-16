@@ -216,7 +216,7 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
             AppSpacing.xl,
             0,
             AppSpacing.xl,
-            AppSpacing.navBarHeight,
+            AppSpacing.screenBottomInset,
           ),
           children: [
             HorizontalDatePicker(

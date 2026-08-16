@@ -179,7 +179,7 @@ class _HealthGoalsScreenState extends ConsumerState<HealthGoalsScreen> {
             AppSpacing.xl,
             AppSpacing.sm,
             AppSpacing.xl,
-            AppSpacing.navBarHeight,
+            AppSpacing.screenBottomInset,
           ),
           children: [
             const SectionHeader('Nutrition intake goal'),

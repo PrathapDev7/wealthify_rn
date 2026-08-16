@@ -308,7 +308,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         onRefresh: () => ref.refresh(txnFeedProvider.future),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xl, AppSpacing.md, AppSpacing.xl, AppSpacing.navBarHeight),
+              AppSpacing.xl, AppSpacing.md, AppSpacing.xl, AppSpacing.screenBottomInset),
           children: [
             const SizedBox(height: AppSpacing.sm),
             Center(

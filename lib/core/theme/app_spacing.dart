@@ -14,10 +14,13 @@ abstract class AppSpacing {
   static const double xl6 = 48;
   static const double xl7 = 64;
 
-  /// Height of [AppShell]'s bottom nav bar. Screens embedded in the tab
-  /// shell should use this as their scrollable's bottom padding so content
-  /// never sits hidden behind the nav bar on short screens.
+  /// Height of [AppShell]'s bottom nav bar.
   static const double navBarHeight = 68;
+
+  /// Bottom padding for screens embedded in the tab shell — clears the nav
+  /// bar plus the docked FAB so content never sits hidden behind them on
+  /// short screens.
+  static const double screenBottomInset = 120;
 }
 
 abstract class AppRadius {
