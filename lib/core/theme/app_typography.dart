@@ -23,7 +23,7 @@ abstract class AppText {
   static TextStyle get label => _p(11, FontWeight.w600);
   static TextStyle get button => _p(14, FontWeight.w700);
   static TextStyle get link => _p(12, FontWeight.w700);
-  static TextStyle get money => _p(34, FontWeight.w800);
+  static TextStyle get money => _p(34, FontWeight.w600);
   static TextStyle get moneyMd => _p(19, FontWeight.w700);
   static TextStyle get moneySm => _p(12, FontWeight.w700);
 }

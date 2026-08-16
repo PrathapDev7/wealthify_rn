@@ -15,12 +15,12 @@ abstract class AppSpacing {
   static const double xl7 = 64;
 
   /// Height of [AppShell]'s bottom nav bar.
-  static const double navBarHeight = 68;
+  static const double navBarHeight = 56;
 
-  /// Bottom padding for screens embedded in the tab shell — clears the nav
-  /// bar plus the docked FAB so content never sits hidden behind them on
-  /// short screens.
-  static const double screenBottomInset = 120;
+  /// Bottom padding for screens embedded in the tab shell — clears the
+  /// floating pill nav bar so content never sits hidden behind it on short
+  /// screens.
+  static const double screenBottomInset = 96;
 }
 
 abstract class AppRadius {

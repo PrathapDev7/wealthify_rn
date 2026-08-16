@@ -46,8 +46,10 @@ class HomeWalletCard extends StatelessWidget {
                   '**** $maskedTail',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppText.bodyMedium
-                      .copyWith(color: white, letterSpacing: 2),
+                  style: AppText.bodyMedium.copyWith(
+                      color: white,
+                      letterSpacing: 2,
+                      fontWeight: FontWeight.w300),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -64,12 +66,12 @@ class HomeWalletCard extends StatelessWidget {
             height: 36,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.transparent,
+              color: provider != null ? Colors.transparent : accent,
               borderRadius: BorderRadius.circular(10),
             ),
             child: provider != null
                 ? ProviderAvatar(provider: provider, size: 28)
-                : Icon(kindIcon(wallet.kind), color: accent, size: 18),
+                : Icon(kindIcon(wallet.kind), color: white, size: 18),
           ),
         ],
       ),

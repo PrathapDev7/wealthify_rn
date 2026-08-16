@@ -117,20 +117,26 @@ Widget _heroBackdrop(BuildContext context, Widget content) {
   );
 }
 
-class _WealthifyDashboard extends ConsumerWidget {
+class _WealthifyDashboard extends ConsumerStatefulWidget {
   const _WealthifyDashboard({required this.switcher});
 
   final Widget switcher;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_WealthifyDashboard> createState() =>
+      _WealthifyDashboardState();
+}
+
+class _WealthifyDashboardState extends ConsumerState<_WealthifyDashboard> {
+  int _walletIndex = 0;
+  bool _indexSeeded = false;
+
+  @override
+  Widget build(BuildContext context) {
     final prefs = ref.watch(preferencesProvider);
     final money = ref.read(preferencesProvider.notifier).money;
     final async = ref.watch(dashboardDataProvider);
 
-    // The chosen default ("primary") wallet, if any, drives the wallet card.
-    // Prefer the locally-synced default; fall back to the server's isPrimary
-    // flag so the card shows even before the user has opened the Wallets tab.
     final wallets = ref.watch(walletsListProvider).asData?.value ?? const [];
     final defaultWalletId = prefs.defaultWallet;
     WalletModel? primaryWallet;
@@ -151,16 +157,35 @@ class _WealthifyDashboard extends ConsumerWidget {
       }
     }
 
+    if (!_indexSeeded && primaryWallet != null) {
+      final idx = wallets.indexOf(primaryWallet);
+      if (idx >= 0) _walletIndex = idx;
+      _indexSeeded = true;
+    }
+    final safeIndex = wallets.isEmpty
+        ? 0
+        : _walletIndex.clamp(0, wallets.length - 1);
+    final displayedWallet = wallets.isEmpty ? primaryWallet : wallets[safeIndex];
+
     return async.when(
       loading: () => Column(
         children: [
-          switcher,
-          const Expanded(child: _DashboardSkeleton()),
+          _heroBackdrop(
+            context,
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                widget.switcher,
+                const _DashboardSkeletonHero(),
+              ],
+            ),
+          ),
+          const Expanded(child: _DashboardSkeletonBody()),
         ],
       ),
       error: (e, _) => Column(
         children: [
-          switcher,
+          widget.switcher,
           Expanded(
             child: Center(
               child: PillButton(
@@ -185,17 +210,15 @@ class _WealthifyDashboard extends ConsumerWidget {
             ? 'Set Budget'
             : '${walletBalance < 0 ? '-' : ''}${money(walletBalance.abs())}';
 
-        // Stats/recent-transactions scope to the shown wallet even when the
-        // account has more than one (only a single card is ever displayed).
-        final displayStats = primaryWallet != null
-            ? _statsForWallet(stats, primaryWallet.id)
+        final displayStats = displayedWallet != null
+            ? _statsForWallet(stats, displayedWallet.id)
             : stats;
         final recent = displayStats.allData.take(6).toList();
         final balance = displayStats.balance;
         final walletText = balanceTextFor(balance);
 
-        final walletCardChild = primaryWallet != null
-            ? HomeWalletCard(wallet: primaryWallet)
+        final walletCardChild = displayedWallet != null
+            ? HomeWalletCard(wallet: displayedWallet)
             : Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
@@ -267,20 +290,47 @@ class _WealthifyDashboard extends ConsumerWidget {
                 statusPositive: statusPositive,
               ),
               const SizedBox(height: AppSpacing.sm),
-              WalletCardStack(
-                child: ClipRect(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    // 0.75 = 90px of the card's 120px height — hides the
-                    // bottom quarter so it reads as tucked into the green
-                    // hero instead of overflowing past it.
-                    heightFactor: 0.75,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => context.push(
-                        isFirstRun ? Routes.setBudget : Routes.analytics,
+              Center(
+                child: WalletCardStack(
+                  child: ClipRect(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      heightFactor: 0.75,
+                      child: Stack(
+                        children: [
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => context.push(
+                              isFirstRun ? Routes.setBudget : Routes.analytics,
+                            ),
+                            child: walletCardChild,
+                          ),
+                          if (wallets.length > 1)
+                            Positioned(
+                              right: 8,
+                              top: 48,
+                              child: IconButton(
+                                onPressed: () {
+                                  final next = (safeIndex + 1) % wallets.length;
+                                  setState(() => _walletIndex = next);
+                                },
+                                icon: Icon(
+                                  Icons.swap_vert_rounded,
+                                  size: 20,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                ),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 36,
+                                  minHeight: 36,
+                                ),
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                      child: walletCardChild,
                     ),
                   ),
                 ),
@@ -295,7 +345,7 @@ class _WealthifyDashboard extends ConsumerWidget {
               context,
               Column(
                 mainAxisSize: MainAxisSize.min,
-                children: [switcher, heroContent],
+                children: [widget.switcher, heroContent],
               ),
             ),
             Expanded(
@@ -421,7 +471,7 @@ class _BalanceHero extends StatelessWidget {
           Text('Balance',
               style: AppText.label
                   .copyWith(color: Colors.white.withValues(alpha: 0.75))),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: 0),
           Text(balanceText,
               style: AppText.money.copyWith(color: Colors.white)),
           if (statusMessage != null) ...[
@@ -455,6 +505,7 @@ class _BalanceHero extends StatelessWidget {
               ),
             ),
           ],
+          const SizedBox(height: AppSpacing.md),
         ],
       ),
     );
@@ -549,45 +600,75 @@ class _ActionPill extends StatelessWidget {
   }
 }
 
-/// Mirrors [_WealthifyDashboard]'s data layout: wallet card, centered spend
-/// label + amount, budget card, recent-transactions section.
-class _DashboardSkeleton extends StatelessWidget {
-  const _DashboardSkeleton();
+/// Hero portion of the skeleton — sits inside the green gradient backdrop.
+class _DashboardSkeletonHero extends StatelessWidget {
+  const _DashboardSkeletonHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.none),
+      child: Column(
+        children: [
+          Center(
+            child: Column(
+              children: [
+                const SkeletonLine(width: 110, height: 12),
+                const SizedBox(height: 0),
+                const SkeletonLine(width: 160, height: 36),
+                const SizedBox(height: AppSpacing.sm),
+                SkeletonBox(
+                  width: 140,
+                  height: 26,
+                  radius: AppRadius.pill,
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Center(
+            child: WalletCardStack(
+              child: ClipRect(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  heightFactor: 0.75,
+                  child: AppCard(
+                    child: Row(
+                      children: [
+                        const SkeletonCircle(size: 42),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(child: SkeletonLine(width: 120)),
+                        const SizedBox(width: AppSpacing.sm),
+                        const SkeletonLine(width: 60),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Body portion of the skeleton — budget card + recent transactions.
+class _DashboardSkeletonBody extends StatelessWidget {
+  const _DashboardSkeletonBody();
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,
-        AppSpacing.md,
+        AppSpacing.lg,
         AppSpacing.xl,
         AppSpacing.screenBottomInset,
       ),
       children: [
-        AppCard(
-          child: Row(
-            children: [
-              const SkeletonCircle(size: 42),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(child: SkeletonLine(width: 120)),
-              const SizedBox(width: AppSpacing.sm),
-              const SkeletonLine(width: 60),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xl2),
-        Center(
-          child: Column(
-            children: [
-              const SkeletonLine(width: 110, height: 12),
-              const SizedBox(height: AppSpacing.sm),
-              const SkeletonLine(width: 160, height: 36),
-              const SizedBox(height: AppSpacing.sm),
-              const SkeletonLine(width: 140, height: 12),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
