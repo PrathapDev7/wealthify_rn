@@ -56,7 +56,7 @@ class HomeWalletCard extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Flexible(
             child: Text(
-              brand.isEmpty ? kindLabel(wallet.kind) : brand,
+              kindLabel(wallet.kind),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.right,
