@@ -48,11 +48,15 @@ class AppChip extends StatelessWidget {
                   size: 15, color: selected ? c.textInverse : c.textSubtle),
               const SizedBox(width: 6),
             ],
-            Text(
-              label,
-              style: AppText.bodySm.copyWith(
-                color: selected ? c.textInverse : c.textSubtle,
-                fontWeight: FontWeight.w600,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.bodySm.copyWith(
+                  color: selected ? c.textInverse : c.textSubtle,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -75,13 +79,20 @@ class SectionHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: AppText.subtitle.copyWith(color: c.text)),
-        if (actionLabel != null)
+        Flexible(
+          child: Text(title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.subtitle.copyWith(color: c.text)),
+        ),
+        if (actionLabel != null) ...[
+          const SizedBox(width: AppSpacing.sm),
           GestureDetector(
             onTap: onAction,
             child: Text(actionLabel!,
                 style: AppText.link.copyWith(color: c.primary)),
           ),
+        ],
       ],
     );
   }

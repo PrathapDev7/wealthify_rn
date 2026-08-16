@@ -115,7 +115,17 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
           [];
       await _fetchCalories();
       _textController.clear();
-      if (mounted && added.isNotEmpty) _showMealAddedModal(added);
+      if (mounted) {
+        if (result['status'] == 'pending') {
+          _showMealAddedModal(
+            added,
+            pendingMessage: result['message'] as String? ??
+                'Nutrition data will be added shortly.',
+          );
+        } else if (added.isNotEmpty) {
+          _showMealAddedModal(added);
+        }
+      }
     } catch (e) {
       _stopLoadingMessages();
       if (mounted) showAppSnack(context, errorMessage(e), error: true);
@@ -194,12 +204,12 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
     return grouped;
   }
 
-  void _showMealAddedModal(List<MealItem> items) {
+  void _showMealAddedModal(List<MealItem> items, {String? pendingMessage}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => MealAddedSheet(items: items),
+      builder: (_) => MealAddedSheet(items: items, pendingMessage: pendingMessage),
     );
   }
 
@@ -250,7 +260,7 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
             AppSpacing.xl4,
           ),
           children: [
-            _HorizontalDatePicker(
+            HorizontalDatePicker(
               selectedDate: _selectedDate,
               onDateSelected: (date) {
                 setState(() => _selectedDate = date);
@@ -382,190 +392,6 @@ class _FoodInputCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ─── Horizontal Date Picker ──────────────────────────────────────
-class _HorizontalDatePicker extends StatelessWidget {
-  final DateTime selectedDate;
-  final ValueChanged<DateTime> onDateSelected;
-  final VoidCallback onTodayTap;
-  final VoidCallback onPrevTap;
-  final VoidCallback onNextTap;
-
-  const _HorizontalDatePicker({
-    required this.selectedDate,
-    required this.onDateSelected,
-    required this.onTodayTap,
-    required this.onPrevTap,
-    required this.onNextTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    final monthYear = DateFormat('MMMM yyyy').format(selectedDate);
-    final days = _getWeekDays(selectedDate);
-    final selectedKey = DateFormat('yyyy-MM-dd').format(selectedDate);
-    final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(monthYear, style: AppText.bodyLarge.copyWith(color: c.text)),
-            const Spacer(),
-            GestureDetector(
-              onTap: onTodayTap,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: c.primarySoft,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
-                child: Text(
-                  'Today',
-                  style: AppText.bodySm.copyWith(
-                    color: c.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            CircleIconButton(
-              icon: Icons.chevron_left,
-              size: 32,
-              iconSize: 18,
-              onTap: onPrevTap,
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            CircleIconButton(
-              icon: Icons.chevron_right,
-              size: 32,
-              iconSize: 18,
-              onTap: onNextTap,
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        // Weekday initials
-        Row(
-          children: days
-              .map(
-                (day) => Expanded(
-                  child: Center(
-                    child: Text(
-                      (day['abbrev'] as String).substring(0, 1),
-                      style: AppText.caption.copyWith(color: c.textSubtle),
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        // Date circles
-        Row(
-          children: days
-              .map(
-                (day) => Expanded(
-                  child: Center(
-                    child: _DateBadge(
-                      day: day['day'] as int,
-                      isSelected: (day['key'] as String) == selectedKey,
-                      isToday: (day['key'] as String) == todayKey,
-                      onTap: () => onDateSelected(day['date'] as DateTime),
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-      ],
-    );
-  }
-
-  List<Map<String, dynamic>> _getWeekDays(DateTime date) {
-    final days = <Map<String, dynamic>>[];
-    // Start from the Monday of the current week
-    final startOfWeek = DateTime(
-      date.year,
-      date.month,
-      date.day - date.weekday + 1,
-    );
-    for (int i = 0; i < 7; i++) {
-      final dayDate = startOfWeek.add(Duration(days: i));
-      days.add({
-        'abbrev': DateFormat('EEE').format(dayDate),
-        'date': dayDate,
-        'day': dayDate.day,
-        'key': DateFormat('yyyy-MM-dd').format(dayDate),
-      });
-    }
-    return days;
-  }
-}
-
-/// Fixed-size circular date badge — a single centered number, so it can
-/// never look vertically off-center regardless of the column width.
-class _DateBadge extends StatelessWidget {
-  final int day;
-  final bool isSelected;
-  final bool isToday;
-  final VoidCallback onTap;
-
-  const _DateBadge({
-    required this.day,
-    required this.isSelected,
-    required this.isToday,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: isSelected
-              ? LinearGradient(colors: [c.primaryDark, c.primaryDarker])
-              : null,
-          color: isSelected
-              ? null
-              : (isToday ? c.primarySoft : Colors.transparent),
-          border: !isSelected && isToday
-              ? Border.all(color: c.primary, width: 1.2)
-              : null,
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: c.primary.withValues(alpha: 0.35),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          '$day',
-          style: AppText.bodyMedium.copyWith(
-            color: isSelected ? Colors.white : (isToday ? c.primary : c.text),
-            fontWeight: FontWeight.w700,
-          ),
-        ),
       ),
     );
   }

@@ -469,13 +469,17 @@ class _Segmented extends StatelessWidget {
                               ? c.textInverse
                               : c.textSubtle),
                       const SizedBox(width: 6),
-                      Text(label,
-                          style: AppText.bodySm.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: selected == value
-                                ? c.textInverse
-                                : c.textSubtle,
-                          )),
+                      Flexible(
+                        child: Text(label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.bodySm.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: selected == value
+                                  ? c.textInverse
+                                  : c.textSubtle,
+                            )),
+                      ),
                     ],
                   ),
                 ),

@@ -70,7 +70,14 @@ class PillButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (leading != null) ...[leading!, const SizedBox(width: AppSpacing.sm)],
-              Text(label, style: AppText.button.copyWith(color: fg)),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.button.copyWith(color: fg),
+                ),
+              ),
             ],
           );
 

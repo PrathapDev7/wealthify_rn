@@ -716,8 +716,13 @@ class _OverviewSection extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(range.label,
-                        style: AppText.bodyStrong.copyWith(color: c.text)),
+                    Flexible(
+                      child: Text(range.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.bodyStrong.copyWith(color: c.text)),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
                     Text(
                       '${balancePositive ? '+' : '-'}${money(balance.abs())}',
                       style: AppText.bodyStrong.copyWith(
@@ -1131,8 +1136,13 @@ class _TrendRow extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(bucket.longLabel,
-                  style: AppText.bodyMedium.copyWith(color: c.text)),
+              Flexible(
+                child: Text(bucket.longLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.bodyMedium.copyWith(color: c.text)),
+              ),
+              const SizedBox(width: AppSpacing.sm),
               Text(
                 '${netPositive ? '+' : '-'}${money(bucket.net.abs())}',
                 style: AppText.bodyMedium.copyWith(

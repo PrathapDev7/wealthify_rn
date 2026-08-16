@@ -8,7 +8,7 @@ import '../../data/models/recurring_model.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/models/wallet_model.dart';
 import '../../features/account/account_screen.dart';
-import '../../features/analytics/analytics_screen.dart';
+import '../../features/analytics/analytics_tab_screen.dart';
 import '../../features/auth/auth_screen.dart';
 import '../../features/auth/session_controller.dart';
 import '../../features/auth/splash_screen.dart';
@@ -93,7 +93,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.analytics,
-                builder: (_, _) => const AnalyticsScreen(),
+                builder: (_, _) => const AnalyticsTabScreen(),
               ),
             ],
           ),

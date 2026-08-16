@@ -39,6 +39,13 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
     return mondayThisWeek.add(Duration(days: _weekOffset * 7));
   }
 
+  int _weekOffsetFor(DateTime date) {
+    final now = DateTime.now();
+    final mondayThisWeek = DateTime(now.year, now.month, now.day - now.weekday + 1);
+    final mondayOfDate = DateTime(date.year, date.month, date.day - date.weekday + 1);
+    return mondayOfDate.difference(mondayThisWeek).inDays ~/ 7;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -199,14 +206,18 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
             AppSpacing.xl4,
           ),
           children: [
-            _WeekNavigator(
-              weekStart: _weekStart,
-              onPrev: () => _moveWeek(-1),
-              onNext: _weekOffset < 0 ? () => _moveWeek(1) : null,
-              onToday: _weekOffset == 0 ? null : () {
+            HorizontalDatePicker(
+              selectedDate: _weekStart,
+              onDateSelected: (date) {
+                setState(() => _weekOffset = _weekOffsetFor(date));
+                _fetch();
+              },
+              onTodayTap: () {
                 setState(() => _weekOffset = 0);
                 _fetch();
               },
+              onPrevTap: () => _moveWeek(-1),
+              onNextTap: _weekOffset < 0 ? () => _moveWeek(1) : null,
             ),
             const SizedBox(height: AppSpacing.xl),
             if (_loading && _days.isEmpty)
@@ -274,59 +285,6 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
       child: Column(
         children: [const ScreenHeader(title: 'Statistics'), content],
       ),
-    );
-  }
-}
-
-class _WeekNavigator extends StatelessWidget {
-  const _WeekNavigator({
-    required this.weekStart,
-    required this.onPrev,
-    this.onNext,
-    this.onToday,
-  });
-
-  final DateTime weekStart;
-  final VoidCallback onPrev;
-  final VoidCallback? onNext;
-  final VoidCallback? onToday;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    final weekEnd = weekStart.add(const Duration(days: 6));
-    final sameMonth = weekStart.month == weekEnd.month;
-    final label = sameMonth
-        ? '${DateFormat('MMM d').format(weekStart)} - ${DateFormat('d, yyyy').format(weekEnd)}'
-        : '${DateFormat('MMM d').format(weekStart)} - ${DateFormat('MMM d, yyyy').format(weekEnd)}';
-
-    return Row(
-      children: [
-        CircleIconButton(icon: Icons.chevron_left, size: 32, iconSize: 18, onTap: onPrev),
-        Expanded(
-          child: Center(
-            child: Text(label, style: AppText.bodyLarge.copyWith(color: c.text)),
-          ),
-        ),
-        CircleIconButton(icon: Icons.chevron_right, size: 32, iconSize: 18, onTap: onNext),
-        if (onToday != null) ...[
-          const SizedBox(width: AppSpacing.sm),
-          GestureDetector(
-            onTap: onToday,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-              decoration: BoxDecoration(
-                color: c.primarySoft,
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-              ),
-              child: Text(
-                'Today',
-                style: AppText.bodySm.copyWith(color: c.primary, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
-      ],
     );
   }
 }

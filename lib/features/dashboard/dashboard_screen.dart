@@ -19,8 +19,8 @@ import '../../data/repositories/budgets_repository.dart';
 import '../../data/repositories/transactions_repository.dart';
 import '../../data/repositories/wallets_repository.dart';
 import '../preferences/preferences_controller.dart';
+import '../calories/calorie_screen.dart';
 import '../wallets/widgets/wallet_card_visual.dart';
-import 'healthify_home.dart';
 
 final dashboardDataProvider =
     FutureProvider.autoDispose<(StatsModel, BudgetModel)>((ref) async {
@@ -85,7 +85,7 @@ class DashboardScreen extends ConsumerWidget {
         ),
         Expanded(
           child: activeApp == ActiveApp.healthify
-              ? const HealthifyHome()
+              ? const CalorieScreen(embedded: true)
               : const _WealthifyDashboard(),
         ),
       ],
@@ -222,14 +222,21 @@ class _WealthifyDashboard extends ConsumerWidget {
                               Expanded(
                                 child: Text(
                                   'Spending Wallet',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style:
                                       AppText.subtitle.copyWith(color: c.text),
                                 ),
                               ),
-                              Text(
-                                walletText,
-                                style:
-                                    AppText.subtitle.copyWith(color: c.text),
+                              const SizedBox(width: AppSpacing.sm),
+                              Flexible(
+                                child: Text(
+                                  walletText,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style:
+                                      AppText.subtitle.copyWith(color: c.text),
+                                ),
                               ),
                               const SizedBox(width: AppSpacing.sm),
                               Icon(Icons.chevron_right,
@@ -278,9 +285,15 @@ class _WealthifyDashboard extends ConsumerWidget {
                             'Budget',
                             style: AppText.subtitle.copyWith(color: c.text),
                           ),
-                          Text(
-                            '${money(displayStats.totalExpenses)} of ${money(overall)}',
-                            style: AppText.bodySm.copyWith(color: c.textSubtle),
+                          const SizedBox(width: AppSpacing.sm),
+                          Flexible(
+                            child: Text(
+                              '${money(displayStats.totalExpenses)} of ${money(overall)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.right,
+                              style: AppText.bodySm.copyWith(color: c.textSubtle),
+                            ),
                           ),
                         ],
                       ),
