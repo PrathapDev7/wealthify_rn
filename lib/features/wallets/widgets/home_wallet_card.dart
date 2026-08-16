@@ -31,21 +31,37 @@ class HomeWalletCard extends StatelessWidget {
         color: white.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            '**** $maskedTail',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.bodyMedium
-                .copyWith(color: white, letterSpacing: 2),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '**** $maskedTail',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.bodyMedium
+                      .copyWith(color: white, letterSpacing: 2),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: AppText.caption
+                      .copyWith(color: white.withValues(alpha: 0.72)),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: AppText.caption
-                .copyWith(color: white.withValues(alpha: 0.72)),
+          const SizedBox(width: AppSpacing.sm),
+          Flexible(
+            child: Text(
+              brand.isEmpty ? kindLabel(wallet.kind) : brand,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: AppText.bodyStrong.copyWith(color: white),
+            ),
           ),
         ],
       ),
