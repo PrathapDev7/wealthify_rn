@@ -10,6 +10,7 @@ import '../../core/widgets/app_card.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import '../../core/widgets/misc.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../data/models/recurring_model.dart';
 import '../../data/repositories/recurring_repository.dart';
 import '../auth/auth_screen.dart';
@@ -57,7 +58,7 @@ class RecurringScreen extends ConsumerWidget {
           const ScreenHeader(title: 'Recurring'),
           Expanded(
             child: async.when(
-              loading: () => const LoadingView(),
+              loading: () => const _RecurringSkeleton(),
               error: (e, _) => Center(
                 child: PillButton(
                   label: 'Retry',
@@ -98,6 +99,73 @@ class RecurringScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Skeleton placeholder mirroring [_RecurringCard]'s layout, shown while
+/// [recurringListProvider] is loading.
+class _RecurringSkeleton extends StatelessWidget {
+  const _RecurringSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 120),
+      children: List.generate(
+        5,
+        (_) => Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const SkeletonCircle(size: 30),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SkeletonLine(width: 120, height: 14),
+                          const SizedBox(height: AppSpacing.xs),
+                          const SkeletonLine(width: 80),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    const SkeletonLine(width: 56, height: 16),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                const SkeletonLine(width: 140),
+                const SizedBox(height: AppSpacing.xs),
+                Container(
+                  margin: const EdgeInsets.only(top: AppSpacing.sm),
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: c.border, width: 0.5)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Expanded(
+                        child: SkeletonBox(height: 36, radius: AppRadius.sm),
+                      ),
+                      SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: SkeletonBox(height: 36, radius: AppRadius.sm),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

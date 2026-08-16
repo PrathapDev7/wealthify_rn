@@ -37,7 +37,7 @@ class BudgetsScreen extends ConsumerWidget {
           const ScreenHeader(title: 'Budgets'),
           Expanded(
             child: async.when(
-              loading: () => const LoadingView(),
+              loading: () => const _BudgetsSkeleton(),
               error: (e, _) => Center(
                 child: PillButton(
                   label: 'Retry',
@@ -192,6 +192,58 @@ class BudgetsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Skeleton loading state mirroring [BudgetsScreen]'s `data:` layout: an
+/// "Overall this month" card followed by a handful of category budget cards.
+class _BudgetsSkeleton extends StatelessWidget {
+  const _BudgetsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 120),
+      children: [
+        AppCard(
+          margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SkeletonLine(width: 110, height: 10),
+              const SizedBox(height: AppSpacing.xs),
+              const SkeletonLine(width: 160, height: 22),
+              const SizedBox(height: AppSpacing.md),
+              const SkeletonBox(height: 8, width: double.infinity),
+            ],
+          ),
+        ),
+        for (var i = 0; i < 5; i++)
+          AppCard(
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const SkeletonCircle(size: 30),
+                    const SizedBox(width: AppSpacing.sm),
+                    const Expanded(
+                        child: SkeletonLine(width: 90, height: 14)),
+                    const SizedBox(width: AppSpacing.sm),
+                    const SkeletonLine(width: 60, height: 10),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                const SkeletonBox(height: 8, width: double.infinity),
+                const SizedBox(height: AppSpacing.sm),
+                const SkeletonLine(width: 100, height: 10),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
