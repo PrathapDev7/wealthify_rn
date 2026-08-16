@@ -133,6 +133,7 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
     final result = await showModalBottomSheet<Map<String, int>>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (_) => EditGoalSheet(
         calorieTarget: totals?.calorieTarget ?? 2000,
@@ -1010,6 +1011,7 @@ class _EditGoalSheetState extends ConsumerState<EditGoalSheet> {
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (_) => HealthProfileSheet(initial: widget.healthProfile),
     );
