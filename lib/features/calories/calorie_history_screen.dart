@@ -239,7 +239,7 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
               onNextTap: _weekOffset < 0 ? () => _moveWeek(1) : null,
             ),
             const SizedBox(height: AppSpacing.xl),
-            if (_loading && _days.isEmpty)
+            if (_loading)
               const _WeeklyStatsSkeleton()
             else if (_days.every((d) => d.calories == 0))
               const EmptyState(
@@ -255,7 +255,7 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
             const SizedBox(height: AppSpacing.xl2),
             const SectionHeader('Weight'),
             const SizedBox(height: AppSpacing.md),
-            if (_weightLoading && _weightEntries.isEmpty)
+            if (_weightLoading)
               const _WeightHistorySkeleton()
             else ...[
               _WeightHeroCard(

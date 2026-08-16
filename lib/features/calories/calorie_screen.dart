@@ -33,10 +33,12 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
   List<MealItem> _mealItems = [];
   DailyTotals? _dailyTotals;
   HealthProfile? _healthProfile;
+  bool _loading = false;
 
   Future<void> _fetchCalories() async {
     final repo = ref.read(caloriesRepositoryProvider);
     final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    if (mounted) setState(() => _loading = true);
     try {
       final res = await repo.getDailyCalories(date: dateStr);
       if (mounted) {
@@ -60,6 +62,8 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
       }
     } catch (e) {
       if (mounted) showAppSnack(context, errorMessage(e), error: true);
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -184,7 +188,12 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
             const SizedBox(height: AppSpacing.xl),
 
             // Compact hero + macro summary
-            if (_dailyTotals != null) ...[
+            if (_loading) ...[
+              const _CalorieHeroSkeleton(),
+              const SizedBox(height: AppSpacing.md),
+              const _MacroStatsRowSkeleton(),
+              const SizedBox(height: AppSpacing.xl),
+            ] else if (_dailyTotals != null) ...[
               _CalorieHeroCard(totals: _dailyTotals!, onEditGoal: _editGoals),
               const SizedBox(height: AppSpacing.md),
               _MacroStatsRow(totals: _dailyTotals!),
@@ -193,7 +202,9 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
 
             const SectionHeader("Today's Meals"),
             const SizedBox(height: AppSpacing.md),
-            if (_mealItems.isEmpty)
+            if (_loading)
+              const _MealListSkeleton()
+            else if (_mealItems.isEmpty)
               const EmptyState(
                 icon: Icons.restaurant_menu_outlined,
                 title: 'No meals logged yet',
@@ -698,6 +709,173 @@ class _MealItemRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── Loading skeletons ─────────────────────────────────────────────
+/// Placeholder for [_CalorieHeroCard] (ring + two stat lines).
+class _CalorieHeroSkeleton extends StatelessWidget {
+  const _CalorieHeroSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: c.surfaceElevated,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: c.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SkeletonCircle(size: 68),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                SkeletonLine(width: 110, height: 14),
+                SizedBox(height: AppSpacing.sm),
+                SkeletonLine(width: 160, height: 24),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Placeholder for [_MacroStatsRow] (three [_MacroMiniCard]s).
+class _MacroStatsRowSkeleton extends StatelessWidget {
+  const _MacroStatsRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (var i = 0; i < 3; i++) ...[
+          if (i > 0) const SizedBox(width: AppSpacing.sm),
+          const Expanded(child: _MacroMiniCardSkeleton()),
+        ],
+      ],
+    );
+  }
+}
+
+class _MacroMiniCardSkeleton extends StatelessWidget {
+  const _MacroMiniCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              SkeletonCircle(size: 24),
+              SizedBox(width: AppSpacing.xs),
+              Expanded(child: SkeletonLine(height: 12)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          const SkeletonLine(width: 50, height: 10),
+          const SizedBox(height: AppSpacing.xs),
+          const SkeletonBox(height: 4, width: double.infinity),
+        ],
+      ),
+    );
+  }
+}
+
+/// Placeholder for the meal-groups list — a handful of [_MealGroupCard]
+/// shapes stacked the way the loaded list would render.
+class _MealListSkeleton extends StatelessWidget {
+  const _MealListSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        _MealGroupCardSkeleton(),
+        _MealGroupCardSkeleton(),
+        _MealGroupCardSkeleton(),
+      ],
+    );
+  }
+}
+
+class _MealGroupCardSkeleton extends StatelessWidget {
+  const _MealGroupCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const SkeletonCircle(size: 40),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    SkeletonLine(width: 90, height: 14),
+                    SizedBox(height: 4),
+                    SkeletonLine(width: 70, height: 11),
+                  ],
+                ),
+              ),
+              const SkeletonBox(
+                width: 60,
+                height: 18,
+                radius: AppRadius.pill,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const SkeletonBox(height: 5, width: double.infinity),
+          const SizedBox(height: AppSpacing.sm),
+          const _MealItemRowSkeleton(),
+          const SizedBox(height: AppSpacing.md),
+          const _MealItemRowSkeleton(),
+        ],
+      ),
+    );
+  }
+}
+
+/// Placeholder for [_MealItemRow] (name + portion lines, trailing calories).
+class _MealItemRowSkeleton extends StatelessWidget {
+  const _MealItemRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonLine(height: 12),
+              SizedBox(height: 4),
+              SkeletonLine(width: 60, height: 10),
+            ],
+          ),
+        ),
+        SizedBox(width: AppSpacing.sm),
+        SkeletonLine(width: 40, height: 12),
+      ],
     );
   }
 }
