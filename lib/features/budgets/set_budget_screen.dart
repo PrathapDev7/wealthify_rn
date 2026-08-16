@@ -155,7 +155,7 @@ class _SetBudgetScreenState extends ConsumerState<SetBudgetScreen> {
           const ScreenHeader(title: 'Set Budget'),
           Expanded(
             child: _loading
-                ? const LoadingView()
+                ? const _SetBudgetSkeleton()
                 : ListView(
                     padding: const EdgeInsets.fromLTRB(
                         AppSpacing.xl, AppSpacing.md, AppSpacing.xl, AppSpacing.lg),
@@ -412,6 +412,166 @@ class _SetBudgetScreenState extends ConsumerState<SetBudgetScreen> {
 
   String _group(int value) => value.toString().replaceAllMapped(
       RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
+}
+
+/// Skeleton loading state mirroring [SetBudgetScreen]'s loaded layout: the
+/// balance summary card, the amount-entry card (scope pill, big amount,
+/// quick-set chips), income/balance stat tiles, and saved-budget rows.
+class _SetBudgetSkeleton extends StatelessWidget {
+  const _SetBudgetSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.md, AppSpacing.xl, AppSpacing.lg),
+      children: [
+        // Balance / scope summary card.
+        AppCard(
+          child: Row(
+            children: [
+              const SkeletonCircle(size: 44),
+              const SizedBox(width: AppSpacing.md),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SkeletonLine(width: 90, height: 10),
+                    SizedBox(height: 6),
+                    SkeletonLine(width: 130, height: 18),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  SkeletonLine(width: 50, height: 10),
+                  SizedBox(height: 6),
+                  SkeletonLine(width: 70, height: 14),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+
+        // Amount entry card: scope pill + big amount + quick-set chips.
+        AppCard(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  SkeletonLine(width: 70, height: 10),
+                  SkeletonBox(width: 100, height: 26, radius: AppRadius.pill),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              const SkeletonBox(width: 160, height: 42, radius: AppRadius.sm),
+              const SizedBox(height: AppSpacing.xs),
+              const SkeletonLine(width: 90, height: 10),
+              const SizedBox(height: AppSpacing.xl),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: SkeletonLine(width: 70, height: 10),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  for (var i = 0; i < _presets.length; i++)
+                    const SkeletonBox(
+                        width: 78, height: 32, radius: AppRadius.pill),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+
+        // Income / Balance tiles.
+        const Row(
+          children: [
+            Expanded(child: _StatTileSkeleton()),
+            SizedBox(width: AppSpacing.md),
+            Expanded(child: _StatTileSkeleton()),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+
+        // Saved budgets list.
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  SkeletonLine(width: 100, height: 14),
+                  SkeletonLine(width: 18, height: 12),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              for (var i = 0; i < 3; i++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md, vertical: AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: c.surfaceSoft,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: c.border),
+                    ),
+                    child: const Row(
+                      children: [
+                        Expanded(child: SkeletonLine(width: 100, height: 14)),
+                        SizedBox(width: AppSpacing.md),
+                        SkeletonLine(width: 60, height: 14),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Stat-tile placeholder mirroring [_StatTile]'s box, for the skeleton state.
+class _StatTileSkeleton extends StatelessWidget {
+  const _StatTileSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      constraints: const BoxConstraints(minHeight: 72),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+      decoration: BoxDecoration(
+        color: c.surfaceLifted,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: c.divider),
+      ),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SkeletonLine(width: 44, height: 10),
+          SizedBox(height: 4),
+          SkeletonLine(width: 64, height: 14),
+        ],
+      ),
+    );
+  }
 }
 
 class _PresetChip extends StatelessWidget {

@@ -14,6 +14,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/misc.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/transaction_row.dart';
 import '../../data/models/stats_model.dart';
 import '../../data/models/transaction_model.dart';
@@ -324,10 +325,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             ),
             const SizedBox(height: AppSpacing.lg),
             feedAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.only(top: AppSpacing.xl5),
-                child: LoadingView(),
-              ),
+              loading: () => const _TransactionsSkeleton(),
               error: (e, _) => const Padding(
                 padding: EdgeInsets.only(top: AppSpacing.xl2),
                 child: EmptyState(
@@ -419,6 +417,126 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ───────────────────────────── Loading skeleton ─────────────────────────────
+
+/// Mirrors the loaded layout of the async feed section: the cashflow gauge
+/// card (arc + two mini stat boxes), a section-header-shaped row, and a
+/// handful of transaction rows. (The search/filter row above this section is
+/// always rendered live, outside the async boundary, so it isn't duplicated
+/// here.)
+class _TransactionsSkeleton extends StatelessWidget {
+  const _TransactionsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppCard(
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg),
+          child: Column(
+            children: [
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: SkeletonBox(
+                    width: 96, height: 30, radius: AppRadius.pill),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              const SkeletonCircle(size: _kArcSize),
+              const SizedBox(height: AppSpacing.md),
+              const Row(
+                children: [
+                  Expanded(child: _CashflowMetricSkeleton()),
+                  SizedBox(width: AppSpacing.sm),
+                  Expanded(child: _CashflowMetricSkeleton()),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: SkeletonLine(width: 180, height: 16),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        for (var i = 0; i < 5; i++) const _TransactionRowSkeleton(),
+      ],
+    );
+  }
+}
+
+/// Mirrors [_CashflowMetric]'s icon-circle + 2-line stat layout.
+class _CashflowMetricSkeleton extends StatelessWidget {
+  const _CashflowMetricSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      constraints: const BoxConstraints(minHeight: 76),
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: c.surfaceSoft,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: c.border),
+      ),
+      child: Row(
+        children: [
+          const SkeletonCircle(size: 30),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SkeletonLine(width: 40, height: 10),
+                const SizedBox(height: 4),
+                SkeletonLine(width: 60, height: 14),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Mirrors [TransactionRow]'s 40x40 icon box, 2-line text column, and
+/// right-aligned amount. Colocated copy (per this codebase's convention of
+/// duplicating small private per-screen skeleton widgets).
+class _TransactionRowSkeleton extends StatelessWidget {
+  const _TransactionRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.md),
+      child: Row(
+        children: [
+          const SkeletonBox(width: 40, height: 40, radius: AppRadius.sm),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonLine(width: 100),
+                const SizedBox(height: 6),
+                SkeletonLine(width: 70, height: 10),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          SkeletonLine(width: 50),
+        ],
       ),
     );
   }

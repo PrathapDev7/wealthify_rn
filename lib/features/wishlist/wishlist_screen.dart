@@ -9,6 +9,7 @@ import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/misc.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../data/models/wishlist_item_model.dart';
 import '../../data/repositories/wishlist_repository.dart';
 import '../auth/auth_screen.dart';
@@ -48,7 +49,7 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
         label: const Text('Add item'),
       ),
       body: async.when(
-        loading: () => const LoadingView(),
+        loading: () => const _WishlistSkeleton(),
         error: (error, _) => EmptyState(
           icon: Icons.cloud_off_outlined,
           title: 'Could not load wishlist',
@@ -270,6 +271,97 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
         item == null ? 'Added to wishlist' : 'Wishlist item updated',
       );
     }
+  }
+}
+
+/// Mirrors [_WishlistScreenState]'s data layout: 3-metric summary card,
+/// filter-chip row, and a list of item rows.
+class _WishlistSkeleton extends StatelessWidget {
+  const _WishlistSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xl,
+        120,
+      ),
+      children: [
+        AppCard(
+          child: Row(
+            children: [
+              Expanded(child: _metric()),
+              Container(width: 1, height: 40, color: c.divider),
+              Expanded(child: _metric()),
+              Container(width: 1, height: 40, color: c.divider),
+              Expanded(child: _metric()),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Row(
+          children: [
+            for (final width in [40.0, 100.0, 50.0, 80.0]) ...[
+              SkeletonBox(width: width, height: 32, radius: AppRadius.pill),
+              const SizedBox(width: AppSpacing.sm),
+            ],
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        AppCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (var i = 0; i < 5; i++) ...[
+                const _WishlistItemRowSkeleton(),
+                if (i < 4) Divider(height: 1, color: c.divider, indent: 68),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _metric() => const Column(
+    children: [
+      SkeletonLine(width: 40, height: 20),
+      SizedBox(height: 4),
+      SkeletonLine(width: 70, height: 10),
+    ],
+  );
+}
+
+class _WishlistItemRowSkeleton extends StatelessWidget {
+  const _WishlistItemRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          const SkeletonCircle(size: 26),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonLine(width: 140),
+                const SizedBox(height: 6),
+                SkeletonLine(width: 100, height: 10),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

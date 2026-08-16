@@ -11,6 +11,7 @@ import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_switcher.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/misc.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/transaction_row.dart';
 import '../../data/models/budget_model.dart';
 import '../../data/models/stats_model.dart';
@@ -127,7 +128,7 @@ class _WealthifyDashboard extends ConsumerWidget {
     }
 
     return async.when(
-      loading: () => const LoadingView(),
+      loading: () => const _DashboardSkeleton(),
       error: (e, _) => Center(
         child: PillButton(
           label: 'Retry',
@@ -341,6 +342,111 @@ class _WealthifyDashboard extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Mirrors [_WealthifyDashboard]'s data layout: wallet card, centered spend
+/// label + amount, budget card, recent-transactions section.
+class _DashboardSkeleton extends StatelessWidget {
+  const _DashboardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xl,
+        120,
+      ),
+      children: [
+        AppCard(
+          child: Row(
+            children: [
+              const SkeletonCircle(size: 42),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(child: SkeletonLine(width: 120)),
+              const SizedBox(width: AppSpacing.sm),
+              const SkeletonLine(width: 60),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl2),
+        Center(
+          child: Column(
+            children: [
+              const SkeletonLine(width: 110, height: 12),
+              const SizedBox(height: AppSpacing.sm),
+              const SkeletonLine(width: 160, height: 36),
+              const SizedBox(height: AppSpacing.sm),
+              const SkeletonLine(width: 140, height: 12),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SkeletonLine(width: 70),
+                  SkeletonLine(width: 100),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              const SkeletonLine(width: 90, height: 10),
+              const SizedBox(height: AppSpacing.sm),
+              const SkeletonBox(height: 8, width: double.infinity),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const SkeletonLine(width: 140, height: 16),
+            SkeletonLine(width: 50, height: 12),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        for (var i = 0; i < 5; i++) const _TransactionRowSkeleton(),
+      ],
+    );
+  }
+}
+
+/// Mirrors [TransactionRow]'s 40x40 icon box, 2-line text column, and
+/// right-aligned amount.
+class _TransactionRowSkeleton extends StatelessWidget {
+  const _TransactionRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.md),
+      child: Row(
+        children: [
+          const SkeletonBox(width: 40, height: 40, radius: AppRadius.sm),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonLine(width: 100),
+                const SizedBox(height: 6),
+                SkeletonLine(width: 70, height: 10),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          SkeletonLine(width: 50),
+        ],
+      ),
     );
   }
 }

@@ -240,10 +240,7 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
             ),
             const SizedBox(height: AppSpacing.xl),
             if (_loading && _days.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.xl3),
-                child: LoadingView(),
-              )
+              const _WeeklyStatsSkeleton()
             else if (_days.every((d) => d.calories == 0))
               const EmptyState(
                 icon: Icons.show_chart_rounded,
@@ -259,10 +256,7 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
             const SectionHeader('Weight'),
             const SizedBox(height: AppSpacing.md),
             if (_weightLoading && _weightEntries.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.xl3),
-                child: LoadingView(),
-              )
+              const _WeightHistorySkeleton()
             else ...[
               _WeightHeroCard(
                 currentWeightKg: _latestWeightKg,
@@ -479,6 +473,57 @@ class _CaloriesBarChartCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Loading placeholder mirroring [_WeeklyStatsRow] + [_CaloriesBarChartCard]:
+/// a row of 4 stat mini-cards followed by a bar-chart-shaped block.
+class _WeeklyStatsSkeleton extends StatelessWidget {
+  const _WeeklyStatsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            for (var i = 0; i < 4; i++) ...[
+              if (i > 0) const SizedBox(width: AppSpacing.sm),
+              const Expanded(child: _StatMiniSkeleton()),
+            ],
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        const AppCard(
+          padding: EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
+          child: SkeletonBox(width: double.infinity, height: 200),
+        ),
+      ],
+    );
+  }
+}
+
+/// Placeholder for [_StatMini] (value line + label line inside a small card).
+class _StatMiniSkeleton extends StatelessWidget {
+  const _StatMiniSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.xs),
+      decoration: BoxDecoration(
+        color: c.surfaceElevated,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: const Column(
+        children: [
+          SkeletonLine(width: 36, height: 14),
+          SizedBox(height: 6),
+          SkeletonLine(width: 52, height: 10),
+        ],
       ),
     );
   }
@@ -701,6 +746,81 @@ class _WeightHistoryRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Loading placeholder mirroring [_WeightHeroCard] + a few [_WeightHistoryRow]s:
+/// a current-vs-goal split with a pill badge, followed by row placeholders.
+class _WeightHistorySkeleton extends StatelessWidget {
+  const _WeightHistorySkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: c.surfaceElevated,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    SkeletonLine(width: 48, height: 10),
+                    SizedBox(height: 6),
+                    SkeletonLine(width: 64, height: 18),
+                  ],
+                ),
+              ),
+              Container(width: 1, height: 36, color: c.divider),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      SkeletonLine(width: 40, height: 10),
+                      SizedBox(height: 6),
+                      SkeletonLine(width: 64, height: 18),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const SkeletonBox(width: 72, height: 22, radius: AppRadius.pill),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        for (var i = 0; i < 3; i++) const _WeightHistoryRowSkeleton(),
+      ],
+    );
+  }
+}
+
+/// Placeholder for [_WeightHistoryRow] (icon + text line + trailing value line).
+class _WeightHistoryRowSkeleton extends StatelessWidget {
+  const _WeightHistoryRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Row(
+        children: const [
+          SkeletonCircle(size: 18),
+          SizedBox(width: AppSpacing.sm),
+          Expanded(child: SkeletonLine(height: 12)),
+          SizedBox(width: AppSpacing.sm),
+          SkeletonLine(width: 48, height: 12),
+        ],
       ),
     );
   }

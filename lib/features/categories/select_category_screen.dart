@@ -9,6 +9,7 @@ import '../../core/utils/category_icon.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import '../../core/widgets/misc.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/wealthify_icon.dart';
 import '../../data/repositories/categories_repository.dart';
 
@@ -154,7 +155,7 @@ class _SelectCategoryScreenState extends ConsumerState<SelectCategoryScreen> {
           const SizedBox(height: AppSpacing.lg),
           Expanded(
             child: async.when(
-              loading: () => const LoadingView(),
+              loading: () => const _SelectCategorySkeleton(),
               error: (_, _) => const EmptyState(
                 icon: Icons.error_outline,
                 title: 'Could not load categories',
@@ -274,6 +275,78 @@ class _CategoryTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Skeleton for [SelectCategoryScreen]'s loading state, mirroring the
+/// data-loaded layout: a search-field-shaped bar, a recent-chip row, and the
+/// 4-up category grid.
+class _SelectCategorySkeleton extends StatelessWidget {
+  const _SelectCategorySkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.xl5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SkeletonBox(
+            width: double.infinity,
+            height: 48,
+            radius: AppRadius.md,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              for (final width in const [72.0, 96.0, 64.0, 88.0])
+                SkeletonBox(width: width, height: 32, radius: AppRadius.pill),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.lg,
+            children: [
+              for (var i = 0; i < 12; i++) const _SkeletonCategoryTile(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Single icon-tile placeholder in the skeleton grid, sized to match
+/// [_CategoryTile]'s 4-up layout.
+class _SkeletonCategoryTile extends StatelessWidget {
+  const _SkeletonCategoryTile();
+
+  @override
+  Widget build(BuildContext context) {
+    // Mirrors _CategoryTile's tile-width math so the skeleton grid lines up
+    // with the real one.
+    final tileWidth =
+        (MediaQuery.sizeOf(context).width - AppSpacing.xl * 2 - AppSpacing.md * 3) /
+            4;
+
+    return SizedBox(
+      width: tileWidth,
+      child: Column(
+        children: [
+          SkeletonBox(
+            width: tileWidth,
+            height: tileWidth,
+            radius: AppRadius.sm,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          SkeletonLine(width: tileWidth * 0.7, height: 10),
+        ],
       ),
     );
   }

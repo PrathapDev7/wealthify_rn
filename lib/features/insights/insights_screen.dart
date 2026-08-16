@@ -29,7 +29,7 @@ class InsightsScreen extends ConsumerWidget {
           const ScreenHeader(title: 'Insights'),
           Expanded(
             child: async.when(
-              loading: () => const LoadingView(),
+              loading: () => const _InsightsSkeleton(),
               error: (e, _) => Center(
                 child: PillButton(
                   label: 'Retry',
@@ -297,6 +297,142 @@ class _MoverRow extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Text('${mover.deltaPct.round()}%',
             style: AppText.caption.copyWith(color: c.textSubtle)),
+      ],
+    );
+  }
+}
+
+// ── Loading skeleton (mirrors the `data:` layout while insights loads) ──────
+
+/// Mirrors the data layout: hero spend card, 3-stat row, top-categories
+/// list, biggest-changes list.
+class _InsightsSkeleton extends StatelessWidget {
+  const _InsightsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 120),
+      children: [
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SkeletonLine(width: 110, height: 11),
+              const SizedBox(height: AppSpacing.xs),
+              const SkeletonLine(width: 160, height: 26),
+              const SizedBox(height: AppSpacing.xs),
+              const SkeletonLine(width: 90, height: 11),
+              const SizedBox(height: AppSpacing.md),
+              const SkeletonBox(
+                  width: 130, height: 24, radius: AppRadius.pill),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Expanded(child: _StatCardSkeleton()),
+            const SizedBox(width: AppSpacing.md),
+            const Expanded(child: _StatCardSkeleton()),
+            const SizedBox(width: AppSpacing.md),
+            const Expanded(child: _StatCardSkeleton()),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        const SkeletonLine(width: 130, height: 16),
+        const SizedBox(height: AppSpacing.md),
+        AppCard(
+          child: Column(
+            children: [
+              for (var i = 0; i < 4; i++) ...[
+                if (i > 0) const SizedBox(height: AppSpacing.lg),
+                const _CategoryRowSkeleton(),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        const SkeletonLine(width: 150, height: 16),
+        const SizedBox(height: AppSpacing.md),
+        AppCard(
+          child: Column(
+            children: [
+              for (var i = 0; i < 3; i++) ...[
+                if (i > 0) const SizedBox(height: AppSpacing.md),
+                const _MoverRowSkeleton(),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Placeholder for [_StatCard] (label line, value line, optional sub line).
+class _StatCardSkeleton extends StatelessWidget {
+  const _StatCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SkeletonLine(width: 46, height: 9),
+          const SizedBox(height: AppSpacing.xs),
+          const SkeletonLine(width: 60, height: 12),
+          const SizedBox(height: 2),
+          const SkeletonLine(width: 40, height: 9),
+        ],
+      ),
+    );
+  }
+}
+
+/// Placeholder for [_CategoryRow] (name + amount row, progress bar).
+class _CategoryRowSkeleton extends StatelessWidget {
+  const _CategoryRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(child: SkeletonLine(height: 12)),
+            const SizedBox(width: AppSpacing.sm),
+            const SkeletonLine(width: 50, height: 11),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        const SkeletonBox(height: 8, width: double.infinity),
+      ],
+    );
+  }
+}
+
+/// Placeholder for [_MoverRow] (name, trend icon, delta, pct).
+class _MoverRowSkeleton extends StatelessWidget {
+  const _MoverRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Expanded(child: SkeletonLine(height: 12)),
+        const SizedBox(width: AppSpacing.sm),
+        const SkeletonCircle(size: 14),
+        const SizedBox(width: AppSpacing.xs),
+        const SkeletonLine(width: 44, height: 11),
+        const SizedBox(width: AppSpacing.sm),
+        const SkeletonLine(width: 28, height: 10),
       ],
     );
   }

@@ -10,6 +10,7 @@ import '../../core/widgets/app_card.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import '../../core/widgets/misc.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../data/repositories/wallets_repository.dart';
 import '../preferences/preferences_controller.dart';
 import 'widgets/wallet_card_visual.dart';
@@ -29,7 +30,7 @@ class WalletsScreen extends ConsumerWidget {
           const ScreenHeader(title: 'Wallets'),
           Expanded(
             child: async.when(
-              loading: () => const LoadingView(),
+              loading: () => const _WalletsSkeleton(),
               error: (e, _) => Center(
                 child: PillButton(
                   label: 'Retry',
@@ -152,6 +153,65 @@ class WalletsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Loading placeholder mirroring the loaded layout: a total-balance card,
+/// a few wallet-card-shaped blocks, and a caption row under each.
+class _WalletsSkeleton extends StatelessWidget {
+  const _WalletsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 120),
+      children: [
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SkeletonLine(width: 90, height: 12),
+              const SizedBox(height: AppSpacing.xs),
+              const SkeletonLine(width: 160, height: 28),
+              const SizedBox(height: AppSpacing.xs),
+              const SkeletonLine(width: 100, height: 12),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        for (var i = 0; i < 3; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Roughly matches WalletCardVisual's height (icon row +
+                // masked number + holder/balance footer).
+                const SkeletonBox(
+                    width: double.infinity,
+                    height: 150,
+                    radius: AppRadius.md),
+                const SizedBox(height: AppSpacing.xs),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: SkeletonLine(width: 140, height: 12),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      const SkeletonBox(
+                          width: 90, height: 18, radius: AppRadius.pill),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
