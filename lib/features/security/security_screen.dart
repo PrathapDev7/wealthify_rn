@@ -158,7 +158,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
           const ScreenHeader(title: 'Security'),
           Expanded(
             child: _loading
-                ? const LoadingView()
+                ? const _SecuritySkeleton()
                 : ListView(
                     padding: const EdgeInsets.fromLTRB(
                         AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 60),
@@ -297,6 +297,69 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
         border: Border.all(color: c.warning.withValues(alpha: 0.33)),
       ),
       child: content,
+    );
+  }
+}
+
+/// Loading placeholder for [SecurityScreen], mirroring the capability info
+/// card, app-lock toggle card, and test-unlock button shapes so the layout
+/// doesn't jump once data arrives.
+class _SecuritySkeleton extends StatelessWidget {
+  const _SecuritySkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 60),
+      children: [
+        // Capability info card: icon badge + title line + shorter body line.
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const SkeletonCircle(size: 32),
+                  const SizedBox(width: AppSpacing.sm),
+                  const Expanded(child: SkeletonLine(width: double.infinity)),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              const SkeletonLine(width: 200),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        const SkeletonLine(width: 80),
+        const SizedBox(height: AppSpacing.sm),
+        // App-lock toggle card: text lines + switch-shaped placeholder.
+        AppCard(
+          child: Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SkeletonLine(width: 100),
+                    SizedBox(height: 6),
+                    SkeletonLine(width: 180, height: 10),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              const SkeletonBox(width: 44, height: 24, radius: AppRadius.pill),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        // Test-unlock button placeholder (matches PillButton's 52px height).
+        const SkeletonBox(
+          width: double.infinity,
+          height: 52,
+          radius: AppRadius.pill,
+        ),
+      ],
     );
   }
 }
