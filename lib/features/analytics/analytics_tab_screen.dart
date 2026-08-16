@@ -30,7 +30,7 @@ class AnalyticsTabScreen extends ConsumerWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.md),
+                    AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.md),
                 child: Row(
                   children: [
                     CircleIconButton(
