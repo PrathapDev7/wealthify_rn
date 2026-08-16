@@ -395,13 +395,6 @@ class _NavBar extends ConsumerWidget {
   const _NavBar({required this.shell});
   final StatefulNavigationShell shell;
 
-  static const _items = [
-    (Icons.home_outlined, Icons.home, 'Home'),
-    (Icons.receipt_long_outlined, Icons.receipt_long, 'Transactions'),
-    (Icons.bar_chart_outlined, Icons.bar_chart, 'Analytics'),
-    (Icons.person_outline, Icons.person, 'Account'),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
@@ -410,6 +403,16 @@ class _NavBar extends ConsumerWidget {
     final activeColor = activeApp == ActiveApp.healthify
         ? (isDark ? AppColors.healthifyDark.primary : AppColors.healthifyLight.primary)
         : c.primary;
+    final items = [
+      (Icons.home_outlined, Icons.home, 'Home'),
+      (Icons.receipt_long_outlined, Icons.receipt_long, 'Transactions'),
+      (
+        Icons.bar_chart_outlined,
+        Icons.bar_chart,
+        activeApp == ActiveApp.healthify ? 'Statistics' : 'Analytics',
+      ),
+      (Icons.person_outline, Icons.person, 'Account'),
+    ];
     return BottomAppBar(
       color: c.surface,
       elevation: 0,
@@ -419,13 +422,13 @@ class _NavBar extends ConsumerWidget {
       notchMargin: 8,
       child: Row(
         children: [
-          for (var i = 0; i < _items.length; i++) ...[
+          for (var i = 0; i < items.length; i++) ...[
             if (i == 2) const SizedBox(width: 64), // gap for FAB
             Expanded(
               child: _NavItem(
-                icon: _items[i].$1,
-                activeIcon: _items[i].$2,
-                label: _items[i].$3,
+                icon: items[i].$1,
+                activeIcon: items[i].$2,
+                label: items[i].$3,
                 selected: shell.currentIndex == i,
                 activeColor: activeColor,
                 onTap: () => shell.goBranch(i,
