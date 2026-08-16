@@ -34,7 +34,7 @@ import '../../features/security/security_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/transactions/add_transaction_screen.dart';
 import '../../features/transactions/transaction_detail_screen.dart';
-import '../../features/transactions/transactions_screen.dart';
+import '../../features/transactions/transactions_tab_screen.dart';
 import '../../features/wallets/edit_wallet_screen.dart';
 import '../../features/wallets/select_provider_screen.dart';
 import '../../features/wallets/wallets_screen.dart';
@@ -86,7 +86,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.transactions,
-                builder: (_, _) => const TransactionsScreen(),
+                builder: (_, _) => const TransactionsTabScreen(),
               ),
             ],
           ),

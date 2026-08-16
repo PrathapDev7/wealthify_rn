@@ -405,7 +405,9 @@ class _NavBar extends ConsumerWidget {
         : c.primary;
     final items = [
       (Icons.home_outlined, Icons.home, 'Home'),
-      (Icons.receipt_long_outlined, Icons.receipt_long, 'Transactions'),
+      activeApp == ActiveApp.healthify
+          ? (Icons.flag_outlined, Icons.flag, 'Goals')
+          : (Icons.receipt_long_outlined, Icons.receipt_long, 'Transactions'),
       (
         Icons.bar_chart_outlined,
         Icons.bar_chart,

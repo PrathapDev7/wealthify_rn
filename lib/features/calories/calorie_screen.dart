@@ -134,7 +134,7 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _EditGoalSheet(
+      builder: (_) => EditGoalSheet(
         calorieTarget: totals?.calorieTarget ?? 2000,
         sugarTarget: totals?.sugarTarget ?? 50,
         fatTarget: totals?.fatTarget ?? 80,
@@ -950,14 +950,17 @@ class _ItemNutritionSheet extends StatelessWidget {
 }
 
 // ─── Edit Goal Modal ───────────────────────────────────────────────
-class _EditGoalSheet extends ConsumerStatefulWidget {
+/// Public so it can be reused by the Healthify "Goals" tab, not just the
+/// inline edit affordance on the Today tab's calorie hero card.
+class EditGoalSheet extends ConsumerStatefulWidget {
   final int calorieTarget;
   final int sugarTarget;
   final int fatTarget;
   final int proteinTarget;
   final HealthProfile? healthProfile;
 
-  const _EditGoalSheet({
+  const EditGoalSheet({
+    super.key,
     required this.calorieTarget,
     required this.sugarTarget,
     required this.fatTarget,
@@ -966,10 +969,10 @@ class _EditGoalSheet extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_EditGoalSheet> createState() => _EditGoalSheetState();
+  ConsumerState<EditGoalSheet> createState() => _EditGoalSheetState();
 }
 
-class _EditGoalSheetState extends ConsumerState<_EditGoalSheet> {
+class _EditGoalSheetState extends ConsumerState<EditGoalSheet> {
   late final TextEditingController _calorie;
   late final TextEditingController _sugar;
   late final TextEditingController _fat;
@@ -1008,7 +1011,7 @@ class _EditGoalSheetState extends ConsumerState<_EditGoalSheet> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _HealthProfileSheet(initial: widget.healthProfile),
+      builder: (_) => HealthProfileSheet(initial: widget.healthProfile),
     );
     if (result == null || !mounted) return;
     final goals = Map<String, dynamic>.from(result['calorieGoals'] as Map);
@@ -1192,17 +1195,17 @@ class _EditGoalSheetState extends ConsumerState<_EditGoalSheet> {
 }
 
 // ─── Auto-calculate — health profile modal ─────────────────────────
-class _HealthProfileSheet extends ConsumerStatefulWidget {
+class HealthProfileSheet extends ConsumerStatefulWidget {
   final HealthProfile? initial;
 
-  const _HealthProfileSheet({this.initial});
+  const HealthProfileSheet({super.key, this.initial});
 
   @override
-  ConsumerState<_HealthProfileSheet> createState() =>
+  ConsumerState<HealthProfileSheet> createState() =>
       _HealthProfileSheetState();
 }
 
-class _HealthProfileSheetState extends ConsumerState<_HealthProfileSheet> {
+class _HealthProfileSheetState extends ConsumerState<HealthProfileSheet> {
   late final TextEditingController _age;
   late final TextEditingController _height;
   late final TextEditingController _weight;
