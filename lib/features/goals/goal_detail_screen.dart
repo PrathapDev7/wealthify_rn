@@ -271,7 +271,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
           ScreenHeader(title: title),
           Expanded(
             child: async.when(
-              loading: () => const LoadingView(),
+              loading: () => const _GoalDetailSkeleton(),
               error: (e, _) => Center(
                 child: PillButton(
                   label: 'Retry',
@@ -560,6 +560,88 @@ class _CompletedBadge extends StatelessWidget {
                   color: c.textInverse, fontWeight: FontWeight.w600)),
         ],
       ),
+    );
+  }
+}
+
+/// Skeleton loading state mirroring detail mode's `data:` layout (see
+/// [_GoalDetailScreenState._buildDetail]): the progress header card followed
+/// by the contributions list card.
+class _GoalDetailSkeleton extends StatelessWidget {
+  const _GoalDetailSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 120),
+      children: [
+        // Progress header.
+        AppCard(
+          margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Expanded(
+                      child: SkeletonLine(width: 140, height: 20)),
+                  const SizedBox(width: AppSpacing.sm),
+                  const SkeletonBox(
+                      width: 84, height: 20, radius: AppRadius.xs),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const SkeletonLine(width: 96, height: 24),
+                  const SizedBox(width: AppSpacing.xs),
+                  const SkeletonLine(width: 72, height: 16),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              const SkeletonBox(height: 8, width: double.infinity),
+              const SizedBox(height: AppSpacing.sm),
+              const SkeletonLine(width: 90, height: 12),
+              const SizedBox(height: AppSpacing.xs),
+              const SkeletonLine(width: 130, height: 11),
+            ],
+          ),
+        ),
+
+        // Contributions list.
+        AppCard(
+          margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SkeletonLine(width: 110, height: 16),
+              const SizedBox(height: AppSpacing.md),
+              for (var i = 0; i < 3; i++)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                  decoration: i == 0
+                      ? null
+                      : BoxDecoration(
+                          border: Border(
+                              top: BorderSide(color: c.border, width: 0.5))),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                          child: SkeletonLine(width: 100, height: 14)),
+                      const SizedBox(width: AppSpacing.sm),
+                      const SkeletonLine(width: 56, height: 14),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
