@@ -233,30 +233,85 @@ class _NutritionGoalCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.local_fire_department_rounded,
-                  size: 18, color: c.primary),
-              const SizedBox(width: AppSpacing.xs),
+              const _IconBadge(icon: Icons.local_fire_department_rounded),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text('Daily targets',
-                    style: AppText.bodyMedium.copyWith(color: c.text)),
+                    style: AppText.bodyStrong.copyWith(color: c.text)),
               ),
-              GestureDetector(
+              CircleIconButton(
+                icon: Icons.edit_rounded,
+                size: 32,
+                iconSize: 15,
+                background: c.primarySoft,
+                color: c.primary,
                 onTap: onEdit,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration:
-                      BoxDecoration(color: c.primarySoft, shape: BoxShape.circle),
-                  child: Icon(Icons.edit_rounded, size: 14, color: c.primary),
-                ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
+          Container(height: 1, color: c.divider),
+          const SizedBox(height: AppSpacing.sm),
           _GoalRow(label: 'Calories', value: '${totals?.calorieTarget ?? '—'}', unit: 'kcal'),
           _GoalRow(label: 'Protein', value: '${totals?.proteinTarget ?? '—'}', unit: 'g'),
           _GoalRow(label: 'Carbs', value: '${totals?.carbTarget ?? '—'}', unit: 'g'),
           _GoalRow(label: 'Fat', value: '${totals?.fatTarget ?? '—'}', unit: 'g'),
           _GoalRow(label: 'Sugar', value: '${totals?.sugarTarget ?? '—'}', unit: 'g', isLast: true),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small circular icon badge used at the head of the Nutrition/Weight cards.
+class _IconBadge extends StatelessWidget {
+  const _IconBadge({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      width: 32,
+      height: 32,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: c.primarySoft, shape: BoxShape.circle),
+      child: Icon(icon, size: 16, color: c.primary),
+    );
+  }
+}
+
+/// Renders a numeric value with its unit de-emphasized, e.g. **2000** kcal —
+/// keeps the number as the visual anchor and the unit as a quiet label.
+class _StatValue extends StatelessWidget {
+  const _StatValue({
+    required this.value,
+    required this.unit,
+    this.valueStyle,
+    this.unitStyle,
+  });
+
+  final String value;
+  final String unit;
+  final TextStyle? valueStyle;
+  final TextStyle? unitStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: value,
+            style: valueStyle ??
+                AppText.bodyLarge.copyWith(color: c.text, fontWeight: FontWeight.w800),
+          ),
+          TextSpan(
+            text: ' $unit',
+            style: unitStyle ?? AppText.bodySm.copyWith(color: c.textSubtle),
+          ),
         ],
       ),
     );
@@ -280,16 +335,13 @@ class _GoalRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.sm),
+      padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.md),
       child: Row(
         children: [
           Expanded(
-            child: Text(label, style: AppText.bodySm.copyWith(color: c.textSubtle)),
+            child: Text(label, style: AppText.body.copyWith(color: c.textSubtle)),
           ),
-          Text(
-            '$value $unit',
-            style: AppText.bodyMedium.copyWith(color: c.text, fontWeight: FontWeight.w700),
-          ),
+          _StatValue(value: value, unit: unit),
         ],
       ),
     );
@@ -314,54 +366,69 @@ class _WeightGoalCard extends StatelessWidget {
     final delta = hasBoth ? currentWeightKg! - targetWeightKg! : null;
 
     return AppCard(
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Current', style: AppText.label.copyWith(color: c.textSubtle)),
-                const SizedBox(height: 2),
-                Text(
-                  currentWeightKg != null ? '${currentWeightKg!.toStringAsFixed(1)} kg' : '—',
-                  style: AppText.bodyLarge.copyWith(color: c.text, fontWeight: FontWeight.w800),
-                ),
-              ],
-            ),
+          Row(
+            children: [
+              const _IconBadge(icon: Icons.monitor_weight_rounded),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text('Weight', style: AppText.bodyStrong.copyWith(color: c.text)),
+              ),
+              CircleIconButton(
+                icon: Icons.edit_rounded,
+                size: 32,
+                iconSize: 15,
+                background: c.primarySoft,
+                color: c.primary,
+                onTap: onEdit,
+              ),
+            ],
           ),
-          Container(width: 1, height: 36, color: c.divider),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: AppSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+          const SizedBox(height: AppSpacing.md),
+          Container(height: 1, color: c.divider),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Current', style: AppText.label.copyWith(color: c.textSubtle)),
+                    const SizedBox(height: 4),
+                    currentWeightKg != null
+                        ? _StatValue(
+                            value: currentWeightKg!.toStringAsFixed(1), unit: 'kg')
+                        : Text('Not logged',
+                            style: AppText.body.copyWith(color: c.textSubtle)),
+                  ],
+                ),
+              ),
+              Container(width: 1, height: 36, color: c.divider),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Goal', style: AppText.label.copyWith(color: c.textSubtle)),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: onEdit,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(color: c.primarySoft, shape: BoxShape.circle),
-                          child: Icon(Icons.edit_rounded, size: 12, color: c.primary),
-                        ),
-                      ),
+                      const SizedBox(height: 4),
+                      targetWeightKg != null
+                          ? _StatValue(
+                              value: targetWeightKg!.toStringAsFixed(1), unit: 'kg')
+                          : Text('Not set',
+                              style: AppText.body.copyWith(color: c.textSubtle)),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    targetWeightKg != null ? '${targetWeightKg!.toStringAsFixed(1)} kg' : 'Not set',
-                    style: AppText.bodyLarge.copyWith(color: c.text, fontWeight: FontWeight.w800),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
           if (delta != null) ...[
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.md),
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xxs),
               decoration: BoxDecoration(
                 color: (delta.abs() < 0.05 ? c.accentDark : c.warning).withValues(alpha: 0.14),
@@ -371,6 +438,7 @@ class _WeightGoalCard extends StatelessWidget {
                 delta.abs() < 0.05
                     ? 'On target'
                     : '${delta > 0 ? '-' : '+'}${delta.abs().toStringAsFixed(1)} kg to go',
+                textAlign: TextAlign.center,
                 style: AppText.caption.copyWith(
                   color: delta.abs() < 0.05 ? c.accentDark : c.warning,
                   fontWeight: FontWeight.w600,
@@ -395,15 +463,17 @@ class _GoalCardSkeleton extends StatelessWidget {
         children: [
           Row(
             children: [
-              const SkeletonCircle(size: 18),
-              const SizedBox(width: AppSpacing.xs),
-              const Expanded(child: SkeletonLine(height: 12)),
+              const SkeletonCircle(size: 32),
+              const SizedBox(width: AppSpacing.sm),
+              const Expanded(child: SkeletonLine(height: 14)),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
+          Container(height: 1, color: context.colors.divider),
+          const SizedBox(height: AppSpacing.md),
           for (var i = 0; i < 3; i++) ...[
-            const SkeletonLine(height: 12),
-            const SizedBox(height: AppSpacing.sm),
+            const SkeletonLine(height: 14),
+            const SizedBox(height: AppSpacing.md),
           ],
         ],
       ),
