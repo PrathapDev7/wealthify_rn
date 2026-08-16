@@ -410,7 +410,7 @@ class _NavBar extends ConsumerWidget {
           height: AppSpacing.navBarHeight,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           decoration: BoxDecoration(
-            color: c.deepPurple,
+            color: const Color(0xFF2A2A2A),
             borderRadius: BorderRadius.circular(AppRadius.pill),
             boxShadow: AppShadows.xl,
           ),
