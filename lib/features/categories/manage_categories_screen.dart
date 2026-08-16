@@ -209,7 +209,8 @@ class _CategoryRow extends StatelessWidget {
 }
 
 /// Skeleton shown while [categoriesByTypeProvider] is loading, mirroring the
-/// chip-toggle row and the category card list.
+/// category card list. The Expense/Income chip toggle above is always live
+/// (rendered outside `async.when`), so it isn't duplicated here.
 class _ManageCategoriesSkeleton extends StatelessWidget {
   const _ManageCategoriesSkeleton();
 
@@ -219,18 +220,6 @@ class _ManageCategoriesSkeleton extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 120),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: SkeletonBox(height: 36, radius: AppRadius.pill),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: SkeletonBox(height: 36, radius: AppRadius.pill),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.lg),
         for (var i = 0; i < 6; i++) ...[
           const _CategoryRowSkeleton(),
           const SizedBox(height: AppSpacing.md),
