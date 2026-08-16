@@ -67,8 +67,14 @@ class AppShell extends ConsumerWidget {
     );
   }
 
+  AppColors _healthifyPalette(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? AppColors.healthifyDark
+          : AppColors.healthifyLight;
+
   void _showAddSheet(BuildContext context, WidgetRef ref) {
     final c = context.colors;
+    final healthify = _healthifyPalette(context);
     final activeApp = ref.read(activeAppProvider);
     final isWealthify = activeApp == ActiveApp.wealthify;
     showModalBottomSheet<void>(
@@ -158,7 +164,7 @@ class AppShell extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.sm),
                   _QuickAddCard(
                     icon: Icons.restaurant_rounded,
-                    color: c.warning,
+                    color: healthify.primary,
                     label: 'What Did You Eat?',
                     subtitle: 'Track what you ate today',
                     onTap: () {
@@ -169,7 +175,7 @@ class AppShell extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.sm),
                   _QuickAddCard(
                     icon: Icons.monitor_weight_rounded,
-                    color: c.info,
+                    color: healthify.info,
                     label: 'Weight Today?',
                     subtitle: "Log today's weight",
                     onTap: () {
@@ -223,13 +229,15 @@ class AppShell extends ConsumerWidget {
   }
 
   Future<void> _quickLogMeal(BuildContext context, WidgetRef ref) async {
+    final healthify = _healthifyPalette(context);
     final result = await showModalBottomSheet<({List<MealItem> items, String? pendingMessage})>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => QuickAddSheet(
         icon: Icons.restaurant_rounded,
-        color: context.colors.warning,
+        color: healthify.primary,
+        buttonGradient: [healthify.primaryDark, healthify.primaryDarker],
         title: 'What Did You Eat?',
         subtitle: 'Tell us what you had — we\'ll work out the rest',
         fieldHint: 'e.g. 100g peanuts, 2 eggs, 200g rice',
@@ -273,13 +281,15 @@ class AppShell extends ConsumerWidget {
   }
 
   Future<void> _quickLogWeight(BuildContext context, WidgetRef ref) async {
+    final healthify = _healthifyPalette(context);
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => QuickAddSheet(
         icon: Icons.monitor_weight_rounded,
-        color: context.colors.info,
+        color: healthify.info,
+        buttonGradient: [healthify.primaryDark, healthify.primaryDarker],
         title: 'Weight Today?',
         subtitle: "Log today's weight — logging again today just updates it",
         fieldLabel: 'Weight (kg)',

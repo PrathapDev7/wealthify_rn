@@ -30,6 +30,7 @@ class QuickAddSheet extends StatefulWidget {
     this.keyboardType,
     this.loadingMessages,
     this.emptyErrorText = 'This field is required',
+    this.buttonGradient,
   });
 
   final IconData icon;
@@ -41,6 +42,9 @@ class QuickAddSheet extends StatefulWidget {
   final String buttonLabel;
   final int maxLines;
   final TextInputType? keyboardType;
+
+  /// Overrides the submit button's gradient — see [PillButton.gradientColors].
+  final List<Color>? buttonGradient;
 
   /// Cycled on the button every 3s while [onSubmit] is in flight — omit for
   /// a plain spinner.
@@ -167,6 +171,7 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
               loading: _loading,
               loadingLabel: _loading && widget.loadingMessages != null ? _loadingMessage : null,
               onPressed: _loading ? null : _submit,
+              gradientColors: widget.buttonGradient,
             ),
           ],
         ),

@@ -18,6 +18,7 @@ class PillButton extends StatelessWidget {
     this.leading,
     this.expand = true,
     this.loadingLabel,
+    this.gradientColors,
   });
 
   final String label;
@@ -26,6 +27,12 @@ class PillButton extends StatelessWidget {
   final bool loading;
   final Widget? leading;
   final bool expand;
+
+  /// Overrides the primary-variant gradient (defaults to
+  /// `[c.primaryDark, c.primaryDarker]`) — lets a caller in an ambient theme
+  /// (e.g. a modal outside [HealthifyTheme]) still show the Healthify brand
+  /// gradient on its submit button.
+  final List<Color>? gradientColors;
 
   /// When set, shown next to the spinner while [loading] is true instead of
   /// a bare spinner — lets a button surface progress text on itself.
@@ -94,7 +101,7 @@ class PillButton extends StatelessWidget {
               : const EdgeInsets.symmetric(horizontal: AppSpacing.xl2),
           decoration: BoxDecoration(
             gradient: isPrimary
-                ? LinearGradient(colors: [c.primaryDark, c.primaryDarker])
+                ? LinearGradient(colors: gradientColors ?? [c.primaryDark, c.primaryDarker])
                 : null,
             color: switch (variant) {
               PillVariant.primary => null,
