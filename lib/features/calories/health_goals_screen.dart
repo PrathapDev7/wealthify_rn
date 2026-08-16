@@ -317,13 +317,32 @@ class _WeightGoalCard extends StatelessWidget {
               ],
             ),
           ),
-          CircleIconButton(
-            icon: Icons.edit_rounded,
-            size: 32,
-            iconSize: 15,
-            background: c.primarySoft,
-            color: c.primary,
+          GestureDetector(
             onTap: onEdit,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: c.primarySoft,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.edit_rounded, size: 13, color: c.primary),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Edit',
+                    style: AppText.bodySm.copyWith(
+                      color: c.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
