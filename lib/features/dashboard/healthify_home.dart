@@ -5,12 +5,12 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
 import '../calories/calorie_history_screen.dart';
 import '../calories/calorie_screen.dart';
-import '../weight/weight_screen.dart';
 
-enum _HealthifyTab { today, history, weight }
+enum _HealthifyTab { today, history }
 
-/// Healthify's own three-way sub-nav (Today / History / Weight), shown
-/// beneath the Wealthify/Healthify app switcher on the Home tab.
+/// Healthify's own two-way sub-nav (Today / Statistics), shown beneath the
+/// Wealthify/Healthify app switcher on the Home tab. Weight tracking lives
+/// inside the Statistics tab alongside calorie trends.
 class HealthifyHome extends StatefulWidget {
   const HealthifyHome({super.key});
 
@@ -41,7 +41,6 @@ class _HealthifyHomeState extends State<HealthifyHome> {
           child: switch (_tab) {
             _HealthifyTab.today => const CalorieScreen(embedded: true),
             _HealthifyTab.history => const CalorieHistoryScreen(embedded: true),
-            _HealthifyTab.weight => const WeightScreen(embedded: true),
           },
         ),
       ],
@@ -58,7 +57,6 @@ class _HealthifySubNav extends StatelessWidget {
   static const _tabs = [
     (_HealthifyTab.today, 'Today', Icons.restaurant_rounded),
     (_HealthifyTab.history, 'Statistics', Icons.show_chart_rounded),
-    (_HealthifyTab.weight, 'Weight', Icons.monitor_weight_rounded),
   ];
 
   @override
