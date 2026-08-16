@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../providers.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart';
 
@@ -17,6 +18,8 @@ class AppSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final healthify = isDark ? AppColors.healthifyDark : AppColors.healthifyLight;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(4),
@@ -41,7 +44,7 @@ class AppSwitcher extends StatelessWidget {
               label: 'Healthify',
               icon: Icons.restaurant_rounded,
               selected: active == ActiveApp.healthify,
-              gradient: [c.warning, c.warning.withValues(alpha: 0.75)],
+              gradient: [healthify.primaryGradientStart, healthify.primaryGradientEnd],
               onTap: () => onChanged(ActiveApp.healthify),
             ),
           ),

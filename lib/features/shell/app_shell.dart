@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/providers.dart';
 import '../../core/router/routes.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
@@ -375,7 +376,7 @@ class _QuickAddCard extends StatelessWidget {
   }
 }
 
-class _NavBar extends StatelessWidget {
+class _NavBar extends ConsumerWidget {
   const _NavBar({required this.shell});
   final StatefulNavigationShell shell;
 
@@ -387,8 +388,13 @@ class _NavBar extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
+    final activeApp = ref.watch(activeAppProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = activeApp == ActiveApp.healthify
+        ? (isDark ? AppColors.healthifyDark.primary : AppColors.healthifyLight.primary)
+        : c.primary;
     return BottomAppBar(
       color: c.surface,
       elevation: 0,
@@ -406,6 +412,7 @@ class _NavBar extends StatelessWidget {
                 activeIcon: _items[i].$2,
                 label: _items[i].$3,
                 selected: shell.currentIndex == i,
+                activeColor: activeColor,
                 onTap: () => shell.goBranch(i,
                     initialLocation: i == shell.currentIndex),
               ),
@@ -423,18 +430,20 @@ class _NavItem extends StatelessWidget {
     required this.activeIcon,
     required this.label,
     required this.selected,
+    required this.activeColor,
     required this.onTap,
   });
   final IconData icon;
   final IconData activeIcon;
   final String label;
   final bool selected;
+  final Color activeColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final color = selected ? c.primary : c.textSubtle;
+    final color = selected ? activeColor : c.textSubtle;
     return InkWell(
       onTap: onTap,
       child: Column(
