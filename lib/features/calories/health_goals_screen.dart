@@ -9,7 +9,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/calorie_entry.dart';
 import 'calorie_screen.dart';
-import 'widgets/calorie_cards.dart';
+import 'widgets/goal_cards.dart';
 
 String _errorMessage(Object e) => e.toString();
 
@@ -185,16 +185,16 @@ class _HealthGoalsScreenState extends ConsumerState<HealthGoalsScreen> {
             const SectionHeader('Nutrition intake goal'),
             const SizedBox(height: AppSpacing.md),
             if (_loading) ...[
-              const CalorieHeroSkeleton(),
+              const NutritionGoalCardSkeleton(),
               const SizedBox(height: AppSpacing.sm),
-              const _MacroGridSkeleton(),
+              const MacroGoalListSkeleton(),
             ] else ...[
-              CalorieHeroCard(
+              NutritionGoalCard(
                 totals: _dailyTotals ?? DailyTotals.fromJson(null),
                 onEditGoal: _editNutritionGoal,
               ),
               const SizedBox(height: AppSpacing.sm),
-              _MacroGrid(totals: _dailyTotals ?? DailyTotals.fromJson(null)),
+              MacroGoalList(totals: _dailyTotals ?? DailyTotals.fromJson(null)),
             ],
             const SizedBox(height: AppSpacing.xl2),
             const SectionHeader('Weight goal'),
@@ -220,102 +220,6 @@ class _HealthGoalsScreenState extends ConsumerState<HealthGoalsScreen> {
       child: Column(
         children: [const ScreenHeader(title: 'Goals'), content],
       ),
-    );
-  }
-}
-
-/// 2×2 grid of macro mini-cards below the calorie hero card — same
-/// [MacroMiniCard] used on the Today tracker's 3-across row, arranged as a
-/// grid here so Carbs (not shown on Today) can join Protein/Fat/Sugar.
-class _MacroGrid extends StatelessWidget {
-  const _MacroGrid({required this.totals});
-
-  final DailyTotals totals;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: MacroMiniCard(
-                icon: Icons.fitness_center_rounded,
-                label: 'Protein',
-                value: totals.protein.round(),
-                target: totals.proteinTarget,
-                progress: totals.proteinProgress,
-                color: c.accentDark,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: MacroMiniCard(
-                icon: Icons.grain_rounded,
-                label: 'Carbs',
-                value: totals.carbs.round(),
-                target: totals.carbTarget,
-                progress: totals.carbProgress,
-                color: c.info,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: MacroMiniCard(
-                icon: Icons.opacity_rounded,
-                label: 'Fats',
-                value: totals.fat.round(),
-                target: totals.fatTarget,
-                progress: totals.fatProgress,
-                color: c.warning,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: MacroMiniCard(
-                icon: Icons.icecream_rounded,
-                label: 'Sugar',
-                value: totals.sugar.round(),
-                target: totals.sugarTarget,
-                progress: totals.sugarProgress,
-                color: c.pink,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _MacroGridSkeleton extends StatelessWidget {
-  const _MacroGridSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: MacroMiniCardSkeleton()),
-            SizedBox(width: AppSpacing.sm),
-            Expanded(child: MacroMiniCardSkeleton()),
-          ],
-        ),
-        SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(child: MacroMiniCardSkeleton()),
-            SizedBox(width: AppSpacing.sm),
-            Expanded(child: MacroMiniCardSkeleton()),
-          ],
-        ),
-      ],
     );
   }
 }
