@@ -516,7 +516,7 @@ class _ActionPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     return Material(
-      color: c.surface,
+      color: const Color(0xFF2A2A2A),
       borderRadius: BorderRadius.circular(AppRadius.pill),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -526,7 +526,7 @@ class _ActionPill extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadius.pill),
-            border: Border.all(color: c.border),
+            border: Border.all(color: const Color(0xFF3A3A3A)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -538,7 +538,7 @@ class _ActionPill extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppText.bodyMedium.copyWith(color: c.text),
+                  style: AppText.bodyMedium.copyWith(color: Colors.white),
                 ),
               ),
             ],
