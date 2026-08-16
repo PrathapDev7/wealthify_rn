@@ -9,6 +9,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/calorie_entry.dart';
 import 'calorie_screen.dart';
+import 'widgets/calorie_cards.dart';
 
 String _errorMessage(Object e) => e.toString();
 
@@ -183,13 +184,18 @@ class _HealthGoalsScreenState extends ConsumerState<HealthGoalsScreen> {
           children: [
             const SectionHeader('Nutrition intake goal'),
             const SizedBox(height: AppSpacing.md),
-            if (_loading)
-              const _GoalCardSkeleton()
-            else
-              _NutritionGoalCard(
-                totals: _dailyTotals,
-                onEdit: _editNutritionGoal,
+            if (_loading) ...[
+              const CalorieHeroSkeleton(),
+              const SizedBox(height: AppSpacing.sm),
+              const _MacroGridSkeleton(),
+            ] else ...[
+              CalorieHeroCard(
+                totals: _dailyTotals ?? DailyTotals.fromJson(null),
+                onEditGoal: _editNutritionGoal,
               ),
+              const SizedBox(height: AppSpacing.sm),
+              _MacroGrid(totals: _dailyTotals ?? DailyTotals.fromJson(null)),
+            ],
             const SizedBox(height: AppSpacing.xl2),
             const SectionHeader('Weight goal'),
             const SizedBox(height: AppSpacing.md),
@@ -218,52 +224,103 @@ class _HealthGoalsScreenState extends ConsumerState<HealthGoalsScreen> {
   }
 }
 
-class _NutritionGoalCard extends StatelessWidget {
-  const _NutritionGoalCard({required this.totals, required this.onEdit});
+/// 2×2 grid of macro mini-cards below the calorie hero card — same
+/// [MacroMiniCard] used on the Today tracker's 3-across row, arranged as a
+/// grid here so Carbs (not shown on Today) can join Protein/Fat/Sugar.
+class _MacroGrid extends StatelessWidget {
+  const _MacroGrid({required this.totals});
 
-  final DailyTotals? totals;
-  final VoidCallback onEdit;
+  final DailyTotals totals;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const _IconBadge(icon: Icons.local_fire_department_rounded),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text('Daily targets',
-                    style: AppText.bodyStrong.copyWith(color: c.text)),
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: MacroMiniCard(
+                icon: Icons.fitness_center_rounded,
+                label: 'Protein',
+                value: totals.protein.round(),
+                target: totals.proteinTarget,
+                progress: totals.proteinProgress,
+                color: c.accentDark,
               ),
-              CircleIconButton(
-                icon: Icons.edit_rounded,
-                size: 32,
-                iconSize: 15,
-                background: c.primarySoft,
-                color: c.primary,
-                onTap: onEdit,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: MacroMiniCard(
+                icon: Icons.grain_rounded,
+                label: 'Carbs',
+                value: totals.carbs.round(),
+                target: totals.carbTarget,
+                progress: totals.carbProgress,
+                color: c.info,
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Container(height: 1, color: c.divider),
-          const SizedBox(height: AppSpacing.sm),
-          _GoalRow(label: 'Calories', value: '${totals?.calorieTarget ?? '—'}', unit: 'kcal'),
-          _GoalRow(label: 'Protein', value: '${totals?.proteinTarget ?? '—'}', unit: 'g'),
-          _GoalRow(label: 'Carbs', value: '${totals?.carbTarget ?? '—'}', unit: 'g'),
-          _GoalRow(label: 'Fat', value: '${totals?.fatTarget ?? '—'}', unit: 'g'),
-          _GoalRow(label: 'Sugar', value: '${totals?.sugarTarget ?? '—'}', unit: 'g', isLast: true),
-        ],
-      ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: MacroMiniCard(
+                icon: Icons.opacity_rounded,
+                label: 'Fats',
+                value: totals.fat.round(),
+                target: totals.fatTarget,
+                progress: totals.fatProgress,
+                color: c.warning,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: MacroMiniCard(
+                icon: Icons.icecream_rounded,
+                label: 'Sugar',
+                value: totals.sugar.round(),
+                target: totals.sugarTarget,
+                progress: totals.sugarProgress,
+                color: c.pink,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
 
-/// Small circular icon badge used at the head of the Nutrition/Weight cards.
+class _MacroGridSkeleton extends StatelessWidget {
+  const _MacroGridSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: MacroMiniCardSkeleton()),
+            SizedBox(width: AppSpacing.sm),
+            Expanded(child: MacroMiniCardSkeleton()),
+          ],
+        ),
+        SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(child: MacroMiniCardSkeleton()),
+            SizedBox(width: AppSpacing.sm),
+            Expanded(child: MacroMiniCardSkeleton()),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Small circular icon badge used at the head of the Weight card.
 class _IconBadge extends StatelessWidget {
   const _IconBadge({required this.icon});
 
@@ -312,36 +369,6 @@ class _StatValue extends StatelessWidget {
             text: ' $unit',
             style: unitStyle ?? AppText.bodySm.copyWith(color: c.textSubtle),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GoalRow extends StatelessWidget {
-  const _GoalRow({
-    required this.label,
-    required this.value,
-    required this.unit,
-    this.isLast = false,
-  });
-
-  final String label;
-  final String value;
-  final String unit;
-  final bool isLast;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.md),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(label, style: AppText.body.copyWith(color: c.textSubtle)),
-          ),
-          _StatValue(value: value, unit: unit),
         ],
       ),
     );
