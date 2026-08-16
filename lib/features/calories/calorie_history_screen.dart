@@ -146,37 +146,42 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
         final c = ctx.colors;
         final bottom = MediaQuery.viewInsetsOf(ctx).bottom;
         return Container(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.xl,
-            AppSpacing.lg,
-            AppSpacing.xl,
-            bottom + AppSpacing.xl,
-          ),
           decoration: BoxDecoration(
             color: c.background,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Set goal weight', style: AppText.title.copyWith(color: c.text)),
-              const SizedBox(height: AppSpacing.lg),
-              AppTextField(
-                controller: controller,
-                label: 'Goal weight (kg)',
-                keyboardType: TextInputType.number,
-                prefixIcon: Icons.flag_rounded,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.lg,
+                AppSpacing.xl,
+                bottom + AppSpacing.xl,
               ),
-              const SizedBox(height: AppSpacing.xl),
-              PillButton(
-                label: 'Save goal',
-                onPressed: () {
-                  final v = double.tryParse(controller.text.trim());
-                  Navigator.of(ctx).pop(v);
-                },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Set goal weight', style: AppText.title.copyWith(color: c.text)),
+                  const SizedBox(height: AppSpacing.lg),
+                  AppTextField(
+                    controller: controller,
+                    label: 'Goal weight (kg)',
+                    keyboardType: TextInputType.number,
+                    prefixIcon: Icons.flag_rounded,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  PillButton(
+                    label: 'Save goal',
+                    onPressed: () {
+                      final v = double.tryParse(controller.text.trim());
+                      Navigator.of(ctx).pop(v);
+                    },
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
