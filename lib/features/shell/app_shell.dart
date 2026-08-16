@@ -23,12 +23,6 @@ class AppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
-    final activeApp = ref.watch(activeAppProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final healthify = isDark ? AppColors.healthifyDark : AppColors.healthifyLight;
-    final fabGradient = activeApp == ActiveApp.healthify
-        ? [healthify.primaryGradientStart, healthify.primaryGradientEnd]
-        : [c.primaryGradientStart, c.primaryGradientEnd];
     return Scaffold(
       extendBody: true,
       backgroundColor: c.background,
@@ -48,22 +42,10 @@ class AppShell extends ConsumerWidget {
         ),
         child: SafeArea(bottom: false, child: navigationShell),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: Container(
-        height: 60,
-        width: 60,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: fabGradient),
-          shape: BoxShape.circle,
-          boxShadow: AppShadows.primaryGlow,
-          border: Border.all(color: c.fabRing, width: 4),
-        ),
-        child: IconButton(
-          icon: const Icon(Icons.add, color: Colors.white, size: 28),
-          onPressed: () => _showAddSheet(context, ref),
-        ),
+      bottomNavigationBar: _NavBar(
+        shell: navigationShell,
+        onAdd: () => _showAddSheet(context, ref),
       ),
-      bottomNavigationBar: _NavBar(shell: navigationShell),
     );
   }
 
@@ -392,8 +374,9 @@ class _QuickAddCard extends StatelessWidget {
 }
 
 class _NavBar extends ConsumerWidget {
-  const _NavBar({required this.shell});
+  const _NavBar({required this.shell, required this.onAdd});
   final StatefulNavigationShell shell;
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -403,42 +386,57 @@ class _NavBar extends ConsumerWidget {
     final activeColor = activeApp == ActiveApp.healthify
         ? (isDark ? AppColors.healthifyDark.primary : AppColors.healthifyLight.primary)
         : c.primary;
+    // deepPurple is a dark near-black tone in both light and dark palettes,
+    // so the bar reads the same (and the icon color stays fixed) in either
+    // theme instead of flipping to a stark white bar in dark mode.
     final items = [
-      (Icons.home_outlined, Icons.home, 'Home'),
+      (icon: Icons.home_outlined, activeIcon: Icons.home, branchIndex: 0),
       activeApp == ActiveApp.healthify
-          ? (Icons.flag_outlined, Icons.flag, 'Goals')
-          : (Icons.receipt_long_outlined, Icons.receipt_long, 'Transactions'),
-      (
-        Icons.bar_chart_outlined,
-        Icons.bar_chart,
-        activeApp == ActiveApp.healthify ? 'Statistics' : 'Analytics',
-      ),
-      (Icons.person_outline, Icons.person, 'Account'),
-    ];
-    return BottomAppBar(
-      color: c.surface,
-      elevation: 0,
-      height: AppSpacing.navBarHeight,
-      padding: EdgeInsets.zero,
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 8,
-      child: Row(
-        children: [
-          for (var i = 0; i < items.length; i++) ...[
-            if (i == 2) const SizedBox(width: 64), // gap for FAB
-            Expanded(
-              child: _NavItem(
-                icon: items[i].$1,
-                activeIcon: items[i].$2,
-                label: items[i].$3,
-                selected: shell.currentIndex == i,
-                activeColor: activeColor,
-                onTap: () => shell.goBranch(i,
-                    initialLocation: i == shell.currentIndex),
-              ),
+          ? (icon: Icons.flag_outlined, activeIcon: Icons.flag, branchIndex: 1)
+          : (
+              icon: Icons.receipt_long_outlined,
+              activeIcon: Icons.receipt_long,
+              branchIndex: 1,
             ),
-          ],
-        ],
+      (icon: Icons.add_rounded, activeIcon: Icons.add_rounded, branchIndex: null),
+      (icon: Icons.bar_chart_outlined, activeIcon: Icons.bar_chart, branchIndex: 2),
+      (icon: Icons.person_outline, activeIcon: Icons.person, branchIndex: 3),
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
+      child: Container(
+        height: AppSpacing.navBarHeight,
+        decoration: BoxDecoration(
+          color: c.deepPurple,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          boxShadow: AppShadows.xl,
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              for (final item in items)
+                SizedBox(
+                  width: 44,
+                  height: AppSpacing.navBarHeight,
+                  child: _NavItem(
+                    icon: item.icon,
+                    activeIcon: item.activeIcon,
+                    selected: item.branchIndex != null &&
+                        shell.currentIndex == item.branchIndex,
+                    activeColor: activeColor,
+                    iconColor: c.textOnPrimary,
+                    onTap: item.branchIndex != null
+                        ? () => shell.goBranch(item.branchIndex!,
+                            initialLocation: item.branchIndex == shell.currentIndex)
+                        : onAdd,
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -448,36 +446,40 @@ class _NavItem extends StatelessWidget {
   const _NavItem({
     required this.icon,
     required this.activeIcon,
-    required this.label,
     required this.selected,
     required this.activeColor,
+    required this.iconColor,
     required this.onTap,
   });
   final IconData icon;
   final IconData activeIcon;
-  final String label;
   final bool selected;
   final Color activeColor;
+  final Color iconColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
-    final color = selected ? activeColor : c.textSubtle;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      splashColor: activeColor.withValues(alpha: 0.12),
-      highlightColor: activeColor.withValues(alpha: 0.08),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(selected ? activeIcon : icon, size: 22, color: color),
-          const SizedBox(height: 2),
-          Text(label,
-              style: AppText.caption.copyWith(color: color, fontSize: 10)),
-        ],
+      customBorder: const CircleBorder(),
+      splashColor: activeColor.withValues(alpha: 0.24),
+      highlightColor: activeColor.withValues(alpha: 0.16),
+      child: Center(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: selected ? activeColor : Colors.transparent,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            selected ? activeIcon : icon,
+            size: 20,
+            color: selected ? Colors.white : iconColor.withValues(alpha: 0.6),
+          ),
+        ),
       ),
     );
   }
