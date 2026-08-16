@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/providers.dart';
-import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
@@ -29,9 +28,7 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
   bool _loading = false;
   List<DailyCalorieSummary> _days = [];
 
-  final TextEditingController _weightController = TextEditingController();
   bool _weightLoading = false;
-  bool _weightSaving = false;
   List<WeightEntry> _weightEntries = [];
   double? _targetWeightKg;
   double? _currentWeightKg;
@@ -47,12 +44,6 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
     super.initState();
     _fetch();
     _fetchWeight();
-  }
-
-  @override
-  void dispose() {
-    _weightController.dispose();
-    super.dispose();
   }
 
   Future<void> _fetch() async {
@@ -107,26 +98,6 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
 
   double? get _latestWeightKg =>
       _weightEntries.isNotEmpty ? _weightEntries.last.weightKg : _currentWeightKg;
-
-  Future<void> _logWeight() async {
-    final value = double.tryParse(_weightController.text.trim());
-    if (value == null || value <= 0) {
-      showAppSnack(context, 'Enter a valid weight', error: true);
-      return;
-    }
-    setState(() => _weightSaving = true);
-    final repo = ref.read(caloriesRepositoryProvider);
-    try {
-      await repo.addWeightEntry(weightKg: value);
-      _weightController.clear();
-      await _fetchWeight();
-      if (mounted) showAppSnack(context, 'Weight logged');
-    } catch (e) {
-      if (mounted) showAppSnack(context, _errorMessage(e), error: true);
-    } finally {
-      if (mounted) setState(() => _weightSaving = false);
-    }
-  }
 
   Future<void> _deleteWeightEntry(WeightEntry entry) async {
     final ok = await showDialog<bool>(
@@ -276,20 +247,19 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
               ],
-              _LogWeightCard(
-                controller: _weightController,
-                saving: _weightSaving,
-                onSubmit: _weightSaving ? null : _logWeight,
-              ),
-              if (_weightEntries.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.lg),
+              if (_weightEntries.isEmpty)
+                const EmptyState(
+                  icon: Icons.monitor_weight_outlined,
+                  title: 'No weight logged yet',
+                  message: 'Use the + button to log your weight.',
+                )
+              else
                 ...[for (final e in _weightEntries.reversed) e].map(
                   (e) => _WeightHistoryRow(
                     entry: e,
                     onDelete: () => _deleteWeightEntry(e),
                   ),
                 ),
-              ],
             ],
           ],
         ),
@@ -715,62 +685,6 @@ class _WeightChartCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _LogWeightCard extends StatelessWidget {
-  const _LogWeightCard({required this.controller, required this.saving, required this.onSubmit});
-
-  final TextEditingController controller;
-  final bool saving;
-  final VoidCallback? onSubmit;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: c.surfaceElevated,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: c.primary.withValues(alpha: 0.22)),
-        boxShadow: AppShadows.sm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.monitor_weight_rounded, size: 18, color: c.primary),
-              const SizedBox(width: AppSpacing.xs),
-              Text("Today's weight", style: AppText.label.copyWith(color: c.textSubtle)),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: AppTextField(
-                  controller: controller,
-                  hint: 'e.g. 72.5',
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  fillColor: c.surfaceMuted,
-                  borderColor: c.primary.withValues(alpha: 0.28),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              PillButton(
-                label: 'Log',
-                loading: saving,
-                expand: false,
-                onPressed: onSubmit,
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
