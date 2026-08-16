@@ -402,9 +402,10 @@ class _NavBar extends ConsumerWidget {
       (icon: Icons.bar_chart_outlined, activeIcon: Icons.bar_chart, branchIndex: 2),
       (icon: Icons.person_outline, activeIcon: Icons.person, branchIndex: 3),
     ];
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Align(
+        alignment: Alignment.bottomCenter,
         child: Container(
           height: AppSpacing.navBarHeight,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
