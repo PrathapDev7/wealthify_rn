@@ -25,6 +25,7 @@ class CalorieHistoryScreen extends ConsumerStatefulWidget {
 
 class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
   int _weekOffset = 0; // 0 = week containing today, -1 = previous week, ...
+  DateTime _selectedDate = DateTime.now();
   bool _loading = false;
   List<DailyCalorieSummary> _days = [];
 
@@ -75,7 +76,10 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
   }
 
   void _moveWeek(int delta) {
-    setState(() => _weekOffset += delta);
+    setState(() {
+      _weekOffset += delta;
+      _selectedDate = _weekStart;
+    });
     _fetch();
   }
 
@@ -212,13 +216,19 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
           ),
           children: [
             HorizontalDatePicker(
-              selectedDate: _weekStart,
+              selectedDate: _selectedDate,
               onDateSelected: (date) {
-                setState(() => _weekOffset = _weekOffsetFor(date));
+                setState(() {
+                  _selectedDate = date;
+                  _weekOffset = _weekOffsetFor(date);
+                });
                 _fetch();
               },
               onTodayTap: () {
-                setState(() => _weekOffset = 0);
+                setState(() {
+                  _selectedDate = DateTime.now();
+                  _weekOffset = 0;
+                });
                 _fetch();
               },
               onPrevTap: () => _moveWeek(-1),
