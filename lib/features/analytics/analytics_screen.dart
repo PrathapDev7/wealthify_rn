@@ -10,6 +10,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/utils/category_icon.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/misc.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/wealthify_icon.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/models/wallet_model.dart';
@@ -279,10 +280,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         ),
         const SizedBox(height: AppSpacing.md),
         async.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.only(top: AppSpacing.xl6),
-            child: LoadingView(),
-          ),
+          loading: () => const _AnalyticsSkeleton(),
           error: (e, _) => Padding(
             padding: const EdgeInsets.only(top: AppSpacing.xl5),
             child: EmptyState(
@@ -313,6 +311,118 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Loading skeleton (mirrors the `data:` layout while analytics loads) ──────
+
+class _AnalyticsSkeleton extends StatelessWidget {
+  const _AnalyticsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SkeletonBox(
+                      width: 96, height: 28, radius: AppRadius.pill),
+                  Row(children: [
+                    const SkeletonCircle(size: 8),
+                    const SizedBox(width: 4),
+                    const SkeletonLine(width: 42, height: 10),
+                    const SizedBox(width: AppSpacing.md),
+                    const SkeletonCircle(size: 8),
+                    const SizedBox(width: 4),
+                    const SkeletonLine(width: 48, height: 10),
+                  ]),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              const SkeletonBox(height: 200, width: double.infinity),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        const _SkeletonStatRow(),
+        const SizedBox(height: AppSpacing.md),
+        const _SkeletonStatRow(),
+        const SizedBox(height: AppSpacing.lg),
+        const SkeletonLine(width: 84, height: 18),
+        const SizedBox(height: AppSpacing.md),
+        AppCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (var i = 0; i < 5; i++) _SkeletonCategoryRow(first: i == 0),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Placeholder for [_StatRow] (icon badge + label line + value line).
+class _SkeletonStatRow extends StatelessWidget {
+  const _SkeletonStatRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Row(
+        children: [
+          const SkeletonCircle(size: 40),
+          const SizedBox(width: AppSpacing.md),
+          const Expanded(child: SkeletonLine(height: 14)),
+          const SizedBox(width: AppSpacing.md),
+          const SkeletonLine(width: 64, height: 14),
+        ],
+      ),
+    );
+  }
+}
+
+/// Placeholder for [_CategoryRow] (icon circle, text line, progress bar).
+class _SkeletonCategoryRow extends StatelessWidget {
+  const _SkeletonCategoryRow({required this.first});
+
+  final bool first;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+      decoration: BoxDecoration(
+        border: first ? null : Border(top: BorderSide(color: c.divider)),
+      ),
+      child: Row(
+        children: [
+          const SkeletonCircle(size: 38),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SkeletonLine(width: 110, height: 12),
+                const SizedBox(height: 6),
+                const SkeletonBox(height: 6, width: double.infinity),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          const SkeletonLine(width: 48, height: 12),
+        ],
+      ),
     );
   }
 }
