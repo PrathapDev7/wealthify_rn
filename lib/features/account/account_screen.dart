@@ -48,7 +48,7 @@ class AccountScreen extends ConsumerWidget {
         AppSpacing.xl,
         AppSpacing.md,
         AppSpacing.xl,
-        120,
+        AppSpacing.navBarHeight,
       ),
       children: [
         Center(

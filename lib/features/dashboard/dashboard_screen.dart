@@ -173,7 +173,7 @@ class _WealthifyDashboard extends ConsumerWidget {
               AppSpacing.xl,
               AppSpacing.md,
               AppSpacing.xl,
-              120,
+              AppSpacing.navBarHeight,
             ),
             children: [
               if (showCarousel)
@@ -358,7 +358,7 @@ class _DashboardSkeleton extends StatelessWidget {
         AppSpacing.xl,
         AppSpacing.md,
         AppSpacing.xl,
-        120,
+        AppSpacing.navBarHeight,
       ),
       children: [
         AppCard(

@@ -418,7 +418,7 @@ class _NavBar extends ConsumerWidget {
     return BottomAppBar(
       color: c.surface,
       elevation: 0,
-      height: 68,
+      height: AppSpacing.navBarHeight,
       padding: EdgeInsets.zero,
       shape: const CircularNotchedRectangle(),
       notchMargin: 8,
