@@ -466,6 +466,9 @@ class _NavItem extends StatelessWidget {
     final color = selected ? activeColor : c.textSubtle;
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      splashColor: activeColor.withValues(alpha: 0.12),
+      highlightColor: activeColor.withValues(alpha: 0.08),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
