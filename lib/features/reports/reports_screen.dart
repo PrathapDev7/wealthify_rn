@@ -339,10 +339,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 async.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: AppSpacing.xl4),
-                    child: LoadingView(),
-                  ),
+                  loading: () => const _ReportsSkeleton(),
                   error: (e, _) => Padding(
                     padding: const EdgeInsets.symmetric(
                         vertical: AppSpacing.xl2),
@@ -373,6 +370,90 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Loading skeleton (mirrors the `data:` layout while the report loads) ────
+
+/// Placeholder for [_Report] (stat cards + category breakdown) shown while
+/// [reportProvider] is loading. The range segmented control and custom-range
+/// date rows above already render immediately (they don't depend on
+/// [reportProvider]), so only the async portion needs a placeholder here.
+class _ReportsSkeleton extends StatelessWidget {
+  const _ReportsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: const [
+            Expanded(child: _SkeletonStatCard()),
+            SizedBox(width: AppSpacing.md),
+            Expanded(child: _SkeletonStatCard()),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        const _SkeletonStatCard(),
+        const SizedBox(height: AppSpacing.xl),
+        const SkeletonLine(width: 140, height: 12),
+        const SizedBox(height: AppSpacing.sm),
+        AppCard(
+          child: Column(
+            children: [
+              for (var i = 0; i < 5; i++) ...[
+                if (i > 0) const SizedBox(height: AppSpacing.md),
+                const _SkeletonCategoryRow(),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Placeholder for [_StatCard] (label line + value line).
+class _SkeletonStatCard extends StatelessWidget {
+  const _SkeletonStatCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          SkeletonLine(width: 46, height: 11),
+          SizedBox(height: AppSpacing.xs),
+          SkeletonLine(width: 80, height: 22),
+        ],
+      ),
+    );
+  }
+}
+
+/// Placeholder for a "Spending by category" row (name + amount line, with
+/// the progress bar beneath), mirroring the `data:` category list.
+class _SkeletonCategoryRow extends StatelessWidget {
+  const _SkeletonCategoryRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        Row(
+          children: [
+            Expanded(child: SkeletonLine(height: 12)),
+            SizedBox(width: AppSpacing.sm),
+            SkeletonLine(width: 48, height: 12),
+          ],
+        ),
+        SizedBox(height: AppSpacing.sm),
+        SkeletonBox(height: 6, width: double.infinity),
+      ],
     );
   }
 }
