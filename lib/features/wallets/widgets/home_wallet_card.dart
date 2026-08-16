@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/data/provider_catalog.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/models/wallet_model.dart';
@@ -23,6 +24,9 @@ class HomeWalletCard extends StatelessWidget {
     final last4 = wallet.last4?.trim() ?? '';
     final maskedTail = last4.isEmpty ? 'xxxx' : last4.padLeft(4, 'x');
 
+    final accent = walletAccent(wallet);
+    final provider = providerById(wallet.provider);
+
     return Container(
       height: 120,
       padding: const EdgeInsets.fromLTRB(
@@ -32,6 +36,7 @@ class HomeWalletCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: Column(
@@ -54,14 +59,24 @@ class HomeWalletCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Flexible(
-            child: Text(
-              kindLabel(wallet.kind),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
-              style: AppText.bodyStrong.copyWith(color: white),
+          Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: white,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
+            child: provider != null
+                ? ProviderAvatar(provider: provider, size: 28)
+                : Icon(kindIcon(wallet.kind), color: accent, size: 18),
           ),
         ],
       ),
