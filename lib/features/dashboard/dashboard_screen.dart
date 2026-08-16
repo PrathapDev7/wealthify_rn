@@ -85,7 +85,7 @@ class DashboardScreen extends ConsumerWidget {
         ),
         Expanded(
           child: activeApp == ActiveApp.healthify
-              ? const CalorieScreen(embedded: true)
+              ? const HealthifyTheme(child: CalorieScreen(embedded: true))
               : const _WealthifyDashboard(),
         ),
       ],

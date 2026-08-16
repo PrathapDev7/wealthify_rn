@@ -19,16 +19,22 @@ class AnalyticsTabScreen extends ConsumerWidget {
     final activeApp = ref.watch(activeAppProvider);
     if (activeApp == ActiveApp.wealthify) return const AnalyticsScreen();
 
-    final c = context.colors;
-    return Column(
-      children: [
-        const SizedBox(height: AppSpacing.sm),
-        Center(
-          child: Text('Statistics', style: AppText.screenTitle.copyWith(color: c.text)),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        const Expanded(child: CalorieHistoryScreen(embedded: true)),
-      ],
+    return HealthifyTheme(
+      child: Builder(
+        builder: (context) {
+          final c = context.colors;
+          return Column(
+            children: [
+              const SizedBox(height: AppSpacing.sm),
+              Center(
+                child: Text('Statistics', style: AppText.screenTitle.copyWith(color: c.text)),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              const Expanded(child: CalorieHistoryScreen(embedded: true)),
+            ],
+          );
+        },
+      ),
     );
   }
 }

@@ -8,6 +8,10 @@ import 'app_colors.dart';
 abstract class AppTheme {
   static ThemeData light() => _build(AppColors.light, Brightness.light);
   static ThemeData dark() => _build(AppColors.dark, Brightness.dark);
+  static ThemeData healthifyLight() =>
+      _build(AppColors.healthifyLight, Brightness.light);
+  static ThemeData healthifyDark() =>
+      _build(AppColors.healthifyDark, Brightness.dark);
 
   static ThemeData _build(AppColors c, Brightness brightness) {
     final scheme = ColorScheme.fromSeed(
@@ -41,4 +45,23 @@ abstract class AppTheme {
 /// Convenience accessor: `context.colors.primary`.
 extension AppColorsX on BuildContext {
   AppColors get colors => Theme.of(this).extension<AppColors>()!;
+}
+
+/// Swaps in the Healthify brand palette (matching the ambient light/dark
+/// brightness) for its subtree — the calorie tracker's tab content and
+/// standalone routes. Everything under it keeps reading `context.colors`
+/// as usual; only the resolved palette changes.
+class HealthifyTheme extends StatelessWidget {
+  const HealthifyTheme({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Theme(
+      data: isDark ? AppTheme.healthifyDark() : AppTheme.healthifyLight(),
+      child: child,
+    );
+  }
 }

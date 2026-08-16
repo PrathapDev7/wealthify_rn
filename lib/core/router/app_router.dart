@@ -41,6 +41,7 @@ import '../../features/wallets/wallets_screen.dart';
 import '../../features/wishlist/wishlist_screen.dart';
 import '../providers.dart';
 import '../storage/prefs.dart';
+import '../theme/app_theme.dart';
 import 'routes.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -184,10 +185,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: Routes.security, builder: (_, _) => const SecurityScreen()),
       GoRoute(path: Routes.premium, builder: (_, _) => const PremiumScreen()),
-      GoRoute(path: Routes.calories, builder: (_, _) => const CalorieScreen()),
+      GoRoute(
+        path: Routes.calories,
+        builder: (_, _) => const HealthifyTheme(child: CalorieScreen()),
+      ),
       GoRoute(
         path: Routes.calorieHistory,
-        builder: (_, _) => const CalorieHistoryScreen(),
+        builder: (_, _) =>
+            const HealthifyTheme(child: CalorieHistoryScreen()),
       ),
     ],
   );
