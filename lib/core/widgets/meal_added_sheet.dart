@@ -14,12 +14,17 @@ import 'buttons.dart';
 class MealAddedSheet extends StatelessWidget {
   final List<MealItem> items;
 
-  const MealAddedSheet({super.key, required this.items});
+  /// When set, the sheet shows this message instead of nutrition cards —
+  /// used when every parsing model failed and the entry is still 'pending'.
+  final String? pendingMessage;
+
+  const MealAddedSheet({super.key, required this.items, this.pendingMessage});
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final isPending = pendingMessage != null;
     final totalCalories = items.fold<int>(0, (sum, m) => sum + m.calories);
 
     return Container(
@@ -39,16 +44,22 @@ class MealAddedSheet extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(color: c.primarySoft, shape: BoxShape.circle),
-                  child: Icon(Icons.check_circle_rounded, color: c.primary, size: 22),
+                  child: Icon(
+                    isPending ? Icons.hourglass_top_rounded : Icons.check_circle_rounded,
+                    color: c.primary,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Meal added', style: AppText.title.copyWith(color: c.text)),
-                      Text('$totalCalories kcal logged',
-                          style: AppText.bodySm.copyWith(color: c.textSubtle)),
+                      Text(isPending ? 'Meal saved' : 'Meal added', style: AppText.title.copyWith(color: c.text)),
+                      Text(
+                        isPending ? 'Nutrition info on its way' : '$totalCalories kcal logged',
+                        style: AppText.bodySm.copyWith(color: c.textSubtle),
+                      ),
                     ],
                   ),
                 ),
@@ -60,10 +71,13 @@ class MealAddedSheet extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            for (var i = 0; i < items.length; i++) ...[
-              if (i > 0) const SizedBox(height: AppSpacing.md),
-              NutrientDetailCard(item: items[i]),
-            ],
+            if (isPending)
+              Text(pendingMessage!, style: AppText.bodyMedium.copyWith(color: c.textSubtle))
+            else
+              for (var i = 0; i < items.length; i++) ...[
+                if (i > 0) const SizedBox(height: AppSpacing.md),
+                NutrientDetailCard(item: items[i]),
+              ],
             const SizedBox(height: AppSpacing.xl),
             PillButton(label: 'Done', onPressed: () => context.pop()),
           ],
