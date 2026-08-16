@@ -11,6 +11,7 @@ import '../../core/widgets/app_card.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/gradient_scaffold.dart';
 import '../../core/widgets/misc.dart';
+import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/wealthify_icon.dart';
 import '../../data/models/category_model.dart';
 import '../../data/repositories/categories_repository.dart';
@@ -68,7 +69,7 @@ class _ManageCategoriesScreenState
           ),
           Expanded(
             child: async.when(
-              loading: () => const LoadingView(),
+              loading: () => const _ManageCategoriesSkeleton(),
               error: (e, _) => Center(
                 child: PillButton(
                   label: 'Retry',
@@ -201,6 +202,55 @@ class _CategoryRow extends StatelessWidget {
             ),
           ),
           Icon(Icons.chevron_right, size: 18, color: c.textSubtle),
+        ],
+      ),
+    );
+  }
+}
+
+/// Skeleton shown while [categoriesByTypeProvider] is loading, mirroring the
+/// chip-toggle row and the category card list.
+class _ManageCategoriesSkeleton extends StatelessWidget {
+  const _ManageCategoriesSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 120),
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: SkeletonBox(height: 36, radius: AppRadius.pill),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: SkeletonBox(height: 36, radius: AppRadius.pill),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        for (var i = 0; i < 6; i++) ...[
+          const _CategoryRowSkeleton(),
+          const SizedBox(height: AppSpacing.md),
+        ],
+      ],
+    );
+  }
+}
+
+class _CategoryRowSkeleton extends StatelessWidget {
+  const _CategoryRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Row(
+        children: [
+          const SkeletonCircle(size: 44),
+          const SizedBox(width: AppSpacing.md),
+          const SkeletonLine(width: 120),
         ],
       ),
     );
