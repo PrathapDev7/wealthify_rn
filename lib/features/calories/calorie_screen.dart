@@ -29,30 +29,10 @@ class CalorieScreen extends ConsumerStatefulWidget {
 }
 
 class _CalorieScreenState extends ConsumerState<CalorieScreen> {
-  final TextEditingController _textController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
-  bool _isLoading = false;
-  String? _entryId;
   List<MealItem> _mealItems = [];
   DailyTotals? _dailyTotals;
   HealthProfile? _healthProfile;
-  String _loadingMessage = '';
-  Timer? _loadingTimer;
-  int _loadingStep = 0;
-
-  final List<String> _loadingMessages = [
-    'Analyzing your food entry...',
-    'Identifying ingredients...',
-    'Calculating nutrition values...',
-    'Almost done...',
-  ];
-
-  @override
-  void dispose() {
-    _textController.dispose();
-    _loadingTimer?.cancel();
-    super.dispose();
-  }
 
   Future<void> _fetchCalories() async {
     final repo = ref.read(caloriesRepositoryProvider);
@@ -87,66 +67,6 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
   void initState() {
     super.initState();
     _fetchCalories();
-  }
-
-  Future<void> _analyzeFood() async {
-    final text = _textController.text.trim();
-    if (text.isEmpty) {
-      showAppSnack(context, 'Please enter what you ate', error: true);
-      return;
-    }
-    setState(() => _isLoading = true);
-    try {
-      final repo = ref.read(caloriesRepositoryProvider);
-      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-      final addRes = await repo.addCaloriesEntry(date: dateStr);
-      final entryId = addRes['entryId'] as String?;
-      if (entryId == null) {
-        throw Exception('Could not start meal entry. Please try again.');
-      }
-      _entryId = entryId;
-      _startLoadingMessages();
-      final result = await repo.processFoodText(_entryId!, text);
-      _stopLoadingMessages();
-      final added =
-          (result['addedItems'] as List?)
-              ?.map((m) => MealItem.fromJson(m as Map<String, dynamic>))
-              .toList() ??
-          [];
-      await _fetchCalories();
-      _textController.clear();
-      if (mounted) {
-        if (result['status'] == 'pending') {
-          _showMealAddedModal(
-            added,
-            pendingMessage: result['message'] as String? ??
-                'Nutrition data will be added shortly.',
-          );
-        } else if (added.isNotEmpty) {
-          _showMealAddedModal(added);
-        }
-      }
-    } catch (e) {
-      _stopLoadingMessages();
-      if (mounted) showAppSnack(context, errorMessage(e), error: true);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _startLoadingMessages() {
-    _loadingStep = 0;
-    _loadingMessage = _loadingMessages[0];
-    _loadingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (!mounted) return;
-      _loadingStep = (_loadingStep + 1) % _loadingMessages.length;
-      setState(() => _loadingMessage = _loadingMessages[_loadingStep]);
-    });
-  }
-
-  void _stopLoadingMessages() {
-    _loadingTimer?.cancel();
-    _loadingTimer = null;
   }
 
   Future<void> _deleteItem(String itemId) async {
@@ -202,15 +122,6 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
       grouped.putIfAbsent(item.mealType, () => []).add(item);
     }
     return grouped;
-  }
-
-  void _showMealAddedModal(List<MealItem> items, {String? pendingMessage}) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => MealAddedSheet(items: items, pendingMessage: pendingMessage),
-    );
   }
 
   Future<void> _editGoals() async {
@@ -280,22 +191,13 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
               const SizedBox(height: AppSpacing.xl),
             ],
 
-            // Input area
-            _FoodInputCard(
-              controller: _textController,
-              loading: _isLoading,
-              loadingMessage: _loadingMessage,
-              onSubmit: _isLoading ? null : _analyzeFood,
-            ),
-
-            const SizedBox(height: AppSpacing.xl2),
             const SectionHeader("Today's Meals"),
             const SizedBox(height: AppSpacing.md),
-            if (_mealItems.isEmpty && !_isLoading)
+            if (_mealItems.isEmpty)
               const EmptyState(
                 icon: Icons.restaurant_menu_outlined,
                 title: 'No meals logged yet',
-                message: 'Log what you ate above to start tracking today.',
+                message: 'Tap the + button below to log a meal.',
               )
             else
               ...MealType.values
@@ -326,71 +228,6 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
         children: [
           const ScreenHeader(title: 'Calorie Tracker'),
           content,
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Food Input Card ─────────────────────────────────────────────
-class _FoodInputCard extends StatelessWidget {
-  final TextEditingController controller;
-  final bool loading;
-  final String loadingMessage;
-  final VoidCallback? onSubmit;
-
-  const _FoodInputCard({
-    required this.controller,
-    required this.loading,
-    required this.loadingMessage,
-    required this.onSubmit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: c.surfaceElevated,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: c.primary.withValues(alpha: 0.22)),
-        boxShadow: AppShadows.sm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.edit_note_rounded, size: 18, color: c.primary),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                'What did you eat?',
-                style: AppText.label.copyWith(color: c.textSubtle),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          AppTextField(
-            controller: controller,
-            hint: 'e.g. 100g peanuts, 2 eggs, 200g rice',
-            maxLines: 2,
-            fillColor: c.surfaceMuted,
-            borderColor: c.primary.withValues(alpha: 0.28),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          PillButton(
-            label: 'Add Meal',
-            loading: loading,
-            loadingLabel: loading ? loadingMessage : null,
-            onPressed: onSubmit,
-            leading: Icon(
-              Icons.add_circle_outline,
-              size: 18,
-              color: c.textOnPrimary,
-            ),
-          ),
         ],
       ),
     );
