@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_spacing.dart';
@@ -35,7 +36,17 @@ class SplashScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
             Text('Wealthify', style: AppText.titleLg.copyWith(color: c.text)),
             const SizedBox(height: AppSpacing.xl2),
-            CircularProgressIndicator(color: c.primary, strokeWidth: 2.5),
+            Container(
+              height: 6,
+              width: 120,
+              decoration: BoxDecoration(
+                color: c.primary.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ).animate(onPlay: (ctrl) => ctrl.repeat()).shimmer(
+                  duration: 1000.ms,
+                  color: c.primary.withValues(alpha: 0.85),
+                ),
           ],
         ),
       ),

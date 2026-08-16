@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -369,12 +370,17 @@ class _ActionButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
         child: busy
-            ? SizedBox(
-                height: 16,
-                width: 16,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: c.primary),
-              )
+            ? Container(
+                height: 8,
+                width: 24,
+                decoration: BoxDecoration(
+                  color: c.primary.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ).animate(onPlay: (ctrl) => ctrl.repeat()).shimmer(
+                    duration: 1000.ms,
+                    color: c.primary.withValues(alpha: 0.85),
+                  )
             : Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

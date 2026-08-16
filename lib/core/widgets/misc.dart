@@ -176,13 +176,6 @@ class EmptyState extends StatelessWidget {
   }
 }
 
-class LoadingView extends StatelessWidget {
-  const LoadingView({super.key});
-  @override
-  Widget build(BuildContext context) =>
-      Center(child: CircularProgressIndicator(color: context.colors.primary));
-}
-
 /// Toast-style feedback, replacing react-native-toast-message.
 void showAppSnack(BuildContext context, String message, {bool error = false}) {
   final c = context.colors;

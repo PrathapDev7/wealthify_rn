@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
@@ -55,11 +56,17 @@ class PillButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(
-                height: 18,
-                width: 18,
-                child: CircularProgressIndicator(strokeWidth: 2.2, color: fg),
-              ),
+              Container(
+                height: 8,
+                width: 40,
+                decoration: BoxDecoration(
+                  color: fg.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ).animate(onPlay: (ctrl) => ctrl.repeat()).shimmer(
+                    duration: 1000.ms,
+                    color: fg.withValues(alpha: 0.85),
+                  ),
               if (loadingLabel != null) ...[
                 const SizedBox(width: AppSpacing.sm),
                 Flexible(
