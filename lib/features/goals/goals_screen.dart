@@ -39,7 +39,7 @@ class GoalsScreen extends ConsumerWidget {
           const ScreenHeader(title: 'Savings goals'),
           Expanded(
             child: async.when(
-              loading: () => const LoadingView(),
+              loading: () => const _GoalsSkeleton(),
               error: (e, _) => Center(
                 child: PillButton(
                   label: 'Retry',
@@ -172,6 +172,65 @@ class _CompletedBadge extends StatelessWidget {
           Text('Completed',
               style: AppText.caption.copyWith(
                   color: c.textInverse, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Mirrors the data branch's layout: a "Total saved" summary card followed
+/// by goal cards, each with a title/badge row, progress bar, and caption.
+class _GoalsSkeleton extends StatelessWidget {
+  const _GoalsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 120),
+      children: [
+        AppCard(
+          margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SkeletonLine(width: 140, height: 11),
+              const SizedBox(height: AppSpacing.xs),
+              const SkeletonLine(width: 160, height: 26),
+            ],
+          ),
+        ),
+        for (var i = 0; i < 4; i++) const _GoalCardSkeleton(),
+      ],
+    );
+  }
+}
+
+/// Mirrors a goal [AppCard]: title + percent/badge row, progress bar,
+/// "saved of target" caption, and target-date caption.
+class _GoalCardSkeleton extends StatelessWidget {
+  const _GoalCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(child: SkeletonLine(width: 120, height: 14)),
+              const SizedBox(width: AppSpacing.sm),
+              const SkeletonBox(width: 50, height: 20, radius: AppRadius.pill),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          const SkeletonBox(height: 8, width: double.infinity),
+          const SizedBox(height: AppSpacing.sm),
+          const SkeletonLine(width: 150, height: 11),
+          const SizedBox(height: 4),
+          const SkeletonLine(width: 110, height: 11),
         ],
       ),
     );
