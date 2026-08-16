@@ -517,15 +517,15 @@ class _ActionPill extends StatelessWidget {
     final c = context.colors;
     return Material(
       color: const Color(0xFF2A2A2A),
-      borderRadius: BorderRadius.circular(AppRadius.pill),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.pill),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         onTap: onTap,
         child: Container(
-          height: 52,
+          height: 42,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.pill),
+            borderRadius: BorderRadius.circular(AppRadius.md),
             border: Border.all(color: const Color(0xFF3A3A3A)),
           ),
           child: Row(
