@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/providers.dart';
+import '../../core/router/routes.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
@@ -30,7 +32,6 @@ class _HealthGoalsScreenState extends ConsumerState<HealthGoalsScreen> {
   DailyTotals? _dailyTotals;
   HealthProfile? _healthProfile;
   double? _targetWeightKg;
-  double? _currentWeightKg;
 
   @override
   void initState() {
@@ -61,7 +62,6 @@ class _HealthGoalsScreenState extends ConsumerState<HealthGoalsScreen> {
           caloriesRes['healthProfile'] as Map<String, dynamic>?,
         );
         _targetWeightKg = (weightRes['targetWeightKg'] as num?)?.toDouble();
-        _currentWeightKg = (weightRes['currentWeightKg'] as num?)?.toDouble();
       });
     } catch (e) {
       if (mounted) showAppSnack(context, _errorMessage(e), error: true);
@@ -203,7 +203,6 @@ class _HealthGoalsScreenState extends ConsumerState<HealthGoalsScreen> {
               const _GoalCardSkeleton()
             else
               _WeightGoalCard(
-                currentWeightKg: _currentWeightKg,
                 targetWeightKg: _targetWeightKg,
                 onEdit: _editWeightGoal,
               ),
@@ -218,7 +217,13 @@ class _HealthGoalsScreenState extends ConsumerState<HealthGoalsScreen> {
 
     return GradientScaffold(
       child: Column(
-        children: [const ScreenHeader(title: 'Goals'), content],
+        children: [
+          ScreenHeader(
+            title: 'Goals',
+            onBack: () => context.go(Routes.dashboard),
+          ),
+          content,
+        ],
       ),
     );
   }
@@ -281,102 +286,45 @@ class _StatValue extends StatelessWidget {
 
 class _WeightGoalCard extends StatelessWidget {
   const _WeightGoalCard({
-    required this.currentWeightKg,
     required this.targetWeightKg,
     required this.onEdit,
   });
 
-  final double? currentWeightKg;
   final double? targetWeightKg;
   final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final hasBoth = currentWeightKg != null && targetWeightKg != null;
-    final delta = hasBoth ? currentWeightKg! - targetWeightKg! : null;
 
     return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              const _IconBadge(icon: Icons.monitor_weight_rounded),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text('Weight', style: AppText.bodyStrong.copyWith(color: c.text)),
-              ),
-              CircleIconButton(
-                icon: Icons.edit_rounded,
-                size: 32,
-                iconSize: 15,
-                background: c.primarySoft,
-                color: c.primary,
-                onTap: onEdit,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Container(height: 1, color: c.divider),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Current', style: AppText.label.copyWith(color: c.textSubtle)),
-                    const SizedBox(height: 4),
-                    currentWeightKg != null
-                        ? _StatValue(
-                            value: currentWeightKg!.toStringAsFixed(1), unit: 'kg')
-                        : Text('Not logged',
-                            style: AppText.body.copyWith(color: c.textSubtle)),
-                  ],
-                ),
-              ),
-              Container(width: 1, height: 36, color: c.divider),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(left: AppSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Goal', style: AppText.label.copyWith(color: c.textSubtle)),
-                      const SizedBox(height: 4),
-                      targetWeightKg != null
-                          ? _StatValue(
-                              value: targetWeightKg!.toStringAsFixed(1), unit: 'kg')
-                          : Text('Not set',
-                              style: AppText.body.copyWith(color: c.textSubtle)),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (delta != null) ...[
-            const SizedBox(height: AppSpacing.md),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xxs),
-              decoration: BoxDecoration(
-                color: (delta.abs() < 0.05 ? c.accentDark : c.warning).withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-              ),
-              child: Text(
-                delta.abs() < 0.05
-                    ? 'On target'
-                    : '${delta > 0 ? '-' : '+'}${delta.abs().toStringAsFixed(1)} kg to go',
-                textAlign: TextAlign.center,
-                style: AppText.caption.copyWith(
-                  color: delta.abs() < 0.05 ? c.accentDark : c.warning,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+          const _IconBadge(icon: Icons.monitor_weight_rounded),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Goal weight',
+                    style: AppText.label.copyWith(color: c.textSubtle)),
+                const SizedBox(height: 4),
+                targetWeightKg != null
+                    ? _StatValue(
+                        value: targetWeightKg!.toStringAsFixed(1), unit: 'kg')
+                    : Text('Not set',
+                        style: AppText.body.copyWith(color: c.textSubtle)),
+              ],
             ),
-          ],
+          ),
+          CircleIconButton(
+            icon: Icons.edit_rounded,
+            size: 32,
+            iconSize: 15,
+            background: c.primarySoft,
+            color: c.primary,
+            onTap: onEdit,
+          ),
         ],
       ),
     );
@@ -389,23 +337,22 @@ class _GoalCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              const SkeletonCircle(size: 32),
-              const SizedBox(width: AppSpacing.sm),
-              const Expanded(child: SkeletonLine(height: 14)),
-            ],
+          const SkeletonCircle(size: 32),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                SkeletonLine(width: 80, height: 11),
+                SizedBox(height: 6),
+                SkeletonLine(width: 70, height: 18),
+              ],
+            ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Container(height: 1, color: context.colors.divider),
-          const SizedBox(height: AppSpacing.md),
-          for (var i = 0; i < 3; i++) ...[
-            const SkeletonLine(height: 14),
-            const SizedBox(height: AppSpacing.md),
-          ],
+          const SizedBox(width: AppSpacing.sm),
+          const SkeletonCircle(size: 32),
         ],
       ),
     );
