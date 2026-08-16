@@ -23,6 +23,12 @@ class AppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
+    final activeApp = ref.watch(activeAppProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final healthify = isDark ? AppColors.healthifyDark : AppColors.healthifyLight;
+    final fabGradient = activeApp == ActiveApp.healthify
+        ? [healthify.primaryGradientStart, healthify.primaryGradientEnd]
+        : [c.primaryGradientStart, c.primaryGradientEnd];
     return Scaffold(
       extendBody: true,
       backgroundColor: c.background,
@@ -47,8 +53,7 @@ class AppShell extends ConsumerWidget {
         height: 60,
         width: 60,
         decoration: BoxDecoration(
-          gradient:
-              LinearGradient(colors: [c.primaryGradientStart, c.primaryGradientEnd]),
+          gradient: LinearGradient(colors: fabGradient),
           shape: BoxShape.circle,
           boxShadow: AppShadows.primaryGlow,
           border: Border.all(color: c.fabRing, width: 4),
