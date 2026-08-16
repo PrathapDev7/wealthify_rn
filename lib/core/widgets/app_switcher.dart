@@ -96,13 +96,17 @@ class _SwitcherSegment extends StatelessWidget {
           children: [
             Icon(icon, size: 20, color: selected ? Colors.white : c.textSubtle),
             const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 17,
-                fontWeight: FontWeight.w500,
-                height: 1.4,
-                color: selected ? Colors.white : c.textSubtle,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w500,
+                  height: 1.4,
+                  color: selected ? Colors.white : c.textSubtle,
+                ),
               ),
             ),
           ],
