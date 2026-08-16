@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/providers.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
@@ -145,9 +146,11 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
     final result = await showModalBottomSheet<double>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        final c = ctx.colors;
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final c = isDark ? AppColors.healthifyDark : AppColors.healthifyLight;
         final bottom = MediaQuery.viewInsetsOf(ctx).bottom;
         return Container(
           decoration: BoxDecoration(
@@ -178,6 +181,7 @@ class _CalorieHistoryScreenState extends ConsumerState<CalorieHistoryScreen> {
                   const SizedBox(height: AppSpacing.xl),
                   PillButton(
                     label: 'Save goal',
+                    gradientColors: [c.primaryDark, c.primaryDarker],
                     onPressed: () {
                       final v = double.tryParse(controller.text.trim());
                       Navigator.of(ctx).pop(v);
