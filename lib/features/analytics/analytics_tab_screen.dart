@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
+import '../../core/router/routes.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/widgets.dart';
 import '../calories/calorie_history_screen.dart';
 import 'analytics_screen.dart';
 
@@ -25,11 +28,26 @@ class AnalyticsTabScreen extends ConsumerWidget {
           final c = context.colors;
           return Column(
             children: [
-              const SizedBox(height: AppSpacing.sm),
-              Center(
-                child: Text('Statistics', style: AppText.screenTitle.copyWith(color: c.text)),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.md),
+                child: Row(
+                  children: [
+                    CircleIconButton(
+                      icon: Icons.arrow_back_ios_new_rounded,
+                      onTap: () => context.go(Routes.dashboard),
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Statistics',
+                        textAlign: TextAlign.center,
+                        style: AppText.screenTitle.copyWith(color: c.text),
+                      ),
+                    ),
+                    const SizedBox(width: 40),
+                  ],
+                ),
               ),
-              const SizedBox(height: AppSpacing.md),
               const Expanded(child: CalorieHistoryScreen(embedded: true)),
             ],
           );
