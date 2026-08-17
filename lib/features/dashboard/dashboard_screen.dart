@@ -69,11 +69,28 @@ class DashboardScreen extends ConsumerWidget {
       ),
     );
     if (activeApp == ActiveApp.healthify) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
       return Column(
         children: [
-          switcher,
-          const Expanded(
-            child: HealthifyTheme(child: CalorieScreen(embedded: true)),
+          Expanded(
+            child: HealthifyTheme(
+              child: CalorieScreen(
+                embedded: true,
+                heroWrapper: (ctx, hero) => _heroBackdrop(
+                  ctx,
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Theme(
+                        data: isDark ? AppTheme.dark() : AppTheme.light(),
+                        child: switcher,
+                      ),
+                      hero,
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       );
@@ -127,9 +144,25 @@ class _WealthifyDashboard extends ConsumerStatefulWidget {
       _WealthifyDashboardState();
 }
 
-class _WealthifyDashboardState extends ConsumerState<_WealthifyDashboard> {
+class _WealthifyDashboardState extends ConsumerState<_WealthifyDashboard>
+    with SingleTickerProviderStateMixin {
   int _walletIndex = 0;
   bool _indexSeeded = false;
+  bool _swipeLocked = false;
+  late final AnimationController _ghostAnimCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 250),
+  )..addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _ghostAnimCtrl.reverse();
+      }
+    });
+
+  @override
+  void dispose() {
+    _ghostAnimCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -291,48 +324,99 @@ class _WealthifyDashboardState extends ConsumerState<_WealthifyDashboard> {
               ),
               const SizedBox(height: AppSpacing.sm),
               Center(
-                child: WalletCardStack(
-                  child: ClipRect(
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      heightFactor: 0.75,
-                      child: Stack(
-                        children: [
-                          GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () => context.push(
-                              isFirstRun ? Routes.setBudget : Routes.analytics,
-                            ),
-                            child: walletCardChild,
-                          ),
-                          if (wallets.length > 1)
-                            Positioned(
-                              right: 8,
-                              top: 48,
-                              child: IconButton(
-                                onPressed: () {
-                                  final next = (safeIndex + 1) % wallets.length;
-                                  setState(() => _walletIndex = next);
+                child: AnimatedBuilder(
+                  animation: _ghostAnimCtrl,
+                  builder: (context, child) {
+                    final backScale = 1.0 + (_ghostAnimCtrl.value * 0.2);
+                    final middleScale = 1.0 + (_ghostAnimCtrl.value * 1.0);
+                    return WalletCardStack(
+                      backGhostScale: backScale,
+                      middleGhostScale: middleScale,
+                      child: ClipRect(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          heightFactor: 0.75,
+                          child: Stack(
+                            children: [
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => context.push(
+                                  isFirstRun ? Routes.setBudget : Routes.analytics,
+                                ),
+                                onVerticalDragStart: (_) {
+                                  _swipeLocked = false;
                                 },
-                                icon: Icon(
-                                  Icons.swap_vert_rounded,
-                                  size: 20,
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                ),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                  minWidth: 36,
-                                  minHeight: 36,
-                                ),
-                                style: IconButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
+                                onVerticalDragUpdate: (details) {
+                                  if (wallets.length <= 1 || _swipeLocked) return;
+                                  if (details.delta.dy < -5) {
+                                    _swipeLocked = true;
+                                    _ghostAnimCtrl.forward(from: 0);
+                                    final next = (safeIndex + 1) % wallets.length;
+                                    setState(() => _walletIndex = next);
+                                  } else if (details.delta.dy > 5) {
+                                    _swipeLocked = true;
+                                    _ghostAnimCtrl.forward(from: 0);
+                                    final prev = (safeIndex - 1 + wallets.length) %
+                                        wallets.length;
+                                    setState(() => _walletIndex = prev);
+                                  }
+                                },
+                                onVerticalDragEnd: (_) {
+                                  _swipeLocked = false;
+                                },
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 250),
+                                  switchInCurve: Curves.easeOut,
+                                  switchOutCurve: Curves.easeIn,
+                                  transitionBuilder: (child, animation) {
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: ScaleTransition(
+                                        scale: Tween<double>(
+                                          begin: 0.92,
+                                          end: 1.0,
+                                        ).animate(animation),
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  child: KeyedSubtree(
+                                    key: ValueKey(safeIndex),
+                                    child: walletCardChild,
+                                  ),
                                 ),
                               ),
-                            ),
-                        ],
+                              if (wallets.length > 1)
+                                Positioned(
+                                  right: 8,
+                                  top: 48,
+                                  child: IconButton(
+                                    onPressed: () {
+                                      _ghostAnimCtrl.forward(from: 0);
+                                      final next = (safeIndex + 1) % wallets.length;
+                                      setState(() => _walletIndex = next);
+                                    },
+                                    icon: Icon(
+                                      Icons.swap_vert_rounded,
+                                      size: 20,
+                                      color: Colors.white.withValues(alpha: 0.8),
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 36,
+                                      minHeight: 36,
+                                    ),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
             ],

@@ -17,6 +17,7 @@ class HorizontalDatePicker extends StatelessWidget {
     required this.onTodayTap,
     this.onPrevTap,
     this.onNextTap,
+    this.onGradient = false,
   });
 
   final DateTime selectedDate;
@@ -25,6 +26,10 @@ class HorizontalDatePicker extends StatelessWidget {
   final VoidCallback? onPrevTap;
   final VoidCallback? onNextTap;
 
+  /// When true, renders with white/light colors suitable for display on a
+  /// colored gradient background (e.g. the Healthify hero backdrop).
+  final bool onGradient;
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -32,13 +37,17 @@ class HorizontalDatePicker extends StatelessWidget {
     final days = _getWeekDays(selectedDate);
     final selectedKey = DateFormat('yyyy-MM-dd').format(selectedDate);
     final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final textColor = onGradient ? Colors.white : c.text;
+    final subtleColor =
+        onGradient ? Colors.white.withValues(alpha: 0.7) : c.textSubtle;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text(monthYear, style: AppText.bodyLarge.copyWith(color: c.text)),
+            Text(monthYear,
+                style: AppText.bodyLarge.copyWith(color: textColor)),
             const Spacer(),
             GestureDetector(
               onTap: onTodayTap,
@@ -48,7 +57,7 @@ class HorizontalDatePicker extends StatelessWidget {
                   vertical: AppSpacing.xs,
                 ),
                 decoration: BoxDecoration(
-                  color: c.primarySoft,
+                  color: onGradient ? Colors.white : c.primarySoft,
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
                 child: Text(
@@ -65,6 +74,9 @@ class HorizontalDatePicker extends StatelessWidget {
               icon: Icons.chevron_left,
               size: 32,
               iconSize: 18,
+              background:
+                  onGradient ? Colors.white.withValues(alpha: 0.2) : null,
+              color: onGradient ? Colors.white : null,
               onTap: onPrevTap,
             ),
             const SizedBox(width: AppSpacing.xs),
@@ -72,12 +84,14 @@ class HorizontalDatePicker extends StatelessWidget {
               icon: Icons.chevron_right,
               size: 32,
               iconSize: 18,
+              background:
+                  onGradient ? Colors.white.withValues(alpha: 0.2) : null,
+              color: onGradient ? Colors.white : null,
               onTap: onNextTap,
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        // Weekday initials
         Row(
           children: days
               .map(
@@ -85,7 +99,7 @@ class HorizontalDatePicker extends StatelessWidget {
                   child: Center(
                     child: Text(
                       (day['abbrev'] as String).substring(0, 1),
-                      style: AppText.caption.copyWith(color: c.textSubtle),
+                      style: AppText.caption.copyWith(color: subtleColor),
                     ),
                   ),
                 ),
@@ -93,7 +107,6 @@ class HorizontalDatePicker extends StatelessWidget {
               .toList(),
         ),
         const SizedBox(height: AppSpacing.sm),
-        // Date circles
         Row(
           children: days
               .map(
@@ -104,6 +117,7 @@ class HorizontalDatePicker extends StatelessWidget {
                       isSelected: (day['key'] as String) == selectedKey,
                       isToday: (day['key'] as String) == todayKey,
                       onTap: () => onDateSelected(day['date'] as DateTime),
+                      onGradient: onGradient,
                     ),
                   ),
                 ),
@@ -142,12 +156,14 @@ class _DateBadge extends StatelessWidget {
   final bool isSelected;
   final bool isToday;
   final VoidCallback onTap;
+  final bool onGradient;
 
   const _DateBadge({
     required this.day,
     required this.isSelected,
     required this.isToday,
     required this.onTap,
+    this.onGradient = false,
   });
 
   @override
@@ -162,21 +178,28 @@ class _DateBadge extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: isSelected
+          gradient: isSelected && !onGradient
               ? LinearGradient(colors: [c.primaryDark, c.primaryDarker])
               : null,
           color: isSelected
-              ? null
-              : (isToday ? c.primarySoft : Colors.transparent),
-          border: !isSelected && isToday
-              ? Border.all(color: c.primary, width: 1.2)
+              ? (onGradient ? Colors.white : null)
+              : (isToday
+                  ? (onGradient
+                      ? Colors.white.withValues(alpha: 0.2)
+                      : c.primarySoft)
+                  : Colors.transparent),
+          border: isToday && !isSelected
+              ? Border.all(
+                  color: onGradient ? Colors.white : c.primary, width: 1.2)
               : null,
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: c.primary.withValues(alpha: 0.35),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
+                    color: onGradient
+                        ? Colors.black.withValues(alpha: 0.15)
+                        : c.primary.withValues(alpha: 0.35),
+                    blurRadius: onGradient ? 8 : 14,
+                    offset: Offset(0, onGradient ? 2 : 6),
                   ),
                 ]
               : null,
@@ -184,7 +207,11 @@ class _DateBadge extends StatelessWidget {
         child: Text(
           '$day',
           style: AppText.bodyMedium.copyWith(
-            color: isSelected ? Colors.white : (isToday ? c.primary : c.text),
+            color: isSelected
+                ? (onGradient ? c.primary : Colors.white)
+                : (isToday
+                    ? (onGradient ? Colors.white : c.primary)
+                    : (onGradient ? Colors.white : c.text)),
             fontWeight: FontWeight.w700,
           ),
         ),

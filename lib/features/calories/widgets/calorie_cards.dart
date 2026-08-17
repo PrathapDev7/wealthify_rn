@@ -21,9 +21,6 @@ class CalorieHeroCard extends StatelessWidget {
     final c = context.colors;
     final target = totals.calorieTarget;
     final hasTarget = target != null && target > 0;
-    final pct = hasTarget
-        ? (totals.calories / target * 100).clamp(0.0, 100.0)
-        : 100.0;
     final left = totals.caloriesLeft;
     final over = hasTarget && left < 0;
     final accent = over ? c.negative : c.primary;
@@ -35,125 +32,150 @@ class CalorieHeroCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: accent.withValues(alpha: 0.25)),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 68,
-            height: 68,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                PieChart(
-                  duration: const Duration(milliseconds: 400),
-                  PieChartData(
-                    startDegreeOffset: -90,
-                    sectionsSpace: 0,
-                    centerSpaceRadius: 24,
-                    centerSpaceColor: Colors.transparent,
-                    sections: [
-                      PieChartSectionData(
-                        value: pct,
-                        color: accent,
-                        radius: 8,
-                        showTitle: false,
-                      ),
-                      PieChartSectionData(
-                        value: 100 - pct,
-                        color: accent.withValues(alpha: 0.15),
-                        radius: 8,
-                        showTitle: false,
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AnimatedCount(
-                      value: left.abs(),
-                      style: AppText.bodyLarge.copyWith(
-                        color: c.text,
-                        fontWeight: FontWeight.w800,
-                      ),
+      child: CalorieHeroContent(totals: totals, onEditGoal: onEditGoal),
+    );
+  }
+}
+
+/// Inner content of [CalorieHeroCard] — the donut chart + Consumed/Goal
+/// stats row. Exported so the Healthify dashboard hero can embed it in a
+/// combined card alongside the date picker.
+class CalorieHeroContent extends StatelessWidget {
+  final DailyTotals totals;
+  final VoidCallback onEditGoal;
+
+  const CalorieHeroContent({super.key, required this.totals, required this.onEditGoal});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final target = totals.calorieTarget;
+    final hasTarget = target != null && target > 0;
+    final pct = hasTarget
+        ? (totals.calories / target * 100).clamp(0.0, 100.0)
+        : 100.0;
+    final left = totals.caloriesLeft;
+    final over = hasTarget && left < 0;
+    final accent = over ? c.negative : c.primary;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 68,
+          height: 68,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PieChart(
+                duration: const Duration(milliseconds: 400),
+                PieChartData(
+                  startDegreeOffset: -90,
+                  sectionsSpace: 0,
+                  centerSpaceRadius: 24,
+                  centerSpaceColor: Colors.transparent,
+                  sections: [
+                    PieChartSectionData(
+                      value: pct,
+                      color: accent,
+                      radius: 8,
+                      showTitle: false,
                     ),
+                    PieChartSectionData(
+                      value: 100 - pct,
+                      color: accent.withValues(alpha: 0.15),
+                      radius: 8,
+                      showTitle: false,
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedCount(
+                    value: left.abs(),
+                    style: AppText.bodyLarge.copyWith(
+                      color: c.text,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    over ? 'over' : 'left',
+                    style: AppText.caption.copyWith(color: c.textSubtle),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.local_fire_department_rounded,
+                    size: 16,
+                    color: accent,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    'Daily Calories',
+                    style: AppText.bodyMedium.copyWith(color: c.text),
+                  ),
+                  const Spacer(),
+                  if (hasTarget)
                     Text(
-                      over ? 'over' : 'left',
+                      '${pct.round()}%',
                       style: AppText.caption.copyWith(color: c.textSubtle),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.local_fire_department_rounded,
-                      size: 16,
-                      color: accent,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      'Daily Calories',
-                      style: AppText.bodyMedium.copyWith(color: c.text),
-                    ),
-                    const Spacer(),
-                    if (hasTarget)
-                      Text(
-                        '${pct.round()}%',
-                        style: AppText.caption.copyWith(color: c.textSubtle),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _heroStat(c, 'Consumed', '${totals.calories}'),
-                    ),
-                    Container(width: 1, height: 26, color: c.divider),
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _heroStat(
-                              c,
-                              'Goal',
-                              hasTarget ? '$target' : '—',
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  Expanded(
+                    child: _heroStat(c, 'Consumed', '${totals.calories}'),
+                  ),
+                  Container(width: 1, height: 26, color: c.divider),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _heroStat(
+                            c,
+                            'Goal',
+                            hasTarget ? '$target' : '—',
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: onEditGoal,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: c.primarySoft,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.edit_rounded,
+                              size: 12,
+                              color: c.primary,
                             ),
                           ),
-                          GestureDetector(
-                            onTap: onEditGoal,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: c.primarySoft,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.edit_rounded,
-                                size: 12,
-                                color: c.primary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

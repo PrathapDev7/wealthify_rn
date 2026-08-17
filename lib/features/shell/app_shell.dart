@@ -253,6 +253,7 @@ class AppShell extends ConsumerWidget {
       ),
     );
     if (result != null && (result.items.isNotEmpty || result.pendingMessage != null) && context.mounted) {
+      ref.read(dataRefreshProvider.notifier).bump();
       showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,

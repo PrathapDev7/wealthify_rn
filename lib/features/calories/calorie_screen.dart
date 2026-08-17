@@ -17,12 +17,17 @@ import 'widgets/calorie_cards.dart';
 String errorMessage(Object e) => e.toString();
 
 class CalorieScreen extends ConsumerStatefulWidget {
-  const CalorieScreen({super.key, this.embedded = false});
+  const CalorieScreen({super.key, this.embedded = false, this.heroWrapper});
 
   /// When true, renders without the outer [GradientScaffold]/[ScreenHeader]
   /// chrome so it can be dropped in as a tab body (the Healthify side of the
   /// Home switcher) instead of being pushed as its own route.
   final bool embedded;
+
+  /// Optional wrapper for the hero section (date picker + calorie card +
+  /// macros). When provided in [embedded] mode, the hero is rendered through
+  /// this callback while the meal list scrolls independently below.
+  final Widget Function(BuildContext context, Widget heroContent)? heroWrapper;
 
   @override
   ConsumerState<CalorieScreen> createState() => _CalorieScreenState();
@@ -162,84 +167,151 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(dataRefreshProvider, (_, __) => _fetchCalories());
     final c = context.colors;
     final groups = _mealsByType;
-    final content = Expanded(
-      child: RefreshIndicator(
-        onRefresh: _fetchCalories,
-        color: c.primary,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl,
-            0,
-            AppSpacing.xl,
-            AppSpacing.screenBottomInset,
-          ),
-          children: [
-            HorizontalDatePicker(
-              selectedDate: _selectedDate,
-              onDateSelected: (date) {
-                setState(() => _selectedDate = date);
-                _fetchCalories();
-              },
-              onTodayTap: _goToToday,
-              onPrevTap: () => _moveDate(-1),
-              onNextTap: () => _moveDate(1),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-
-            // Compact hero + macro summary
-            if (_loading) ...[
-              const CalorieHeroSkeleton(),
-              const SizedBox(height: AppSpacing.md),
-              const _MacroStatsRowSkeleton(),
-              const SizedBox(height: AppSpacing.xl),
-            ] else if (_dailyTotals != null) ...[
-              CalorieHeroCard(totals: _dailyTotals!, onEditGoal: _editGoals),
-              const SizedBox(height: AppSpacing.md),
-              _MacroStatsRow(totals: _dailyTotals!),
-              const SizedBox(height: AppSpacing.xl),
-            ],
-
-            const SectionHeader("Today's Meals"),
-            const SizedBox(height: AppSpacing.md),
-            if (_loading)
-              const _MealListSkeleton()
-            else if (_mealItems.isEmpty)
-              const EmptyState(
-                icon: Icons.restaurant_menu_outlined,
-                title: 'No meals logged yet',
-                message: 'Tap the + button below to log a meal.',
-              )
-            else
-              ...MealType.values
-                  .where((t) => groups[t]?.isNotEmpty ?? false)
-                  .map(
-                    (type) => _MealGroupCard(
-                      mealType: type,
-                      items: groups[type]!,
-                      onDeleteItem: _deleteItem,
-                    ),
-                  ),
-          ],
-        ),
-      ),
+    final onGradient = widget.embedded && widget.heroWrapper != null;
+    final datePicker = HorizontalDatePicker(
+      selectedDate: _selectedDate,
+      onDateSelected: (date) {
+        setState(() => _selectedDate = date);
+        _fetchCalories();
+      },
+      onTodayTap: _goToToday,
+      onPrevTap: () => _moveDate(-1),
+      onNextTap: () => _moveDate(1),
+      onGradient: onGradient,
     );
 
-    if (widget.embedded) {
+    final List<Widget> calorieCards;
+    if (_loading) {
+      calorieCards = const [
+        CalorieHeroSkeleton(),
+        SizedBox(height: AppSpacing.md),
+        _MacroStatsRowSkeleton(),
+      ];
+    } else if (_dailyTotals != null) {
+      calorieCards = [
+        CalorieHeroCard(totals: _dailyTotals!, onEditGoal: _editGoals),
+        const SizedBox(height: AppSpacing.md),
+        _MacroStatsRow(totals: _dailyTotals!),
+      ];
+    } else {
+      calorieCards = const [];
+    }
+
+    final mealGroups = <Widget>[
+      const SectionHeader("Today's Meals"),
+      const SizedBox(height: AppSpacing.md),
+      if (_loading)
+        const _MealListSkeleton()
+      else if (_mealItems.isEmpty)
+        const EmptyState(
+          icon: Icons.restaurant_menu_outlined,
+          title: 'No meals logged yet',
+          message: 'Tap the + button below to log a meal.',
+        )
+      else
+        ...MealType.values
+            .where((t) => groups[t]?.isNotEmpty ?? false)
+            .map(
+              (type) => _MealGroupCard(
+                mealType: type,
+                items: groups[type]!,
+                onDeleteItem: _deleteItem,
+              ),
+            ),
+    ];
+
+    final listViewPadding = const EdgeInsets.fromLTRB(
+      AppSpacing.xl,
+      0,
+      AppSpacing.xl,
+      AppSpacing.screenBottomInset,
+    );
+
+    // ── Embedded with hero wrapper (Healthify home tab) ──
+    if (widget.embedded && widget.heroWrapper != null) {
       return Column(
         children: [
-          const SizedBox(height: AppSpacing.sm),
-          content,
+          widget.heroWrapper!(
+            context,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  datePicker,
+                  const SizedBox(height: AppSpacing.xl),
+                  ...calorieCards,
+                  if (calorieCards.isNotEmpty)
+                    const SizedBox(height: AppSpacing.xl),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _fetchCalories,
+              color: c.primary,
+              child: ListView(
+                padding: listViewPadding,
+                children: mealGroups,
+              ),
+            ),
+          ),
         ],
       );
     }
 
+    // ── Embedded without hero wrapper ──
+    if (widget.embedded) {
+      return Column(
+        children: [
+          const SizedBox(height: AppSpacing.sm),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _fetchCalories,
+              color: c.primary,
+              child: ListView(
+                padding: listViewPadding,
+                children: [
+                  datePicker,
+                  const SizedBox(height: AppSpacing.xl),
+                  ...calorieCards,
+                  if (calorieCards.isNotEmpty)
+                    const SizedBox(height: AppSpacing.xl),
+                  ...mealGroups,
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // ── Standalone mode ──
     return GradientScaffold(
       child: Column(
         children: [
           const ScreenHeader(title: 'Calorie Tracker'),
-          content,
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _fetchCalories,
+              color: c.primary,
+              child: ListView(
+                padding: listViewPadding,
+                children: [
+                  datePicker,
+                  const SizedBox(height: AppSpacing.xl),
+                  ...calorieCards,
+                  if (calorieCards.isNotEmpty)
+                    const SizedBox(height: AppSpacing.xl),
+                  ...mealGroups,
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -411,6 +483,7 @@ class _MealItemRow extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _ItemNutritionSheet(item: item),
     );
