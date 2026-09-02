@@ -41,6 +41,12 @@ class _FitnessHomeState extends ConsumerState<FitnessHome> {
   String? _error;
   bool _busy = false;
 
+  /// Compositions already fetched, so a tick can swap straight to the next one
+  /// instead of showing a spinner for the round trip. Bounded because these are
+  /// the decompressed documents (~100 KB each) and the catalog is 1603 long.
+  final Map<String, Uint8List> _cache = {};
+  static const int _cacheLimit = 8;
+
   /// Bumped on every selection change. Each async continuation captures the
   /// value it started with and bails if it no longer matches, so a slow reply
   /// for an abandoned selection cannot overwrite a newer one — the five-second
@@ -68,6 +74,7 @@ class _FitnessHomeState extends ConsumerState<FitnessHome> {
   Future<void> _refresh() async {
     final generation = ++_generation;
     _timer?.cancel();
+    _cache.clear();
     setState(() {
       _error = null;
       _busy = true;
@@ -127,32 +134,65 @@ class _FitnessHomeState extends ConsumerState<FitnessHome> {
     _timer?.cancel();
     if (_exercises.isEmpty) return;
 
-    _loadComposition(generation);
+    _show(generation);
     _timer = Timer.periodic(_slide, (_) {
       if (!mounted || generation != _generation || _exercises.isEmpty) return;
-      setState(() {
-        _index = (_index + 1) % _exercises.length;
-        _bytes = null;
-      });
-      _loadComposition(generation);
+      setState(() => _index = (_index + 1) % _exercises.length);
+      _show(generation);
     });
   }
 
-  Future<void> _loadComposition(int generation) async {
+  /// Puts the current exercise on screen, then starts pulling the next one.
+  ///
+  /// Only the very first animation of a selection should show a spinner: from
+  /// then on the next composition is fetched during the five seconds the
+  /// current one is playing, so the swap is instant.
+  Future<void> _show(int generation) async {
     if (_index >= _exercises.length) return;
     final wanted = _exercises[_index];
+    final cached = _cache[wanted.id];
 
-    try {
-      final bytes = await _repo.composition(wanted.id);
-      if (!mounted || generation != _generation) return;
+    if (cached != null) {
+      setState(() => _bytes = cached);
+    } else {
+      setState(() => _bytes = null);
+      final bytes = await _fetch(wanted.id, generation);
+      if (bytes == null || !mounted || generation != _generation) return;
       // The timer may have moved on while this was in flight.
       if (_index >= _exercises.length || _exercises[_index].id != wanted.id) {
         return;
       }
       setState(() => _bytes = bytes);
+    }
+
+    _prefetchNext(generation);
+  }
+
+  void _prefetchNext(int generation) {
+    if (_exercises.length < 2) return;
+    final next = _exercises[(_index + 1) % _exercises.length];
+    if (_cache.containsKey(next.id)) return;
+    _fetch(next.id, generation);
+  }
+
+  /// Fetches into the cache and hands the bytes back. Callers that only want
+  /// the cache warmed can ignore the future.
+  Future<Uint8List?> _fetch(String id, int generation) async {
+    try {
+      final bytes = await _repo.composition(id);
+      if (generation != _generation) return null;
+
+      _cache[id] = bytes;
+      // Maps iterate in insertion order, so this drops the oldest entry. The
+      // one on screen survives regardless — _bytes holds its own reference.
+      if (_cache.length > _cacheLimit) _cache.remove(_cache.keys.first);
+
+      return bytes;
     } catch (error) {
-      if (!mounted || generation != _generation) return;
-      setState(() => _error = '$error');
+      if (mounted && generation == _generation) {
+        setState(() => _error = '$error');
+      }
+      return null;
     }
   }
 
