@@ -142,7 +142,7 @@ class AppShell extends ConsumerWidget {
                     _quickAddWishlistItem(context, ref);
                   },
                 ),
-                if (!isWealthify) ...[
+                if (activeApp == ActiveApp.healthify) ...[
                   const SizedBox(height: AppSpacing.sm),
                   _QuickAddCard(
                     icon: Icons.restaurant_rounded,
@@ -384,21 +384,35 @@ class _NavBar extends ConsumerWidget {
     final c = context.colors;
     final activeApp = ref.watch(activeAppProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final activeColor = activeApp == ActiveApp.healthify
-        ? (isDark ? AppColors.healthifyDark.primary : AppColors.healthifyLight.primary)
-        : c.primary;
+    final activeColor = switch (activeApp) {
+      ActiveApp.wealthify => c.primary,
+      ActiveApp.healthify => isDark
+          ? AppColors.healthifyDark.primary
+          : AppColors.healthifyLight.primary,
+      ActiveApp.fitness => AppColors.fitnessGradient.last,
+    };
     // deepPurple is a dark near-black tone in both light and dark palettes,
     // so the bar reads the same (and the icon color stays fixed) in either
     // theme instead of flipping to a stark white bar in dark mode.
     final items = [
       (icon: Icons.home_outlined, activeIcon: Icons.home, branchIndex: 0),
-      activeApp == ActiveApp.healthify
-          ? (icon: Icons.flag_outlined, activeIcon: Icons.flag, branchIndex: 1)
-          : (
-              icon: Icons.receipt_long_outlined,
-              activeIcon: Icons.receipt_long,
-              branchIndex: 1,
-            ),
+      switch (activeApp) {
+        ActiveApp.wealthify => (
+          icon: Icons.receipt_long_outlined,
+          activeIcon: Icons.receipt_long,
+          branchIndex: 1,
+        ),
+        ActiveApp.healthify => (
+          icon: Icons.flag_outlined,
+          activeIcon: Icons.flag,
+          branchIndex: 1,
+        ),
+        ActiveApp.fitness => (
+          icon: Icons.fitness_center_outlined,
+          activeIcon: Icons.fitness_center,
+          branchIndex: 1,
+        ),
+      },
       (icon: Icons.add_rounded, activeIcon: Icons.add_rounded, branchIndex: null),
       (icon: Icons.bar_chart_outlined, activeIcon: Icons.bar_chart, branchIndex: 2),
       (icon: Icons.person_outline, activeIcon: Icons.person, branchIndex: 3),

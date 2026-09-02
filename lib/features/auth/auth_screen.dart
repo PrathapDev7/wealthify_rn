@@ -2,10 +2,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/align_logo.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/gradient_scaffold.dart';
@@ -21,13 +21,20 @@ String errorMessage(Object? error) {
   return 'Something went wrong';
 }
 
-class AuthScreen extends ConsumerStatefulWidget {
+class AuthScreen extends StatelessWidget {
   const AuthScreen({super.key});
+
   @override
-  ConsumerState<AuthScreen> createState() => _AuthScreenState();
+  Widget build(BuildContext context) => const AlignTheme(child: _AuthBody());
 }
 
-class _AuthScreenState extends ConsumerState<AuthScreen> {
+class _AuthBody extends ConsumerStatefulWidget {
+  const _AuthBody();
+  @override
+  ConsumerState<_AuthBody> createState() => _AuthBodyState();
+}
+
+class _AuthBodyState extends ConsumerState<_AuthBody> {
   bool _isRegister = false;
   bool _obscure = true;
   final _mobile = TextEditingController();
@@ -85,32 +92,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         child: Column(
           children: [
             const SizedBox(height: AppSpacing.xl4),
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                    colors: [c.primaryGradientStart, c.primaryGradientEnd]),
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-                boxShadow: AppShadows.primaryGlow,
-              ),
-              child: const Center(
-                child: Text('₹',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 30,
-                        fontWeight: FontWeight.w800)),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(_isRegister ? 'Get Started with Wealthify' : 'Welcome back',
+            const AlignLogo(markSize: 76, fontSize: 24),
+            const SizedBox(height: AppSpacing.xl2),
+            Text(_isRegister ? 'Create your Align account' : 'Welcome back',
                 textAlign: TextAlign.center,
                 style: AppText.titleLg.copyWith(color: c.text)),
             const SizedBox(height: AppSpacing.xs),
             Text(
               _isRegister
-                  ? 'Create your secure wallet in just a few steps.'
-                  : 'Log in to keep your finances on track.',
+                  ? 'Money, health and fitness — tracked in one place.'
+                  : 'Log in to keep everything in balance.',
               textAlign: TextAlign.center,
               style: AppText.body.copyWith(color: c.textMuted),
             ),

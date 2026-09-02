@@ -12,6 +12,9 @@ abstract class AppTheme {
       _build(AppColors.healthifyLight, Brightness.light);
   static ThemeData healthifyDark() =>
       _build(AppColors.healthifyDark, Brightness.dark);
+  static ThemeData alignLight() =>
+      _build(AppColors.alignLight, Brightness.light);
+  static ThemeData alignDark() => _build(AppColors.alignDark, Brightness.dark);
 
   static ThemeData _build(AppColors c, Brightness brightness) {
     final scheme = ColorScheme.fromSeed(
@@ -61,6 +64,24 @@ class HealthifyTheme extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Theme(
       data: isDark ? AppTheme.healthifyDark() : AppTheme.healthifyLight(),
+      child: child,
+    );
+  }
+}
+
+/// Swaps in the Align brand palette (matching the ambient light/dark
+/// brightness) for its subtree — the launch surfaces: splash, onboarding and
+/// auth. The Wealthify and Healthify tab palettes are unaffected.
+class AlignTheme extends StatelessWidget {
+  const AlignTheme({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Theme(
+      data: isDark ? AppTheme.alignDark() : AppTheme.alignLight(),
       child: child,
     );
   }

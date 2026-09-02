@@ -559,7 +559,7 @@ class AccountScreen extends ConsumerWidget {
         backgroundColor: c.surface,
         title: Text('About', style: AppText.subtitle.copyWith(color: c.text)),
         content: Text(
-          'Wealthify v1.0',
+          'Align v1.0',
           style: AppText.body.copyWith(color: c.text),
         ),
         actions: [

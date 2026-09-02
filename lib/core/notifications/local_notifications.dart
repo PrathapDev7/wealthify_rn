@@ -105,7 +105,7 @@ class LocalNotifications {
       color: const Color(0xFF1B8855),
     );
     // Force foreground presentation on iOS/macOS (show the banner, play the
-    // sound, and update the badge even when Wealthify is the active app).
+    // sound, and update the badge even when Align is the active app).
     const darwin = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
@@ -122,7 +122,7 @@ class LocalNotifications {
       await _plugin.cancelAll();
       await _plugin.zonedSchedule(
         id: _dailyId,
-        title: 'Wealthify',
+        title: 'Align',
         body: "Don't forget to log today's spending.",
         scheduledDate: _nextInstanceOf(hour, minute),
         notificationDetails:
@@ -151,7 +151,7 @@ class LocalNotifications {
     try {
       await _plugin.show(
         id: _testId,
-        title: 'Wealthify',
+        title: 'Align',
         body: 'This is a test reminder.',
         notificationDetails: _details(channelId: 'test', channelName: 'Test'),
       );

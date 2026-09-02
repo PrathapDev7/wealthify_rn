@@ -14,20 +14,20 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       overrides: [prefsProvider.overrideWithValue(prefs)],
-      child: const WealthifyApp(),
+      child: const AlignApp(),
     ),
   );
 }
 
-class WealthifyApp extends ConsumerWidget {
-  const WealthifyApp({super.key});
+class AlignApp extends ConsumerWidget {
+  const AlignApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(themeControllerProvider);
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
-      title: 'Wealthify',
+      title: 'Align',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),

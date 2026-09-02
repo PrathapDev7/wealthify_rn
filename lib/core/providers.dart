@@ -44,8 +44,12 @@ class DataRefreshNotifier extends Notifier<int> {
 }
 
 /// Which app the Home tab's top switcher currently shows: the finance app
-/// (Wealthify) or the calorie tracker (Healthify).
-enum ActiveApp { wealthify, healthify }
+/// (Wealthify), the calorie tracker (Healthify) or Fitness.
+///
+/// Every `switch` on this enum is exhaustive on purpose — adding a fourth app
+/// should break the build at each surface that has to account for it rather
+/// than quietly falling through to whichever mode happens to be last.
+enum ActiveApp { wealthify, healthify, fitness }
 
 final activeAppProvider = NotifierProvider<ActiveAppController, ActiveApp>(
   ActiveAppController.new,

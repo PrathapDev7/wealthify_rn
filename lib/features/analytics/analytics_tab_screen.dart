@@ -9,11 +9,12 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/widgets.dart';
 import '../calories/calorie_history_screen.dart';
+import '../fitness/fitness_screen.dart';
 import 'analytics_screen.dart';
 
 /// Body for the bottom-nav "Analytics" tab. Renders the Wealthify
-/// [AnalyticsScreen] or the Healthify Statistics view depending on which
-/// app is active, so both apps share the same tab slot.
+/// [AnalyticsScreen], the Healthify Statistics view or the Fitness equivalent
+/// depending on which app is active, so all three share the same tab slot.
 class AnalyticsTabScreen extends ConsumerWidget {
   const AnalyticsTabScreen({super.key});
 
@@ -21,6 +22,12 @@ class AnalyticsTabScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeApp = ref.watch(activeAppProvider);
     if (activeApp == ActiveApp.wealthify) return const AnalyticsScreen();
+    if (activeApp == ActiveApp.fitness) {
+      return const FitnessPlaceholder(
+        title: 'Fitness stats',
+        message: 'Training volume and trends will show up here.',
+      );
+    }
 
     return HealthifyTheme(
       child: Builder(

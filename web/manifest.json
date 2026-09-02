@@ -1,11 +1,11 @@
 {
-    "name": "wealthify",
-    "short_name": "wealthify",
+    "name": "Align",
+    "short_name": "Align",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Wealthify - personal finance tracker",
+    "background_color": "#0B1122",
+    "theme_color": "#0B1122",
+    "description": "Align - your life, in balance.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

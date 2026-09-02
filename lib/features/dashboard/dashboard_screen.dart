@@ -21,6 +21,7 @@ import '../../data/repositories/transactions_repository.dart';
 import '../../data/repositories/wallets_repository.dart';
 import '../preferences/preferences_controller.dart';
 import '../calories/calorie_screen.dart';
+import '../fitness/fitness_screen.dart';
 import '../wallets/widgets/home_wallet_card.dart';
 import '../wallets/widgets/wallet_card_stack.dart';
 
@@ -48,8 +49,8 @@ StatsModel _statsForWallet(StatsModel stats, String walletId) {
   );
 }
 
-/// Home tab root: a persistent Wealthify/Healthify switcher pinned above
-/// either the finance dashboard or the calorie tracker.
+/// Home tab root: a persistent Wealthify/Healthify/Fitness switcher pinned
+/// above the finance dashboard, the calorie tracker or the fitness home.
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
@@ -68,6 +69,14 @@ class DashboardScreen extends ConsumerWidget {
         onChanged: (app) => ref.read(activeAppProvider.notifier).set(app),
       ),
     );
+    if (activeApp == ActiveApp.fitness) {
+      return Column(
+        children: [
+          switcher,
+          const Expanded(child: FitnessHome()),
+        ],
+      );
+    }
     if (activeApp == ActiveApp.healthify) {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       return Column(

@@ -18,7 +18,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [prefsProvider.overrideWithValue(prefs)],
-        child: const WealthifyApp(),
+        child: const AlignApp(),
       ),
     );
     await tester.pump();

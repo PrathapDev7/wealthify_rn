@@ -1,5 +1,5 @@
 name: wealthify
-description: "Wealthify - personal finance tracker"
+description: "Align - your life, in balance."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -35,17 +35,19 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^3.3.1
-  go_router: ^17.3.0
+  go_router: ^18.0.0
   dio: ^5.9.2
-  flutter_secure_storage: ^10.3.1
+  flutter_secure_storage: ^11.0.0
   shared_preferences: ^2.5.5
   google_fonts: ^8.1.0
   fl_chart: ^1.2.0
-  flutter_svg: ^2.3.0
   intl: ^0.20.2
   json_annotation: ^4.12.0
-  cached_network_image: ^3.4.1
   flutter_animate: ^4.5.2
+  # Held below 3.3.1: from there lottie needs archive ^4, but excel (used by the
+  # report export) pins archive ^3, so the two cannot co-exist. 3.3.0 renders
+  # plain-JSON compositions identically — archive is only used for .lottie zips.
+  lottie: ^3.3.0
   image_picker: ^1.2.2
   local_auth: ^3.0.1
   flutter_local_notifications: ^22.0.0
@@ -73,23 +75,28 @@ dev_dependencies:
   # splash still works without the runtime package. Re-add temporarily only if
   # you need to regenerate: dart run flutter_native_splash:create
 
-# App launcher icons — regenerate with: dart run flutter_launcher_icons
+# App launcher icons. `python tool/gen_align_brand.py` already writes every
+# android/ios/web icon directly; this config only exists so that re-running
+# `dart run flutter_launcher_icons` produces the same result instead of
+# overwriting them with something different. Both sources below are generated
+# by that script — a square opaque icon (iOS forbids alpha) and a foreground
+# padded for the adaptive-icon safe zone.
 flutter_launcher_icons:
-  image_path: "assets/images/icon-purple.png"
+  image_path: "tool/brand/align-icon-square.png"
   android: true
   ios: true
   remove_alpha_ios: true
   min_sdk_android: 21
-  adaptive_icon_background: "#1EB583"
-  adaptive_icon_foreground: "assets/images/icon-purple.png"
+  adaptive_icon_background: "#0B1122"
+  adaptive_icon_foreground: "tool/brand/align-adaptive-fg.png"
 
 # Native splash — regenerate with: dart run flutter_native_splash:create
 flutter_native_splash:
-  color: "#1EB583"
-  image: "assets/img/logo/splash.png"
+  color: "#0B1122"
+  image: "tool/brand/align-splash.png"
   android_12:
-    color: "#1EB583"
-    image: "assets/img/logo/splash.png"
+    color: "#0B1122"
+    image: "tool/brand/align-splash.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -109,6 +116,7 @@ flutter:
     - assets/wealthify/glyph_256/
     - assets/wealthify/tile_128/
     - assets/templates/
+    - assets/lottie/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

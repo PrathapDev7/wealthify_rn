@@ -201,6 +201,7 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
     }
 
     final mealGroups = <Widget>[
+      const SizedBox(height: AppSpacing.md),
       const SectionHeader("Today's Meals"),
       const SizedBox(height: AppSpacing.md),
       if (_loading)

@@ -61,7 +61,7 @@ class _AppLockGateState extends ConsumerState<AppLockGate>
     _authenticating = true;
     try {
       final ok = await _auth.authenticate(
-        localizedReason: 'Unlock Wealthify',
+        localizedReason: 'Unlock Align',
         persistAcrossBackgrounding: true,
       );
       if (ok && mounted) setState(() => _locked = false);
@@ -102,7 +102,7 @@ class _AppLockGateState extends ConsumerState<AppLockGate>
                           color: Colors.white, size: 32),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    Text('Wealthify is locked',
+                    Text('Align is locked',
                         style: AppText.subtitle.copyWith(color: c.text)),
                     const SizedBox(height: AppSpacing.xl2),
                     Padding(
