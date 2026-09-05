@@ -12,7 +12,6 @@ import '../../data/repositories/workout_repository.dart';
 import 'fitness_stats_screen.dart';
 import 'workout/workout_history_screen.dart';
 import 'workout/workout_session_detail_screen.dart';
-import 'workout/workout_session_screen.dart';
 import 'workout/workout_widgets.dart';
 
 /// Fitness home, laid out like Healthify's: the week's dates across the top of
@@ -40,7 +39,6 @@ class _FitnessHomeScreenState extends ConsumerState<FitnessHomeScreen> {
   /// out of this week", so both ranges are wanted at once.
   WorkoutStats _day = const WorkoutStats();
   WorkoutStats _week = const WorkoutStats();
-  WorkoutSession? _activeSession;
   bool _loading = true;
 
   DateTime get _dayStart =>
@@ -66,13 +64,11 @@ class _FitnessHomeScreenState extends ConsumerState<FitnessHomeScreen> {
       final results = await Future.wait([
         repo.workoutStats(from: day, to: day.add(const Duration(days: 1))),
         repo.workoutStats(from: week, to: week.add(const Duration(days: 7))),
-        repo.activeSession(),
       ]);
       if (!mounted) return;
       setState(() {
-        _day = results[0] as WorkoutStats;
-        _week = results[1] as WorkoutStats;
-        _activeSession = results[2] as WorkoutSession?;
+        _day = results[0];
+        _week = results[1];
       });
     } catch (e) {
       if (mounted) showAppSnack(context, e.toString(), error: true);
@@ -88,13 +84,6 @@ class _FitnessHomeScreenState extends ConsumerState<FitnessHomeScreen> {
 
   void _moveDate(int days) =>
       _selectDate(_selectedDate.add(Duration(days: days)));
-
-  Future<void> _resume() async {
-    final session = _activeSession;
-    if (session == null) return;
-    await pushFitness<void>(context, WorkoutSessionScreen(session: session));
-    if (mounted) await _fetch();
-  }
 
   Future<void> _openSession(WorkoutSessionRow row) async {
     await pushFitness<bool>(
@@ -112,7 +101,6 @@ class _FitnessHomeScreenState extends ConsumerState<FitnessHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final session = _activeSession;
     final wrapper = widget.heroWrapper;
     // On the coloured panel the date picker has to read against the palette,
     // not against the background it would otherwise sit on.
@@ -140,10 +128,6 @@ class _FitnessHomeScreenState extends ConsumerState<FitnessHomeScreen> {
             onGradient: onHero,
           ),
           const SizedBox(height: AppSpacing.xl),
-          if (session != null) ...[
-            _ResumeCard(session: session, onTap: _resume),
-            const SizedBox(height: AppSpacing.md),
-          ],
           _TrainingHeroCard(
             totals: _day.totals,
             onTap: () => pushFitness<void>(context, const FitnessStatsScreen()),
@@ -209,55 +193,6 @@ class _FitnessHomeScreenState extends ConsumerState<FitnessHomeScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// The amber "you left a workout running" card, the one thing on this page
-/// with no Healthify counterpart — it only appears while a session is live.
-class _ResumeCard extends StatelessWidget {
-  const _ResumeCard({required this.session, required this.onTap});
-
-  final WorkoutSession session;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: c.warning.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: c.warning.withValues(alpha: 0.5)),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.play_circle_fill_rounded, color: c.warning, size: 28),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Workout in progress',
-                    style: AppText.bodyMedium.copyWith(color: c.text),
-                  ),
-                  Text(
-                    session.routineName.isEmpty
-                        ? session.planName
-                        : session.routineName,
-                    style: AppText.caption.copyWith(color: c.textSubtle),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded, color: c.warning),
-          ],
-        ),
       ),
     );
   }

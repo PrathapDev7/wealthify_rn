@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/audio/workout_sounds.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
@@ -60,10 +61,13 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     super.initState();
     _exerciseIndex = _firstUnfinishedExercise();
     _ticker = Timer.periodic(const Duration(seconds: 1), _tick);
+    _sounds.play(WorkoutCue.start);
     ref
         .read(exerciseAnimationCacheProvider)
         .prefetch(_session.exercises.map((e) => e.catalogId));
   }
+
+  WorkoutSounds get _sounds => ref.read(workoutSoundsProvider);
 
   @override
   void dispose() {
@@ -77,7 +81,13 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
       _elapsed++;
       final rest = _restRemaining;
       if (rest != null) {
-        _restRemaining = rest <= 1 ? null : rest - 1;
+        if (rest <= 1) {
+          // The one cue the user is most likely to be looking away for.
+          _restRemaining = null;
+          _sounds.play(WorkoutCue.restOver);
+        } else {
+          _restRemaining = rest - 1;
+        }
       } else {
         _setElapsed++;
       }
@@ -264,6 +274,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     final index = _currentSetIndex;
     final set = exercise.sets[index];
     _replaceSet(_exerciseIndex, index, set.copyWith(completed: true));
+    _sounds.play(WorkoutCue.setDone);
 
     try {
       await _repo.updateSessionSet(
@@ -313,6 +324,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
   Future<void> _finish() async {
     if (_finishing) return;
     setState(() => _finishing = true);
+    _sounds.play(WorkoutCue.workoutDone);
     try {
       final result = await _repo.finishSession(
         _session.id,
