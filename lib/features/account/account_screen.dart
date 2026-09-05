@@ -29,7 +29,12 @@ class _Row {
 }
 
 class AccountScreen extends ConsumerWidget {
-  const AccountScreen({super.key});
+  const AccountScreen({super.key, this.showFinanceLinks = true});
+
+  /// False for the Healthify/Fitness account tab, where the identity and
+  /// settings are shared but Wealthify's finance-specific links (Premium,
+  /// Budgets, Wallets, Reports…) do not belong.
+  final bool showFinanceLinks;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -116,93 +121,97 @@ class AccountScreen extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
-        GestureDetector(
-          onTap: () => context.push(Routes.premium),
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [c.primaryGradientStart, c.primaryGradientEnd],
-              ),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              boxShadow: AppShadows.primaryGlow,
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.diamond_outlined, color: Colors.white),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Premium Account',
-                        style: AppText.subtitle.copyWith(color: Colors.white),
-                      ),
-                      Text(
-                        'Unlock advanced insights',
-                        style: AppText.caption.copyWith(color: Colors.white70),
-                      ),
-                    ],
-                  ),
+        if (showFinanceLinks) ...[
+          const SizedBox(height: AppSpacing.md),
+          GestureDetector(
+            onTap: () => context.push(Routes.premium),
+            child: Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [c.primaryGradientStart, c.primaryGradientEnd],
                 ),
-                const Icon(Icons.chevron_right, color: Colors.white),
-              ],
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                boxShadow: AppShadows.primaryGlow,
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.diamond_outlined, color: Colors.white),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Premium Account',
+                          style:
+                              AppText.subtitle.copyWith(color: Colors.white),
+                        ),
+                        Text(
+                          'Unlock advanced insights',
+                          style: AppText.caption
+                              .copyWith(color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.white),
+                ],
+              ),
             ),
           ),
-        ),
-        _section(c, 'Money'),
-        _group(c, [
-          _Row(
-            Icons.pie_chart_outline,
-            'Budgets',
-            () => context.push(Routes.budgets),
-          ),
-          _Row(
-            Icons.bookmark_border,
-            'Wishlist',
-            () => context.push(Routes.wishlist),
-          ),
-          _Row(
-            Icons.monitor_heart_outlined,
-            'Calorie Tracking',
-            () => context.push(Routes.calories),
-          ),
-          _Row(
-            Icons.sell_outlined,
-            'Manage Categories',
-            () => context.push(Routes.manageCategories),
-          ),
-          _Row(
-            Icons.autorenew,
-            'Recurring',
-            () => context.push(Routes.recurring),
-          ),
-          _Row(
-            Icons.flag_outlined,
-            'Savings Goals',
-            () => context.push(Routes.goals),
-          ),
-          _Row(
-            Icons.account_balance_wallet_outlined,
-            'Wallets',
-            () => context.push(Routes.wallets),
-          ),
-        ]),
-        _section(c, 'Reports & Insights'),
-        _group(c, [
-          _Row(
-            Icons.insights_outlined,
-            'Insights',
-            () => context.push(Routes.insights),
-          ),
-          _Row(
-            Icons.description_outlined,
-            'Reports & Export',
-            () => context.push(Routes.reports),
-          ),
-        ]),
+          _section(c, 'Money'),
+          _group(c, [
+            _Row(
+              Icons.pie_chart_outline,
+              'Budgets',
+              () => context.push(Routes.budgets),
+            ),
+            _Row(
+              Icons.bookmark_border,
+              'Wishlist',
+              () => context.push(Routes.wishlist),
+            ),
+            _Row(
+              Icons.monitor_heart_outlined,
+              'Calorie Tracking',
+              () => context.push(Routes.calories),
+            ),
+            _Row(
+              Icons.sell_outlined,
+              'Manage Categories',
+              () => context.push(Routes.manageCategories),
+            ),
+            _Row(
+              Icons.autorenew,
+              'Recurring',
+              () => context.push(Routes.recurring),
+            ),
+            _Row(
+              Icons.flag_outlined,
+              'Savings Goals',
+              () => context.push(Routes.goals),
+            ),
+            _Row(
+              Icons.account_balance_wallet_outlined,
+              'Wallets',
+              () => context.push(Routes.wallets),
+            ),
+          ]),
+          _section(c, 'Reports & Insights'),
+          _group(c, [
+            _Row(
+              Icons.insights_outlined,
+              'Insights',
+              () => context.push(Routes.insights),
+            ),
+            _Row(
+              Icons.description_outlined,
+              'Reports & Export',
+              () => context.push(Routes.reports),
+            ),
+          ]),
+        ],
         _section(c, 'Account Settings'),
         _group(c, [
           _Row(

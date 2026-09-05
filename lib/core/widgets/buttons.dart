@@ -20,6 +20,9 @@ class PillButton extends StatelessWidget {
     this.expand = true,
     this.loadingLabel,
     this.gradientColors,
+    this.radius = AppRadius.pill,
+    this.labelStyle,
+    this.height = 52,
   });
 
   final String label;
@@ -28,6 +31,20 @@ class PillButton extends StatelessWidget {
   final bool loading;
   final Widget? leading;
   final bool expand;
+
+  /// Fully round by default; override for the buttons that should read as a
+  /// rounded box instead, like the ones sitting under an empty state.
+  final double radius;
+
+  /// Overrides the bold [AppText.button] the label is set in — pass a whole
+  /// style rather than a weight, since google_fonts drops a `copyWith`
+  /// fontWeight on the way to the font file. Its color is always the
+  /// variant's foreground.
+  final TextStyle? labelStyle;
+
+  /// Full-height CTA by default; the lighter buttons that sit inside a screen
+  /// (under an empty state, say) run shorter.
+  final double height;
 
   /// Overrides the primary-variant gradient (defaults to
   /// `[c.primaryDark, c.primaryDarker]`) — lets a caller in an ambient theme
@@ -89,7 +106,7 @@ class PillButton extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppText.button.copyWith(color: fg),
+                  style: (labelStyle ?? AppText.button).copyWith(color: fg),
                 ),
               ),
             ],
@@ -101,8 +118,12 @@ class PillButton extends StatelessWidget {
         onTap: disabled ? null : onPressed,
         child: Container(
           width: expand ? double.infinity : null,
-          height: 52,
-          alignment: Alignment.center,
+          height: height,
+          // Only while expanding: a Container with an alignment wraps its
+          // child in an Align, which fills the space it is given — which kept
+          // `expand: false` full width anyway. Without it the Row's own
+          // mainAxisSize.min is what sizes the button, so it hugs its label.
+          alignment: expand ? Alignment.center : null,
           padding: expand
               ? null
               : const EdgeInsets.symmetric(horizontal: AppSpacing.xl2),
@@ -115,7 +136,7 @@ class PillButton extends StatelessWidget {
               PillVariant.secondary => c.surface,
               PillVariant.ghost => Colors.transparent,
             },
-            borderRadius: BorderRadius.circular(AppRadius.pill),
+            borderRadius: BorderRadius.circular(radius),
             border: variant == PillVariant.secondary
                 ? Border.all(color: c.border)
                 : null,

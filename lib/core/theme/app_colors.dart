@@ -464,15 +464,139 @@ class AppColors extends ThemeExtension<AppColors> {
     category: _category,
   );
 
-  /// Brand gradient for the Fitness segment of the app switcher.
+  /// Fitness (workout) palette — a graphite ground with near-black elevated
+  /// cards and a single electric-blue accent, matching the workout reference.
+  /// Applied to the workout surfaces via [FitnessTheme].
   ///
-  /// Fitness has no full palette yet: `fitnessLight`/`fitnessDark` land with
-  /// its screens, and until then the switcher pill is the only surface that
-  /// needs the brand hue. Indigo reads on both the light and dark
-  /// `surfaceMuted` bar, so one pair covers both themes for now.
+  /// Blue rather than green: green is Wealthify's brand color, so Fitness
+  /// gets its own hue to stay visually distinct in the app switcher and tab.
+  ///
+  /// The design is dark-first: the reference is black pills floating on a
+  /// graphite page, and the contrast between `surface` and `background` is the
+  /// whole visual system. The light pair below inverts that relationship
+  /// (white cards on a cool grey page) rather than trying to reproduce it, so
+  /// a user on a light device still gets a legible screen.
+  static const AppColors fitnessLight = AppColors(
+    primary: Color(0xFF2E7DF7),
+    primaryDark: Color(0xFF1E63D6),
+    primaryDarker: Color(0xFF154AA8),
+    primarySoft: Color(0xFFE3EDFE),
+    primarySoftStrong: Color(0xFFC7DBFC),
+    primaryGradientStart: Color(0xFF5FA0FA),
+    primaryGradientEnd: Color(0xFF2E7DF7),
+    deepPurple: Color(0xFF101114),
+    accent: Color(0xFF2E7DF7),
+    accentDark: Color(0xFF1E63D6),
+    accentSoft: Color(0xFFE3EDFE),
+    negative: Color(0xFFE5484D),
+    negativeDark: Color(0xFFC93B40),
+    negativeSoft: Color(0xFFFDECEC),
+    warning: Color(0xFFE08A28),
+    warningSoft: Color(0xFFFCF0DF),
+    info: Color(0xFF3B82F6),
+    infoSoft: Color(0xFFE6EEFE),
+    pink: Color(0xFFD946EF),
+    pinkSoft: Color(0xFFFBEAFE),
+    cyan: Color(0xFF06B6D4),
+    blue: Color(0xFF3B82F6),
+    background: Color(0xFFF3F4F6),
+    surface: Color(0xFFFFFFFF),
+    surfaceMuted: Color(0xFFE9EBEF),
+    surfaceSoft: Color(0xFFF3F4F6),
+    surfaceLifted: Color(0xDBFFFFFF),
+    surfaceElevated: Color(0xFFFFFFFF),
+    overlay: Color(0x73101114),
+    text: Color(0xFF101114),
+    textStrong: Color(0xFF000000),
+    textSecondary: Color(0xFF4B5058),
+    textBody: Color(0xFF5B616B),
+    textMuted: Color(0xFF6B717B),
+    textSubtle: Color(0xFF878D97),
+    textPlaceholder: Color(0xFFB3B8C0),
+    textInverse: Color(0xFFFFFFFF),
+    textOnPrimary: Color(0xFFFFFFFF),
+    border: Color(0xFFE0E3E8),
+    borderStrong: Color(0xFFCBD0D8),
+    divider: Color(0xB8E0E3E8),
+    fab: Color(0xFF2E7DF7),
+    fabRing: Color(0xF2FFFFFF),
+    lavenderWashTop: Color(0xFFEDEFF3),
+    lavenderWashTopSoft: Color(0xFFF1F2F6),
+    lavenderWashMid: Color(0xFFF3F4F6),
+    lavenderWashBottom: Color(0xFFF3F4F6),
+    inputBackground: Color(0xFFFFFFFF),
+    inputBorder: Color(0xFFE0E3E8),
+    category: _category,
+  );
+
+  static const AppColors fitnessDark = AppColors(
+    primary: Color(0xFF5B9DFF),
+    primaryDark: Color(0xFF3B82F6),
+    primaryDarker: Color(0xFF2E7DF7),
+    // The filled ground behind an active set row: blue enough to read as
+    // "this one", dark enough that white numerals still sit on it.
+    primarySoft: Color(0xFF122A4A),
+    primarySoftStrong: Color(0xFF1A3A63),
+    primaryGradientStart: Color(0xFF7FB6FF),
+    primaryGradientEnd: Color(0xFF4A93FF),
+    deepPurple: Color(0xFF000000),
+    accent: Color(0xFF5B9DFF),
+    accentDark: Color(0xFF3B82F6),
+    accentSoft: Color(0xFF122A4A),
+    negative: Color(0xFFFF5C5C),
+    negativeDark: Color(0xFFE5484D),
+    negativeSoft: Color(0xFF381718),
+    // The rest state owns amber outright — the session bar turns this color
+    // the moment a set is ticked off, so it has to be as loud as the blue.
+    warning: Color(0xFFF0A94B),
+    warningSoft: Color(0xFF3A2A12),
+    info: Color(0xFF4F9DFF),
+    infoSoft: Color(0xFF13233A),
+    pink: Color(0xFFE879F9),
+    pinkSoft: Color(0xFF2A163A),
+    cyan: Color(0xFF22D3EE),
+    blue: Color(0xFF4F9DFF),
+    background: Color(0xFF26272A),
+    // Deliberately *darker* than the background: the reference's cards, pills
+    // and chips are near-black shapes cut out of a graphite page, so elevation
+    // here reads as depth rather than as lift.
+    surface: Color(0xFF0E0E10),
+    surfaceMuted: Color(0xFF1A1B1D),
+    surfaceSoft: Color(0xFF202124),
+    surfaceLifted: Color(0xDB0E0E10),
+    surfaceElevated: Color(0xFF303134),
+    overlay: Color(0xB3000000),
+    text: Color(0xFFFFFFFF),
+    textStrong: Color(0xFFFFFFFF),
+    textSecondary: Color(0xFFA8AAAE),
+    textBody: Color(0xFF9A9CA1),
+    textMuted: Color(0xFF9A9CA1),
+    textSubtle: Color(0xFF7C7E83),
+    textPlaceholder: Color(0xFF5A5C60),
+    textInverse: Color(0xFFFFFFFF),
+    textOnPrimary: Color(0xFFFFFFFF),
+    border: Color(0xFF303236),
+    borderStrong: Color(0xFF3D4045),
+    divider: Color(0x80303236),
+    fab: Color(0xFF5B9DFF),
+    fabRing: Color(0xE626272A),
+    lavenderWashTop: Color(0xFF202124),
+    lavenderWashTopSoft: Color(0xFF232427),
+    lavenderWashMid: Color(0xFF26272A),
+    lavenderWashBottom: Color(0xFF26272A),
+    inputBackground: Color(0xFF0E0E10),
+    inputBorder: Color(0xFF303236),
+    category: _category,
+  );
+
+  /// Brand gradient for the Fitness segment of the app switcher, and for the
+  /// blue action bars inside the workout screens. Kept as a bare constant (not
+  /// a palette field) because the switcher pill renders *outside*
+  /// [FitnessTheme] — it sits in the ambient Wealthify theme and still has to
+  /// show the Fitness hue.
   static const List<Color> fitnessGradient = [
-    Color(0xFF7C5CFF),
-    Color(0xFF4F2FE0),
+    Color(0xFF5B9DFF),
+    Color(0xFF2E7DF7),
   ];
 
   /// Resolve a category brand color by name, defaulting to `other`.

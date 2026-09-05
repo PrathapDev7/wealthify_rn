@@ -220,7 +220,7 @@ class _HealthGoalsScreenState extends ConsumerState<HealthGoalsScreen> {
         children: [
           ScreenHeader(
             title: 'Goals',
-            onBack: () => context.go(Routes.dashboard),
+            onBack: () => context.go(Routes.healthifyHome),
           ),
           content,
         ],

@@ -138,12 +138,17 @@ class EmptyState extends StatelessWidget {
     required this.title,
     this.message,
     this.action,
+    this.image,
   });
 
   final IconData icon;
   final String title;
   final String? message;
   final Widget? action;
+
+  /// A custom illustration to show instead of [icon] — e.g. a cropped
+  /// reference-design PNG, for the states where a plain icon undersells it.
+  final Widget? image;
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +159,7 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: c.textSubtle),
+            image ?? Icon(icon, size: 40, color: c.textSubtle),
             const SizedBox(height: AppSpacing.md),
             Text(title,
                 textAlign: TextAlign.center,

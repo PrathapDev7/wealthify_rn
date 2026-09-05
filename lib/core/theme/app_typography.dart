@@ -12,11 +12,17 @@ abstract class AppText {
   static TextStyle get display => _p(30, FontWeight.w800);
   static TextStyle get titleLg => _p(26, FontWeight.w800, height: 1.14);
   static TextStyle get title => _p(20, FontWeight.w700, height: 1.2);
+  /// [title] at a normal weight. A separate style rather than a
+  /// `copyWith(fontWeight:)` on it, which google_fonts silently ignores.
+  static TextStyle get titleRegular => _p(20, FontWeight.w400, height: 1.2);
   static TextStyle get screenTitle => _p(18, FontWeight.w600, height: 1.25);
   static TextStyle get subtitle => _p(16, FontWeight.w700);
   static TextStyle get body => _p(14, FontWeight.w400, height: 1.45);
   static TextStyle get bodyMedium => _p(14, FontWeight.w600);
   static TextStyle get bodyLarge => _p(16, FontWeight.w700, height: 1.4);
+  /// [bodyLarge] at a normal weight. A separate style rather than a
+  /// `copyWith(fontWeight:)` on it, which google_fonts silently ignores.
+  static TextStyle get bodyLargeRegular => _p(16, FontWeight.w400, height: 1.4);
   static TextStyle get bodyStrong => _p(14, FontWeight.w700);
   static TextStyle get bodySm => _p(12, FontWeight.w400, height: 1.4);
   static TextStyle get caption => _p(11, FontWeight.w500, height: 1.35);

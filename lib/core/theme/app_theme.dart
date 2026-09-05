@@ -15,6 +15,10 @@ abstract class AppTheme {
   static ThemeData alignLight() =>
       _build(AppColors.alignLight, Brightness.light);
   static ThemeData alignDark() => _build(AppColors.alignDark, Brightness.dark);
+  static ThemeData fitnessLight() =>
+      _build(AppColors.fitnessLight, Brightness.light);
+  static ThemeData fitnessDark() =>
+      _build(AppColors.fitnessDark, Brightness.dark);
 
   static ThemeData _build(AppColors c, Brightness brightness) {
     final scheme = ColorScheme.fromSeed(
@@ -64,6 +68,36 @@ class HealthifyTheme extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Theme(
       data: isDark ? AppTheme.healthifyDark() : AppTheme.healthifyLight(),
+      child: child,
+    );
+  }
+}
+
+/// Swaps in the Fitness brand palette for its subtree — the workout tab
+/// content and the standalone workout routes.
+///
+/// Unlike [HealthifyTheme] and [AlignTheme] this does *not* follow the ambient
+/// brightness by default. The workout reference is a dark design: a graphite
+/// page with black cards, a green accent and an amber rest state, and the
+/// light pair exists only so a light-mode user is not handed unreadable
+/// screens. Pass `followSystem: true` at a call site that should track the
+/// device instead.
+class FitnessTheme extends StatelessWidget {
+  const FitnessTheme({
+    super.key,
+    required this.child,
+    this.followSystem = false,
+  });
+
+  final Widget child;
+  final bool followSystem;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark =
+        !followSystem || Theme.of(context).brightness == Brightness.dark;
+    return Theme(
+      data: isDark ? AppTheme.fitnessDark() : AppTheme.fitnessLight(),
       child: child,
     );
   }

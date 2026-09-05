@@ -14,14 +14,33 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/widgets.dart';
 import '../../data/models/calorie_entry.dart';
 import '../../data/models/wishlist_item_model.dart';
+import '../../data/repositories/exercise_catalog_cache.dart';
 import '../../data/repositories/wishlist_repository.dart';
+import '../fitness/workout/workout_history_screen.dart';
+import '../fitness/workout/workout_plan_screen.dart';
+import '../fitness/workout/workout_widgets.dart';
 
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.navigationShell});
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  @override
+  void initState() {
+    super.initState();
+    // The exercise catalog is reference data the picker filters locally, so it
+    // is pulled once here — the first screen behind the login — rather than a
+    // page at a time while the user waits on the picker. Deliberately not
+    // awaited: nothing on this screen needs it.
+    ref.read(exerciseCatalogCacheProvider).ensureLoaded();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final c = context.colors;
     return Scaffold(
       extendBody: true,
@@ -40,10 +59,10 @@ class AppShell extends ConsumerWidget {
             stops: const [0.0, 0.5, 0.75, 1.0],
           ),
         ),
-        child: SafeArea(bottom: false, child: navigationShell),
+        child: SafeArea(bottom: false, child: widget.navigationShell),
       ),
       bottomNavigationBar: _NavBar(
-        shell: navigationShell,
+        shell: widget.navigationShell,
         onAdd: () => _showAddSheet(context, ref),
       ),
     );
@@ -163,6 +182,30 @@ class AppShell extends ConsumerWidget {
                     onTap: () {
                       Navigator.pop(sheetContext);
                       _quickLogWeight(context, ref);
+                    },
+                  ),
+                ],
+                if (activeApp == ActiveApp.fitness) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _QuickAddCard(
+                    icon: Icons.fitness_center_rounded,
+                    color: AppColors.fitnessDark.primary,
+                    label: 'Start a Workout',
+                    subtitle: 'Pick a routine and get going',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      pushFitness<void>(context, const WorkoutPlanScreen());
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _QuickAddCard(
+                    icon: Icons.history_rounded,
+                    color: AppColors.fitnessDark.info,
+                    label: 'Workout History',
+                    subtitle: 'Look back at what you have trained',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      pushFitness<void>(context, const WorkoutHistoryScreen());
                     },
                   ),
                 ],
@@ -389,33 +432,56 @@ class _NavBar extends ConsumerWidget {
       ActiveApp.healthify => isDark
           ? AppColors.healthifyDark.primary
           : AppColors.healthifyLight.primary,
-      ActiveApp.fitness => AppColors.fitnessGradient.last,
+      // The bar is a near-black pill, so the lighter end of the Fitness
+      // gradient is the one that reads on it.
+      ActiveApp.fitness => AppColors.fitnessDark.primary,
     };
     // deepPurple is a dark near-black tone in both light and dark palettes,
     // so the bar reads the same (and the icon color stays fixed) in either
     // theme instead of flipping to a stark white bar in dark mode.
+    //
+    // Each app owns its own 4 branches in app_router.dart (Home, Records,
+    // Stats, Account), in that fixed order, so the real branch index for a
+    // tab slot is the app's base offset plus the slot's position within it.
+    final appBase = switch (activeApp) {
+      ActiveApp.wealthify => 0,
+      ActiveApp.healthify => 4,
+      ActiveApp.fitness => 8,
+    };
     final items = [
-      (icon: Icons.home_outlined, activeIcon: Icons.home, branchIndex: 0),
+      (
+        icon: Icons.home_outlined,
+        activeIcon: Icons.home,
+        branchIndex: appBase + 0,
+      ),
       switch (activeApp) {
         ActiveApp.wealthify => (
           icon: Icons.receipt_long_outlined,
           activeIcon: Icons.receipt_long,
-          branchIndex: 1,
+          branchIndex: appBase + 1,
         ),
         ActiveApp.healthify => (
           icon: Icons.flag_outlined,
           activeIcon: Icons.flag,
-          branchIndex: 1,
+          branchIndex: appBase + 1,
         ),
         ActiveApp.fitness => (
           icon: Icons.fitness_center_outlined,
           activeIcon: Icons.fitness_center,
-          branchIndex: 1,
+          branchIndex: appBase + 1,
         ),
       },
       (icon: Icons.add_rounded, activeIcon: Icons.add_rounded, branchIndex: null),
-      (icon: Icons.bar_chart_outlined, activeIcon: Icons.bar_chart, branchIndex: 2),
-      (icon: Icons.person_outline, activeIcon: Icons.person, branchIndex: 3),
+      (
+        icon: Icons.bar_chart_outlined,
+        activeIcon: Icons.bar_chart,
+        branchIndex: appBase + 2,
+      ),
+      (
+        icon: Icons.person_outline,
+        activeIcon: Icons.person,
+        branchIndex: appBase + 3,
+      ),
     ];
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),

@@ -8,7 +8,6 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/app_card.dart';
-import '../../core/widgets/app_switcher.dart';
 import '../../core/widgets/buttons.dart';
 import '../../core/widgets/misc.dart';
 import '../../core/widgets/skeleton.dart';
@@ -20,10 +19,9 @@ import '../../data/repositories/budgets_repository.dart';
 import '../../data/repositories/transactions_repository.dart';
 import '../../data/repositories/wallets_repository.dart';
 import '../preferences/preferences_controller.dart';
-import '../calories/calorie_screen.dart';
-import '../fitness/fitness_screen.dart';
 import '../wallets/widgets/home_wallet_card.dart';
 import '../wallets/widgets/wallet_card_stack.dart';
+import 'app_home_switcher.dart';
 
 final dashboardDataProvider =
     FutureProvider.autoDispose<(StatsModel, BudgetModel)>((ref) async {
@@ -49,104 +47,17 @@ StatsModel _statsForWallet(StatsModel stats, String walletId) {
   );
 }
 
-/// Home tab root: a persistent Wealthify/Healthify/Fitness switcher pinned
-/// above the finance dashboard, the calorie tracker or the fitness home.
-class DashboardScreen extends ConsumerWidget {
+/// Home tab root for Wealthify: a persistent app switcher pinned above the
+/// finance dashboard.
+class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activeApp = ref.watch(activeAppProvider);
-    final switcher = Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.sm,
-      ),
-      child: AppSwitcher(
-        active: activeApp,
-        onChanged: (app) => ref.read(activeAppProvider.notifier).set(app),
-      ),
-    );
-    if (activeApp == ActiveApp.fitness) {
-      return Column(
-        children: [
-          switcher,
-          const Expanded(child: FitnessHome()),
-        ],
-      );
-    }
-    if (activeApp == ActiveApp.healthify) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
-      return Column(
-        children: [
-          Expanded(
-            child: HealthifyTheme(
-              child: CalorieScreen(
-                embedded: true,
-                heroWrapper: (ctx, hero) => _heroBackdrop(
-                  ctx,
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Theme(
-                        data: isDark ? AppTheme.dark() : AppTheme.light(),
-                        child: switcher,
-                      ),
-                      hero,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-    return _WealthifyDashboard(switcher: switcher);
-  }
-}
-
-/// Wraps [content] with a green gradient backdrop that bleeds up behind the
-/// status bar and peeks a little past [content]'s own bottom edge (so the
-/// wallet card's ghost stack layers stay backed by color). Sized purely off
-/// [content]'s natural height via top/bottom-relative Positioned — no guessed
-/// fixed height needed.
-Widget _heroBackdrop(BuildContext context, Widget content) {
-  final c = context.colors;
-  final topInset = MediaQuery.of(context).padding.top;
-  return Stack(
-    clipBehavior: Clip.none,
-    children: [
-      Positioned(
-        top: -topInset,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [c.primary, c.primaryDark, c.primaryDarker],
-            ),
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(AppRadius.xl2),
-              bottomRight: Radius.circular(AppRadius.xl2),
-            ),
-          ),
-        ),
-      ),
-      content,
-    ],
-  );
+  Widget build(BuildContext context) => const _WealthifyDashboard();
 }
 
 class _WealthifyDashboard extends ConsumerStatefulWidget {
-  const _WealthifyDashboard({required this.switcher});
-
-  final Widget switcher;
+  const _WealthifyDashboard();
 
   @override
   ConsumerState<_WealthifyDashboard> createState() =>
@@ -212,13 +123,13 @@ class _WealthifyDashboardState extends ConsumerState<_WealthifyDashboard>
     return async.when(
       loading: () => Column(
         children: [
-          _heroBackdrop(
+          heroBackdrop(
             context,
-            Column(
+            const Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                widget.switcher,
-                const _DashboardSkeletonHero(),
+                AppHomeSwitcher(),
+                _DashboardSkeletonHero(),
               ],
             ),
           ),
@@ -227,7 +138,7 @@ class _WealthifyDashboardState extends ConsumerState<_WealthifyDashboard>
       ),
       error: (e, _) => Column(
         children: [
-          widget.switcher,
+          const AppHomeSwitcher(),
           Expanded(
             child: Center(
               child: PillButton(
@@ -434,11 +345,11 @@ class _WealthifyDashboardState extends ConsumerState<_WealthifyDashboard>
 
         return Column(
           children: [
-            _heroBackdrop(
+            heroBackdrop(
               context,
               Column(
                 mainAxisSize: MainAxisSize.min,
-                children: [widget.switcher, heroContent],
+                children: [const AppHomeSwitcher(), heroContent],
               ),
             ),
             Expanded(
@@ -658,7 +569,6 @@ class _ActionPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
     return Material(
       color: const Color(0xFF2A2A2A),
       borderRadius: BorderRadius.circular(AppRadius.xs),

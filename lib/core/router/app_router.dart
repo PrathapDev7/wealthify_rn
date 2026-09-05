@@ -8,7 +8,7 @@ import '../../data/models/recurring_model.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/models/wallet_model.dart';
 import '../../features/account/account_screen.dart';
-import '../../features/analytics/analytics_tab_screen.dart';
+import '../../features/analytics/analytics_screen.dart';
 import '../../features/auth/auth_screen.dart';
 import '../../features/auth/session_controller.dart';
 import '../../features/auth/splash_screen.dart';
@@ -18,6 +18,10 @@ import '../../features/categories/edit_category_screen.dart';
 import '../../features/categories/manage_categories_screen.dart';
 import '../../features/categories/select_category_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
+import '../../features/dashboard/healthify_home_screen.dart';
+import '../../features/fitness/fitness_home_tab_screen.dart';
+import '../../features/fitness/fitness_stats_screen.dart';
+import '../../features/fitness/workout/workout_plan_screen.dart';
 import '../../features/goals/goal_detail_screen.dart';
 import '../../features/goals/goals_screen.dart';
 import '../../features/insights/insights_screen.dart';
@@ -27,6 +31,8 @@ import '../../features/preferences/preferences_screen.dart';
 import '../../features/premium/premium_screen.dart';
 import '../../features/calories/calorie_history_screen.dart';
 import '../../features/calories/calorie_screen.dart';
+import '../../features/calories/health_goals_screen.dart';
+import '../../features/calories/healthify_stats_screen.dart';
 import '../../features/recurring/edit_recurring_screen.dart';
 import '../../features/recurring/recurring_screen.dart';
 import '../../features/reports/reports_screen.dart';
@@ -34,7 +40,7 @@ import '../../features/security/security_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/transactions/add_transaction_screen.dart';
 import '../../features/transactions/transaction_detail_screen.dart';
-import '../../features/transactions/transactions_tab_screen.dart';
+import '../../features/transactions/transactions_screen.dart';
 import '../../features/wallets/edit_wallet_screen.dart';
 import '../../features/wallets/select_provider_screen.dart';
 import '../../features/wallets/wallets_screen.dart';
@@ -74,6 +80,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
         branches: [
+          // Wealthify
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -86,7 +93,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.transactions,
-                builder: (_, _) => const TransactionsTabScreen(),
+                builder: (_, _) => const TransactionsScreen(),
               ),
             ],
           ),
@@ -94,7 +101,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.analytics,
-                builder: (_, _) => const AnalyticsTabScreen(),
+                builder: (_, _) => const AnalyticsScreen(),
               ),
             ],
           ),
@@ -103,6 +110,81 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.account,
                 builder: (_, _) => const AccountScreen(),
+              ),
+            ],
+          ),
+          // Healthify
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.healthifyHome,
+                builder: (_, _) => const HealthifyHomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.healthifyGoals,
+                builder: (_, _) =>
+                    const HealthifyTheme(child: HealthGoalsScreen()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.healthifyStats,
+                builder: (_, _) =>
+                    const HealthifyTheme(child: HealthifyStatsScreen()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.healthifyAccount,
+                builder: (_, _) => const HealthifyTheme(
+                  child: AccountScreen(showFinanceLinks: false),
+                ),
+              ),
+            ],
+          ),
+          // Fitness
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.fitnessHome,
+                builder: (_, _) => const FitnessHomeTabScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.fitnessWorkout,
+                builder: (_, _) =>
+                    const FitnessTheme(child: WorkoutPlanScreen()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.fitnessStats,
+                builder: (_, _) => const FitnessTheme(
+                  child: FitnessStatsScreen(embedded: true),
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.fitnessAccount,
+                builder: (_, _) => const FitnessTheme(
+                  child: AccountScreen(showFinanceLinks: false),
+                ),
               ),
             ],
           ),
