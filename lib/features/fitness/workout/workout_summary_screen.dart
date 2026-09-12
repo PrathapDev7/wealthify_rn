@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/constants/env.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
@@ -173,6 +174,14 @@ class _SummaryExerciseCard extends StatelessWidget {
 
   final SessionExercise exercise;
 
+  /// A stored gif path resolved against the backend, or null when there is none.
+  String? _gifUrl(BuildContext context, String? path) {
+    if (path == null || path.isEmpty) return null;
+    if (path.startsWith('http')) return path;
+    final base = Env.apiBaseUrl;
+    return '$base${path.startsWith('/') ? path.substring(1) : path}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final timed = exercise.mode == ExerciseMode.time;
@@ -181,7 +190,7 @@ class _SummaryExerciseCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: ExerciseInfoCard(
-        catalogId: exercise.catalogId,
+        gifUrl: _gifUrl(context, exercise.gif),
         name: exercise.name,
         muscleLabel: exercise.muscleLabel,
         restBetweenSetsSec: exercise.restBetweenSetsSec,

@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/env.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../data/models/workout_models.dart';
-import '../../../data/repositories/exercise_animation_cache.dart';
 import '../../../data/repositories/workout_repository.dart';
 import 'build_routine_dialog.dart';
 import 'exercise_config_screen.dart';
@@ -104,7 +104,6 @@ class _WorkoutPlanScreenState extends ConsumerState<WorkoutPlanScreen> {
         _activeSession = session;
         _selectRoutine(full, selectRoutineId);
       });
-      _prefetchAnimations();
     } catch (e) {
       if (mounted) showAppSnack(context, e.toString(), error: true);
     } finally {
@@ -137,7 +136,6 @@ class _WorkoutPlanScreenState extends ConsumerState<WorkoutPlanScreen> {
       _loading = false;
       _selectRoutine(plan, selectRoutineId);
     });
-    _prefetchAnimations();
     unawaited(_reconcile());
   }
 
@@ -157,7 +155,6 @@ class _WorkoutPlanScreenState extends ConsumerState<WorkoutPlanScreen> {
         _loading = false;
         _selectRoutine(full, null);
       });
-      _prefetchAnimations();
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
@@ -189,11 +186,13 @@ class _WorkoutPlanScreenState extends ConsumerState<WorkoutPlanScreen> {
         : (routines.isEmpty ? null : routines.first.id);
   }
 
-  void _prefetchAnimations() {
-    final exercises = _routine?.exercises ?? const <RoutineExercise>[];
-    ref
-        .read(exerciseAnimationCacheProvider)
-        .prefetch(exercises.map((e) => e.catalogId));
+  /// A routine exercise's demo gif URL: the stored path when it has one.
+  String? _exerciseGif(RoutineExercise exercise) {
+    final path = exercise.gif;
+    if (path == null || path.isEmpty) return null;
+    if (path.startsWith('http')) return path;
+    final base = Env.apiBaseUrl;
+    return '$base${path.startsWith('/') ? path.substring(1) : path}';
   }
 
   /// Surfaces a failure from an action that owns its own progress UI — those
@@ -733,6 +732,22 @@ class _WorkoutPlanScreenState extends ConsumerState<WorkoutPlanScreen> {
     if (mounted) await _fetch();
   }
 
+  /// Bottom clearance for the floating action bar so it never lands behind
+  /// what overlays this screen's bottom edge. As a tab body the shell's
+  /// floating pill sits there; pushed full-screen there is no pill and only
+  /// the system nav bar inset matters. The inset is read straight from the
+  /// FlutterView — not the inherited MediaQuery — because SafeArea, Scaffold
+  /// and extendBody all rewrite that padding along the way. The pill's height
+  /// part must stay in sync with _NavBar's construction (sm + navBarHeight).
+  double _bottomBarClearance(BuildContext context) {
+    final systemInset =
+        MediaQueryData.fromView(View.of(context)).padding.bottom;
+    final pushed = Navigator.of(context).canPop();
+    return pushed
+        ? systemInset
+        : systemInset + AppSpacing.sm + AppSpacing.navBarHeight;
+  }
+
   /* ------------------------------------------------------------- build -- */
 
   @override
@@ -768,13 +783,7 @@ class _WorkoutPlanScreenState extends ConsumerState<WorkoutPlanScreen> {
       floatingActionButton: plan == null || routine == null
           ? null
           : Padding(
-              // Default centerFloat margin (16) isn't enough to clear the
-              // outer AppShell's floating pill nav bar, since this nested
-              // Scaffold's body extends behind it (extendBody: true there) —
-              // but only just enough to sit above it, not a gap of its own.
-              padding: const EdgeInsets.only(
-                bottom: AppSpacing.screenBottomInset - 36,
-              ),
+              padding: EdgeInsets.only(bottom: _bottomBarClearance(context)),
               child: _BottomActionBar(
                 onAdd: _addExercise,
                 // Nothing to start until the routine has an exercise in it —
@@ -1148,7 +1157,7 @@ class _ExerciseCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: ExerciseInfoCard(
-        catalogId: exercise.catalogId,
+        gifUrl: _exerciseGif(exercise),
         name: exercise.name,
         muscleLabel: exercise.muscleLabel,
         restBetweenSetsSec: exercise.restBetweenSetsSec,

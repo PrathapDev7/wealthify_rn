@@ -5,12 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/workout_sounds.dart';
+import '../../../core/constants/env.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../data/models/workout_models.dart';
-import '../../../data/repositories/exercise_animation_cache.dart';
 import '../../../data/repositories/workout_repository.dart';
 import 'workout_summary_screen.dart';
 import 'workout_widgets.dart';
@@ -62,9 +62,6 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     _exerciseIndex = _firstUnfinishedExercise();
     _ticker = Timer.periodic(const Duration(seconds: 1), _tick);
     _sounds.play(WorkoutCue.start);
-    ref
-        .read(exerciseAnimationCacheProvider)
-        .prefetch(_session.exercises.map((e) => e.catalogId));
   }
 
   WorkoutSounds get _sounds => ref.read(workoutSoundsProvider);
@@ -132,6 +129,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
       id: exercise.id,
       name: exercise.name,
       catalogId: exercise.catalogId,
+      gif: exercise.gif,
       customExercise: exercise.customExercise,
       muscle: exercise.muscle,
       primaryMuscle: exercise.primaryMuscle,
@@ -310,15 +308,6 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
             : null;
       }
     });
-
-    // Pull the next movement's animation while the user rests, so the panel
-    // is already painted when they get there.
-    final next = _exerciseIndex + 1;
-    if (next < _session.exercises.length) {
-      ref
-          .read(exerciseAnimationCacheProvider)
-          .prefetch([_session.exercises[next].catalogId]);
-    }
   }
 
   Future<void> _finish() async {
@@ -374,6 +363,15 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
   String _blurb(SessionExercise exercise) {
     final notes = (exercise.notes ?? '').trim();
     return notes.isEmpty ? exercise.muscleLabel : notes;
+  }
+
+  /// The exercise's demo gif URL: the stored path when it has one.
+  String? _exerciseGif(SessionExercise exercise) {
+    final path = exercise.gif;
+    if (path == null || path.isEmpty) return null;
+    if (path.startsWith('http')) return path;
+    final base = Env.apiBaseUrl;
+    return '$base${path.startsWith('/') ? path.substring(1) : path}';
   }
 
   @override
@@ -438,7 +436,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                         ),
                         children: [
                           ExerciseAnimationView(
-                            catalogId: exercise.catalogId,
+                            gifUrl: _exerciseGif(exercise),
                             // Landscape rather than the default square: the
                             // figures are drawn wide, so a square panel was
                             // mostly empty white and pushed the sets off the

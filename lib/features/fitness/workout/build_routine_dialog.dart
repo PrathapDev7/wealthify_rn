@@ -669,9 +669,9 @@ class _ExerciseLine extends StatelessWidget {
           height: 6,
           margin: const EdgeInsets.only(right: AppSpacing.md),
           decoration: BoxDecoration(
-            // The catalog match is worth showing: a filled dot has an
-            // animation behind it, a hollow one is a name we could not place.
-            color: exercise.catalogId == null ? Colors.transparent : c.primary,
+            // The catalog match is worth showing: a filled dot has a demo
+            // behind it, a hollow one is a name we could not place.
+            color: exercise.gif == null ? Colors.transparent : c.primary,
             shape: BoxShape.circle,
             border: Border.all(color: c.primary, width: 1),
           ),

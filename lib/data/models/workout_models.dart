@@ -125,6 +125,7 @@ class RoutineExercise {
     required this.id,
     required this.name,
     this.catalogId,
+    this.gif,
     this.customExercise,
     this.muscle,
     this.primaryMuscle,
@@ -141,8 +142,12 @@ class RoutineExercise {
   final String id;
   final String name;
 
-  /// The animation catalog path this came from, when it came from the catalog.
+  /// The exercise catalog id this came from, when it came from the catalog.
   final String? catalogId;
+
+  /// The `/exercise-gifs/<id>.gif` path, copied in when the exercise was
+  /// picked — so saved routines render without another lookup.
+  final String? gif;
 
   /// The custom-exercise document this came from, when the user made it up.
   final String? customExercise;
@@ -176,6 +181,7 @@ class RoutineExercise {
     id: _id(j),
     name: (j['name'] ?? '').toString(),
     catalogId: j['catalogId']?.toString(),
+    gif: j['gif']?.toString(),
     customExercise: j['customExercise']?.toString(),
     muscle: j['muscle']?.toString(),
     primaryMuscle: j['primaryMuscle']?.toString(),
@@ -194,6 +200,7 @@ class RoutineExercise {
   Map<String, dynamic> toJson() => {
     'name': name,
     if (catalogId != null) 'catalogId': catalogId,
+    if (gif != null) 'gif': gif,
     if (customExercise != null) 'customExercise': customExercise,
     if (muscle != null) 'muscle': muscle,
     if (primaryMuscle != null) 'primaryMuscle': primaryMuscle,
@@ -221,6 +228,7 @@ class RoutineExercise {
     id: id,
     name: name ?? this.name,
     catalogId: catalogId,
+    gif: gif,
     customExercise: customExercise,
     muscle: muscle ?? this.muscle,
     primaryMuscle:
@@ -382,9 +390,8 @@ class CatalogVariant {
 
 /// A row of the exercise picker's catalog.
 ///
-/// The backend groups the gendered pair into one entry and hands both back in
-/// [variants], so the picker shows one card per movement and the player can
-/// swap the model without another round trip.
+/// Each row carries its own demo gif path, so thumbnails render without a
+/// second lookup.
 class ExerciseCatalogItem {
   const ExerciseCatalogItem({
     required this.catalogId,
@@ -399,6 +406,8 @@ class ExerciseCatalogItem {
     this.secondaryMuscles = const [],
     this.instructions = const [],
     this.variants = const [],
+    this.gif,
+    this.hasGif = false,
   });
 
   final String catalogId;
@@ -414,6 +423,20 @@ class ExerciseCatalogItem {
   final List<String> instructions;
   final List<CatalogVariant> variants;
 
+  /// The `/exercise-gifs/<id>.gif` path, or null when the catalog has no demo
+  /// for this row.
+  final String? gif;
+  final bool hasGif;
+
+  /// The absolute gif URL against [baseUrl], or null when there is no demo.
+  String? gifUrl(String baseUrl) {
+    final path = gif;
+    if (path == null || path.isEmpty) return null;
+    if (path.startsWith('http')) return path;
+    final base = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/';
+    return '$base${path.startsWith('/') ? path.substring(1) : path}';
+  }
+
   double get aspectRatio => (width <= 0 || height <= 0) ? 1 : width / height;
 
   String get muscleLabel => primaryMuscle.isNotEmpty ? primaryMuscle : muscle;
@@ -426,16 +449,6 @@ class ExerciseCatalogItem {
       for (var i = 0; i < instructions.length; i++)
         '${i + 1}. ${instructions[i]}',
     ].join('\n');
-  }
-
-  /// The animation for [gender], falling back to whatever the catalog grouped
-  /// first so a single-gender movement still plays.
-  String animationIdFor(String? gender) {
-    if (gender == null || gender.isEmpty) return catalogId;
-    for (final v in variants) {
-      if (v.gender.toLowerCase() == gender.toLowerCase()) return v.catalogId;
-    }
-    return catalogId;
   }
 
   factory ExerciseCatalogItem.fromJson(Map<String, dynamic> j) =>
@@ -452,6 +465,8 @@ class ExerciseCatalogItem {
         secondaryMuscles: _strings(j['secondaryMuscles']),
         instructions: _strings(j['instructions']),
         variants: _maps(j['variants']).map(CatalogVariant.fromJson).toList(),
+        gif: j['gif']?.toString(),
+        hasGif: j['hasGif'] == true,
       );
 
   /// Round-trips [fromJson], for the on-disk copy of the catalog the picker
@@ -469,6 +484,8 @@ class ExerciseCatalogItem {
     'secondaryMuscles': secondaryMuscles,
     'instructions': instructions,
     'variants': [for (final v in variants) v.toJson()],
+    'gif': gif,
+    'hasGif': hasGif,
   };
 }
 
@@ -515,6 +532,7 @@ class PreviousExercise {
   const PreviousExercise({
     required this.name,
     this.catalogId,
+    this.gif,
     this.customExercise,
     this.muscle,
     this.primaryMuscle,
@@ -525,6 +543,7 @@ class PreviousExercise {
 
   final String name;
   final String? catalogId;
+  final String? gif;
   final String? customExercise;
   final String? muscle;
   final String? primaryMuscle;
@@ -539,6 +558,7 @@ class PreviousExercise {
   factory PreviousExercise.fromJson(Map<String, dynamic> j) => PreviousExercise(
     name: (j['name'] ?? '').toString(),
     catalogId: j['catalogId']?.toString(),
+    gif: j['gif']?.toString(),
     customExercise: j['customExercise']?.toString(),
     muscle: j['muscle']?.toString(),
     primaryMuscle: j['primaryMuscle']?.toString(),
@@ -557,6 +577,7 @@ class SessionExercise {
     required this.id,
     required this.name,
     this.catalogId,
+    this.gif,
     this.customExercise,
     this.muscle,
     this.primaryMuscle,
@@ -573,6 +594,7 @@ class SessionExercise {
   final String id;
   final String name;
   final String? catalogId;
+  final String? gif;
   final String? customExercise;
   final String? muscle;
   final String? primaryMuscle;
@@ -597,6 +619,7 @@ class SessionExercise {
     id: _id(j),
     name: (j['name'] ?? '').toString(),
     catalogId: j['catalogId']?.toString(),
+    gif: j['gif']?.toString(),
     customExercise: j['customExercise']?.toString(),
     muscle: j['muscle']?.toString(),
     primaryMuscle: j['primaryMuscle']?.toString(),
@@ -858,6 +881,9 @@ class BuiltExercise {
       catalogId = (raw['catalogId'] ?? '').toString().isEmpty
           ? null
           : raw['catalogId'].toString(),
+      gif = (raw['gif'] ?? '').toString().isEmpty
+          ? null
+          : raw['gif'].toString(),
       setCount = _int(raw['setCount']),
       reps = raw['reps'] == null ? null : _int(raw['reps']),
       seconds = raw['seconds'] == null ? null : _int(raw['seconds']),
@@ -868,8 +894,9 @@ class BuiltExercise {
   final String muscleLabel;
 
   /// Null when nothing in the catalog matched the name the model wrote — the
-  /// exercise still works, it just has no animation behind it.
+  /// exercise still works, it just has no demo behind it.
   final String? catalogId;
+  final String? gif;
 
   final int setCount;
   final int? reps;

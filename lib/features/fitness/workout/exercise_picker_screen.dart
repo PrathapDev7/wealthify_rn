@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/env.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../data/models/workout_models.dart';
-import '../../../data/repositories/exercise_animation_cache.dart';
 import '../../../data/repositories/exercise_catalog_cache.dart';
 import '../../../data/repositories/workout_repository.dart';
 import 'exercise_config_screen.dart';
@@ -152,9 +152,22 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
       _matches = matches;
       _shown = _renderStep;
     });
-    ref
-        .read(exerciseAnimationCacheProvider)
-        .prefetch(matches.take(8).map((e) => e.catalogId));
+  }
+
+  /// A previous exercise's demo gif: the stored path when it has one, else the
+  /// current catalog row for the same id.
+  String? _previousGif(PreviousExercise p) {
+    if (p.gif != null && p.gif!.isNotEmpty) {
+      final path = p.gif!;
+      if (path.startsWith('http')) return path;
+      final base = Env.apiBaseUrl;
+      return '$base${path.startsWith('/') ? path.substring(1) : path}';
+    }
+    if (p.catalogId == null || p.catalogId!.isEmpty) return null;
+    for (final item in _cache.items) {
+      if (item.catalogId == p.catalogId) return item.gifUrl(Env.apiBaseUrl);
+    }
+    return null;
   }
 
   void _onSearchChanged(String value) {
@@ -195,6 +208,7 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
         id: '',
         name: item.name,
         catalogId: item.catalogId,
+        gif: item.gif,
         muscle: item.muscle,
         primaryMuscle: item.primaryMuscle,
         equipment: item.equipment,
@@ -213,6 +227,7 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
         id: '',
         name: previous.name,
         catalogId: previous.catalogId,
+        gif: previous.gif,
         customExercise: previous.customExercise,
         muscle: previous.muscle,
         primaryMuscle: previous.primaryMuscle,
@@ -429,7 +444,7 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
                           if (_previousOpen)
                             for (final p in _previous)
                               _ExerciseRow(
-                                catalogId: p.catalogId,
+                                gifUrl: _previousGif(p),
                                 name: p.name,
                                 muscle: p.muscleLabel,
                                 equipment: p.equipment ?? '',
@@ -488,7 +503,7 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
                         else
                           for (final item in _matches.take(_shown))
                             _ExerciseRow(
-                              catalogId: item.catalogId,
+                              gifUrl: item.gifUrl(Env.apiBaseUrl),
                               name: item.name,
                               muscle: item.muscleLabel,
                               equipment: item.equipment,
@@ -737,14 +752,14 @@ class _FilterDropdown extends StatelessWidget {
 /// One catalog / previous-exercise row: thumbnail, name, muscle, equipment.
 class _ExerciseRow extends StatelessWidget {
   const _ExerciseRow({
-    required this.catalogId,
+    required this.gifUrl,
     required this.name,
     required this.muscle,
     required this.equipment,
     required this.onTap,
   });
 
-  final String? catalogId;
+  final String? gifUrl;
   final String name;
   final String muscle;
   final String equipment;
@@ -768,7 +783,7 @@ class _ExerciseRow extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ExerciseThumb(catalogId: catalogId, size: thumbSize),
+                ExerciseThumb(gifUrl: gifUrl, size: thumbSize),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: SizedBox(

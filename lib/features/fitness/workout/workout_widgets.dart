@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lottie/lottie.dart';
 
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -12,7 +10,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/misc.dart';
 import '../../../core/widgets/skeleton.dart';
-import '../../../data/repositories/exercise_animation_cache.dart';
 
 /* ----------------------------------------------------------- navigation -- */
 
@@ -51,96 +48,73 @@ String formatValue(num? value) {
 
 /* ------------------------------------------------------------ animation -- */
 
-/// Plays one catalog animation on the white panel the reference uses.
+/// Plays one catalog exercise's demo gif on the white panel the reference uses.
 ///
 /// The catalog art is drawn for a white ground, so the panel stays white in
 /// both themes — it is the one surface in the workout screens that does not
-/// follow the palette.
-class ExerciseAnimationView extends ConsumerStatefulWidget {
+/// follow the palette. The gif URL is fully resolved by the caller (see
+/// `ExerciseCatalogItem.gifUrl` / `RoutineExercise`'s stored path), so this
+/// widget never fetches JSON and never touches the old animation endpoints.
+class ExerciseAnimationView extends StatelessWidget {
   const ExerciseAnimationView({
     super.key,
-    required this.catalogId,
+    required this.gifUrl,
     this.aspectRatio = 1,
     this.radius = AppRadius.md,
     this.padding = EdgeInsets.zero,
     this.fallbackIcon = Icons.fitness_center_rounded,
   });
 
-  final String? catalogId;
+  final String? gifUrl;
   final double aspectRatio;
   final double radius;
   final EdgeInsets padding;
   final IconData fallbackIcon;
 
   @override
-  ConsumerState<ExerciseAnimationView> createState() =>
-      _ExerciseAnimationViewState();
-}
-
-class _ExerciseAnimationViewState extends ConsumerState<ExerciseAnimationView> {
-  Uint8List? _bytes;
-  bool _failed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _resolve();
-  }
-
-  @override
-  void didUpdateWidget(covariant ExerciseAnimationView old) {
-    super.didUpdateWidget(old);
-    if (old.catalogId != widget.catalogId) {
-      _bytes = null;
-      _failed = false;
-      _resolve();
-    }
-  }
-
-  /// Paints straight from the cache when the bytes are already there, so a
-  /// revisited animation never flashes a placeholder.
-  void _resolve() {
-    final cache = ref.read(exerciseAnimationCacheProvider);
-    final hit = cache.peek(widget.catalogId);
-    if (hit != null) {
-      _bytes = hit;
-      return;
-    }
-
-    final wanted = widget.catalogId;
-    cache.load(wanted).then((bytes) {
-      if (!mounted || wanted != widget.catalogId) return;
-      setState(() {
-        _bytes = bytes;
-        _failed = bytes == null;
-      });
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final bytes = _bytes;
+    final url = (gifUrl == null || gifUrl!.isEmpty) ? null : gifUrl;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(widget.radius),
+      borderRadius: BorderRadius.circular(radius),
       child: Container(
         color: Colors.white,
-        padding: widget.padding,
+        padding: padding,
         child: AspectRatio(
-          aspectRatio: widget.aspectRatio <= 0 ? 1 : widget.aspectRatio,
-          child: bytes == null
+          aspectRatio: aspectRatio <= 0 ? 1 : aspectRatio,
+          child: url == null
               ? Center(
                   child: Icon(
-                    widget.fallbackIcon,
-                    // A failed load settles on a grey glyph; a pending one
-                    // fades it, so the panel never jumps between two layouts.
-                    color: (_failed ? c.textSubtle : c.textPlaceholder)
-                        .withValues(alpha: 0.5),
+                    fallbackIcon,
+                    color: c.textPlaceholder.withValues(alpha: 0.5),
                     size: 28,
                   ),
                 )
-              : Lottie.memory(bytes, fit: BoxFit.contain),
+              : Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                  // Gifs are small; evicting aggressively keeps the image
+                  // cache from holding hundreds of decoded frames.
+                  cacheWidth: 360,
+                  loadingBuilder: (context, child, progress) =>
+                      progress == null
+                      ? child
+                      : Center(
+                          child: Icon(
+                            fallbackIcon,
+                            color: c.textPlaceholder.withValues(alpha: 0.5),
+                            size: 28,
+                          ),
+                        ),
+                  errorBuilder: (context, error, stack) => Center(
+                    child: Icon(
+                      fallbackIcon,
+                      color: c.textSubtle.withValues(alpha: 0.5),
+                      size: 28,
+                    ),
+                  ),
+                ),
         ),
       ),
     );
@@ -149,9 +123,9 @@ class _ExerciseAnimationViewState extends ConsumerState<ExerciseAnimationView> {
 
 /// The 56pt white square in front of every exercise row.
 class ExerciseThumb extends StatelessWidget {
-  const ExerciseThumb({super.key, required this.catalogId, this.size = 56});
+  const ExerciseThumb({super.key, required this.gifUrl, this.size = 56});
 
-  final String? catalogId;
+  final String? gifUrl;
   final double size;
 
   @override
@@ -160,7 +134,7 @@ class ExerciseThumb extends StatelessWidget {
       width: size,
       height: size,
       child: ExerciseAnimationView(
-        catalogId: catalogId,
+        gifUrl: gifUrl,
         radius: AppRadius.sm,
         padding: const EdgeInsets.all(2),
       ),
@@ -290,7 +264,7 @@ class MuscleGroupChip extends StatelessWidget {
 class ExerciseInfoCard extends StatelessWidget {
   const ExerciseInfoCard({
     super.key,
-    required this.catalogId,
+    required this.gifUrl,
     required this.name,
     required this.muscleLabel,
     required this.restBetweenSetsSec,
@@ -302,7 +276,7 @@ class ExerciseInfoCard extends StatelessWidget {
     this.trailing,
   });
 
-  final String? catalogId;
+  final String? gifUrl;
   final String name;
   final String muscleLabel;
   final int restBetweenSetsSec;
@@ -359,7 +333,7 @@ class ExerciseInfoCard extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      ExerciseThumb(catalogId: catalogId, size: 72),
+                      ExerciseThumb(gifUrl: gifUrl, size: 72),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Column(

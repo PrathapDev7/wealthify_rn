@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/env.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
@@ -69,6 +70,14 @@ class _WorkoutPrestartScreenState extends ConsumerState<WorkoutPrestartScreen> {
     final minutes = _minCtrl.selectedItem % _minuteCount;
     final seconds = _secCtrl.selectedItem % _secondCount;
     _restSec = minutes * 60 + seconds;
+  }
+
+  /// A stored gif path resolved against the backend, or null when there is none.
+  String? _exerciseGif(String? path) {
+    if (path == null || path.isEmpty) return null;
+    if (path.startsWith('http')) return path;
+    final base = Env.apiBaseUrl;
+    return '$base${path.startsWith('/') ? path.substring(1) : path}';
   }
 
   Future<void> _submit() async {
@@ -302,7 +311,9 @@ class _WorkoutPrestartScreenState extends ConsumerState<WorkoutPrestartScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       ExerciseThumb(
-                                        catalogId: exercise.catalogId,
+                                        gifUrl: _exerciseGif(
+                                          exercise.gif,
+                                        ),
                                         size: 72,
                                       ),
                                       const SizedBox(width: AppSpacing.md),

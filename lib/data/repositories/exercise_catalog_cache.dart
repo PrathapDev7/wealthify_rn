@@ -38,7 +38,8 @@ class ExerciseCatalogCache extends ChangeNotifier {
 
   /// Bumped when the shape written to disk changes, so an old file is dropped
   /// rather than parsed into something the app no longer understands.
-  static const _schemaVersion = 1;
+  /// v2: catalog rows carry gif paths (the Lottie-era file has none).
+  static const _schemaVersion = 2;
 
   List<ExerciseCatalogItem> items = const [];
   List<MuscleCount> muscles = const [];

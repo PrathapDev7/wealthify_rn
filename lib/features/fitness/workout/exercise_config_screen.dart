@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/env.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
@@ -271,6 +272,14 @@ class _ExerciseConfigScreenState extends ConsumerState<ExerciseConfigScreen> {
   Widget build(BuildContext context) {
     final c = context.colors;
     final aspect = widget.catalogItem?.aspectRatio ?? 1;
+    // The picked catalog row knows the demo best; an already-saved exercise
+    // carries its own stored path.
+    final gifPath = widget.catalogItem?.gif ?? widget.exercise.gif;
+    final gifUrl = gifPath == null || gifPath.isEmpty
+        ? null
+        : (gifPath.startsWith('http')
+              ? gifPath
+              : '${Env.apiBaseUrl}${gifPath.startsWith('/') ? gifPath.substring(1) : gifPath}');
 
     return Scaffold(
       backgroundColor: c.background,
@@ -370,7 +379,7 @@ class _ExerciseConfigScreenState extends ConsumerState<ExerciseConfigScreen> {
                         width: 90,
                         height: 90,
                         child: ExerciseAnimationView(
-                          catalogId: widget.exercise.catalogId,
+                          gifUrl: gifUrl,
                           aspectRatio: aspect,
                           radius: AppRadius.sm,
                         ),
