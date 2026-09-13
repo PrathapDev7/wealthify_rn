@@ -186,15 +186,6 @@ class _WorkoutPlanScreenState extends ConsumerState<WorkoutPlanScreen> {
         : (routines.isEmpty ? null : routines.first.id);
   }
 
-  /// A routine exercise's demo gif URL: the stored path when it has one.
-  String? _exerciseGif(RoutineExercise exercise) {
-    final path = exercise.gif;
-    if (path == null || path.isEmpty) return null;
-    if (path.startsWith('http')) return path;
-    final base = Env.apiBaseUrl;
-    return '$base${path.startsWith('/') ? path.substring(1) : path}';
-  }
-
   /// Surfaces a failure from an action that owns its own progress UI — those
   /// report through here rather than swallowing the error into the sheet or
   /// dialog they came from.
@@ -1149,6 +1140,15 @@ class _ExerciseCard extends StatelessWidget {
   final RoutineExercise exercise;
   final VoidCallback onTap;
 
+  /// The stored gif path resolved against the backend, or null when none.
+  String? _gifUrl() {
+    final path = exercise.gif;
+    if (path == null || path.isEmpty) return null;
+    if (path.startsWith('http')) return path;
+    final base = Env.apiBaseUrl;
+    return '$base${path.startsWith('/') ? path.substring(1) : path}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isTimed = exercise.mode == ExerciseMode.time;
@@ -1157,7 +1157,7 @@ class _ExerciseCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: ExerciseInfoCard(
-        gifUrl: _exerciseGif(exercise),
+        gifUrl: _gifUrl(),
         name: exercise.name,
         muscleLabel: exercise.muscleLabel,
         restBetweenSetsSec: exercise.restBetweenSetsSec,
