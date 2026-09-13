@@ -21,9 +21,12 @@ void main() {
         child: const AlignApp(),
       ),
     );
-    await tester.pump();
+    // A non-zero pump duration is required: the splash's flutter_animate
+    // widgets schedule zero-delay timers that only fire when the fake clock
+    // advances, and a zero-duration pump leaves them pending at teardown.
+    await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Wealthify'), findsWidgets);
+    expect(find.text('ALIGN'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 }

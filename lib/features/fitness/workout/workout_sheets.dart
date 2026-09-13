@@ -10,7 +10,7 @@ import 'workout_widgets.dart';
 
 /// What the routine menu on the bottom action bar offers. The sheet itself is
 /// a [showFitnessOptionSheet], built where it is opened.
-enum RoutineMenuAction { rename, reorderExercises, restBetweenExercises, delete }
+enum RoutineMenuAction { update, rename, reorderExercises, restBetweenExercises, delete }
 
 /* ------------------------------------------------------ manage routines -- */
 

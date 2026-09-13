@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
 import '../storage/prefs.dart';
+import '../../data/repositories/preferences_repository.dart';
 
-/// Persisted theme mode (light/dark/system), mirroring RN's ThemeContext
-/// (`wealthify_theme` key). Drives MaterialApp.themeMode.
 class ThemeController extends Notifier<ThemeMode> {
   @override
   ThemeMode build() => _parse(ref.read(prefsProvider).getString(Prefs.kTheme));
@@ -19,6 +18,26 @@ class ThemeController extends Notifier<ThemeMode> {
   void setMode(ThemeMode mode) {
     state = mode;
     ref.read(prefsProvider).setString(Prefs.kTheme, mode.name);
+    _syncRemote(mode);
+  }
+
+  Future<void> _syncRemote(ThemeMode mode) async {
+    try {
+      await ref
+          .read(preferencesRepositoryProvider)
+          .updatePreferences({'theme': mode.name});
+    } catch (_) {}
+  }
+
+  Future<void> refreshFromServer() async {
+    try {
+      final remote =
+          await ref.read(preferencesRepositoryProvider).getPreferences();
+      final theme = remote['theme']?.toString();
+      if (theme == null || theme.isEmpty) return;
+      state = _parse(theme);
+      ref.read(prefsProvider).setString(Prefs.kTheme, state.name);
+    } catch (_) {}
   }
 
   void toggle() =>

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +12,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/widgets.dart';
+import '../../core/widgets/widget_sync_service.dart';
 import '../../data/models/calorie_entry.dart';
 import 'widgets/calorie_cards.dart';
 
@@ -63,6 +65,10 @@ class _CalorieScreenState extends ConsumerState<CalorieScreen> {
           _healthProfile = HealthProfile.fromJson(
             res['healthProfile'] as Map<String, dynamic>?,
           );
+          final snapshot = _dailyTotals;
+          if (snapshot != null) {
+            unawaited(ref.read(widgetSyncProvider).saveCalories(snapshot));
+          }
         });
       }
     } catch (e) {
@@ -654,7 +660,10 @@ class _ItemNutritionSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final bottom = math.max(
+      MediaQuery.viewInsetsOf(context).bottom,
+      MediaQuery.paddingOf(context).bottom,
+    );
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -795,7 +804,10 @@ class _EditGoalSheetState extends ConsumerState<EditGoalSheet> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final bottom = math.max(
+      MediaQuery.viewInsetsOf(context).bottom,
+      MediaQuery.paddingOf(context).bottom,
+    );
     return Container(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.xl,
@@ -1108,7 +1120,10 @@ class _HealthProfileSheetState extends ConsumerState<HealthProfileSheet> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final bottom = math.max(
+      MediaQuery.viewInsetsOf(context).bottom,
+      MediaQuery.paddingOf(context).bottom,
+    );
     final isLast = _step == _steps.length - 1;
 
     return Container(

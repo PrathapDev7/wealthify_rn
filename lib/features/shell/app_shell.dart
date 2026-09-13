@@ -483,8 +483,11 @@ class _NavBar extends ConsumerWidget {
         branchIndex: appBase + 3,
       ),
     ];
+    // Android 15+ enforces edge-to-edge drawing, so without this the pill
+    // sits behind the system navigation bar on affected devices.
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: EdgeInsets.only(bottom: AppSpacing.sm + bottomInset),
       child: Align(
         alignment: Alignment.bottomCenter,
         child: Container(

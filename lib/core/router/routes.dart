@@ -32,6 +32,7 @@ abstract class Routes {
   static const setBudget = '/set-budget';
   static const wallets = '/wallets';
   static const editWallet = '/edit-wallet';
+  static const transfer = '/transfer';
   static const recurring = '/recurring';
   static const editRecurring = '/edit-recurring';
   static const goals = '/goals';
@@ -46,4 +47,5 @@ abstract class Routes {
   static const premium = '/premium';
   static const calories = '/calories';
   static const calorieHistory = '/calorie-history';
+  static const logWeight = '/log-weight';
 }

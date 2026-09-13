@@ -52,6 +52,11 @@ class _EditWalletScreenState extends ConsumerState<EditWalletScreen> {
   late final TextEditingController _expiry;
   late final TextEditingController _billDay;
   late final TextEditingController _openingBalance;
+  late final TextEditingController _owedBalance;
+  late final TextEditingController _creditLimit;
+  late final TextEditingController _apr;
+  late final TextEditingController _minPayment;
+  late final TextEditingController _dueDay;
   late String _kind;
   String _cardType = '';
   FinProvider? _provider;
@@ -73,6 +78,15 @@ class _EditWalletScreenState extends ConsumerState<EditWalletScreen> {
     _billDay = TextEditingController(text: w?.reminderDay?.toString() ?? '');
     _openingBalance =
         TextEditingController(text: w == null ? '' : '${w.openingBalance}');
+    _owedBalance =
+        TextEditingController(text: w == null ? '' : '${w.owedBalance}');
+    _creditLimit =
+        TextEditingController(text: w?.creditLimit?.toString() ?? '');
+    _apr = TextEditingController(text: w?.apr?.toString() ?? '');
+    _minPayment =
+        TextEditingController(text: w?.minPayment?.toString() ?? '');
+    _dueDay = TextEditingController(
+        text: w?.dueDay?.toString() ?? w?.reminderDay?.toString() ?? '');
   }
 
   String get _profileName =>
@@ -86,6 +100,11 @@ class _EditWalletScreenState extends ConsumerState<EditWalletScreen> {
     _expiry.dispose();
     _billDay.dispose();
     _openingBalance.dispose();
+    _owedBalance.dispose();
+    _creditLimit.dispose();
+    _apr.dispose();
+    _minPayment.dispose();
+    _dueDay.dispose();
     super.dispose();
   }
 
@@ -130,6 +149,12 @@ class _EditWalletScreenState extends ConsumerState<EditWalletScreen> {
     final opening = num.tryParse(_openingBalance.text.trim()) ?? 0;
     final last4 = _last4.text.trim();
     final billDay = int.tryParse(_billDay.text.trim());
+    num? optNum(TextEditingController c) {
+      final t = c.text.trim();
+      if (t.isEmpty) return null;
+      return num.tryParse(t);
+    }
+
     final data = <String, dynamic>{
       'name': name,
       'kind': _kind,
@@ -142,6 +167,11 @@ class _EditWalletScreenState extends ConsumerState<EditWalletScreen> {
       'holderName': _holder.text.trim(),
       'reminderDay': _kind == 'card' ? billDay : null,
       'expiry': _kind == 'card' ? _expiry.text.trim() : '',
+      'owedBalance': num.tryParse(_owedBalance.text.trim()) ?? 0,
+      'creditLimit': optNum(_creditLimit),
+      'apr': optNum(_apr),
+      'minPayment': optNum(_minPayment),
+      'dueDay': int.tryParse(_dueDay.text.trim()),
     };
     setState(() => _saving = true);
     try {
@@ -394,6 +424,70 @@ class _EditWalletScreenState extends ConsumerState<EditWalletScreen> {
                   keyboardType: const TextInputType.numberWithOptions(
                       decimal: true, signed: true),
                 ),
+
+                const SizedBox(height: AppSpacing.lg),
+                AppTextField(
+                  controller: _owedBalance,
+                  label: 'Owed balance (debt)',
+                  hint: '0',
+                  keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true),
+                ),
+
+                if (isCard) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: AppTextField(
+                          controller: _creditLimit,
+                          label: 'Credit limit (optional)',
+                          hint: '0',
+                          keyboardType:
+                              const TextInputType.numberWithOptions(
+                                  decimal: true),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: AppTextField(
+                          controller: _apr,
+                          label: 'APR % (optional)',
+                          hint: '0',
+                          keyboardType:
+                              const TextInputType.numberWithOptions(
+                                  decimal: true),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: AppTextField(
+                          controller: _minPayment,
+                          label: 'Min payment (optional)',
+                          hint: '0',
+                          keyboardType:
+                              const TextInputType.numberWithOptions(
+                                  decimal: true),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: AppTextField(
+                          controller: _dueDay,
+                          label: 'Due day (optional)',
+                          hint: '1-31',
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
 
                 const SizedBox(height: AppSpacing.xl),
                 PillButton(

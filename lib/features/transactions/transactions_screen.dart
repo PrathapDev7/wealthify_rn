@@ -1241,7 +1241,10 @@ class _FiltersSheetState extends State<_FiltersSheet> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final insets = MediaQuery.of(context).viewInsets.bottom;
+    final insets = math.max(
+      MediaQuery.viewInsetsOf(context).bottom,
+      MediaQuery.paddingOf(context).bottom,
+    );
     return Padding(
       padding: EdgeInsets.only(bottom: insets),
       child: Container(

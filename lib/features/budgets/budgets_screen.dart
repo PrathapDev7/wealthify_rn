@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/utils/category_icon.dart';
 import '../../core/widgets/widgets.dart';
+import '../../core/widgets/widget_sync_service.dart';
 import '../../data/models/budget_model.dart';
 import '../../data/models/stats_model.dart';
 import '../../data/repositories/budgets_repository.dart';
@@ -47,6 +48,12 @@ class BudgetsScreen extends ConsumerWidget {
               ),
               data: (data) {
                 final (budget, stats) = data;
+                // Same payload the balance widget reads — refresh it here too.
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  ref
+                      .read(widgetSyncProvider)
+                      .saveBalance(stats, budget, money);
+                });
 
                 // Sum this-month expense spend per category.
                 final spentByCategory = <String, num>{};

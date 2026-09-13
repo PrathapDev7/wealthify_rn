@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/workout_sounds.dart';
 import '../../../core/constants/env.dart';
+import '../../../core/notifications/local_notifications.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_typography.dart';
@@ -31,21 +32,53 @@ class WorkoutSessionScreen extends ConsumerStatefulWidget {
       _WorkoutSessionScreenState();
 }
 
-class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
+class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen>
+    with WidgetsBindingObserver {
   late WorkoutSession _session = widget.session;
-  late int _elapsed = _initialElapsed();
 
-  /// Seconds on the set in front of the user, which is what the bottom clock
-  /// shows — the whole workout is already on the clock up top. Restarts on
-  /// every set and every exercise, and holds at zero through the rest gap.
-  int _setElapsed = 0;
+  /// Wall-clock anchors so the timers keep running while the app is
+  /// backgrounded: the OS suspends [Timer] callbacks while the app is away,
+  /// so every tick recomputes from these instead of counting ticks.
+  late int _elapsedBase;
+  late DateTime _bootedAt;
+  late DateTime _setStartedAt;
+  DateTime? _restEndsAt;
+
+  /// Whole-workout clock: base plus wall-clock time since this screen booted.
+  int get _elapsed =>
+      (_elapsedBase + DateTime.now().difference(_bootedAt).inSeconds)
+          .clamp(0, 86400);
+
+  /// Set clock: wall-clock time since the current set started, held at zero
+  /// through the rest gap (the bottom bar shows the countdown instead).
+  int get _setElapsed {
+    if (_restEndsAt != null) return 0;
+    return DateTime.now().difference(_setStartedAt).inSeconds.clamp(0, 86400);
+  }
+
+  /// Rest countdown, non-null only while it is running. Ceiled so the last
+  /// visible second is 1, then 0 means it just ended.
+  int? get _restRemaining {
+    final endsAt = _restEndsAt;
+    if (endsAt == null) return null;
+    final ms = endsAt.difference(DateTime.now()).inMilliseconds;
+    if (ms <= 0) return 0;
+    return (ms / 1000).ceil();
+  }
 
   Timer? _ticker;
-  int _exerciseIndex = 0;
 
-  /// Non-null only while the rest countdown is running; the whole bottom bar
-  /// and the next set row switch to amber off the back of it.
-  int? _restRemaining;
+  /// The exercise the set clock, rest gap, and Done button belong to.
+  int _activeIndex = 0;
+
+  /// The exercise on screen. The step rail only previews — it never touches
+  /// the timer. The timer moves over only when the user starts the previewed
+  /// exercise (Start) or the flow advances past a completed set (Done).
+  int _viewIndex = 0;
+
+  /// True while previewing an exercise that isn't the running one: the bottom
+  /// bar then offers Start instead of Done.
+  bool get _previewing => _viewIndex != _activeIndex;
 
   bool _notesOpen = false;
   bool _finishing = false;
@@ -59,36 +92,73 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
   @override
   void initState() {
     super.initState();
-    _exerciseIndex = _firstUnfinishedExercise();
+    WidgetsBinding.instance.addObserver(this);
+    _activeIndex = _viewIndex = _firstUnfinishedExercise();
+    final now = DateTime.now();
+    _bootedAt = now;
+    _setStartedAt = now;
+    _elapsedBase = _initialElapsed();
     _ticker = Timer.periodic(const Duration(seconds: 1), _tick);
-    _sounds.play(WorkoutCue.start);
   }
 
   WorkoutSounds get _sounds => ref.read(workoutSoundsProvider);
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
+    unawaited(LocalNotifications.instance.cancelRestOver());
     super.dispose();
+  }
+
+  /// Recomputed on every resume: the wall-clock getters already hold the
+  /// right values, this just repaints with them.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) setState(() {});
   }
 
   void _tick(Timer _) {
     if (!mounted) return;
-    setState(() {
-      _elapsed++;
-      final rest = _restRemaining;
-      if (rest != null) {
-        if (rest <= 1) {
-          // The one cue the user is most likely to be looking away for.
-          _restRemaining = null;
-          _sounds.play(WorkoutCue.restOver);
-        } else {
-          _restRemaining = rest - 1;
-        }
-      } else {
-        _setElapsed++;
-      }
-    });
+    final rest = _restRemaining;
+    if (rest != null && rest <= 0) {
+      // The one cue the user is most likely to be looking away for — and it
+      // still fires if the rest ended while the app was backgrounded, on the
+      // first tick after coming back.
+      _endRest();
+    }
+    // The clocks read off the wall clock, so a tick only repaints — even a
+    // long background gap lands on the right values on the first tick back.
+    setState(() {});
+  }
+
+  /// Rest finished: clear the countdown, restart the set clock, beep, and
+  /// drop the OS-level backup alert (it just fired, or is no longer needed).
+  void _endRest() {
+    _restEndsAt = null;
+    _setStartedAt = DateTime.now();
+    _sounds.playRestOver();
+    unawaited(LocalNotifications.instance.cancelRestOver());
+  }
+
+  /// Starts a rest of [seconds], arming the OS-level backup alert so the user
+  /// is still cued if the app is backgrounded; null/zero means no rest.
+  void _startRest(int seconds) {
+    if (seconds <= 0) {
+      _restEndsAt = null;
+      return;
+    }
+    final endsAt = DateTime.now().add(Duration(seconds: seconds));
+    _restEndsAt = endsAt;
+    unawaited(LocalNotifications.instance.scheduleRestOver(endsAt));
+  }
+
+  /// Rest cut short (skipped, or Start pressed on another exercise): clear the
+  /// countdown and drop the backup alert so it cannot fire late.
+  void _clearRest() {
+    _restEndsAt = null;
+    _setStartedAt = DateTime.now();
+    unawaited(LocalNotifications.instance.cancelRestOver());
   }
 
   WorkoutRepository get _repo => ref.read(workoutRepositoryProvider);
@@ -102,19 +172,26 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
 
   SessionExercise? get _exercise => _session.exercises.isEmpty
       ? null
-      : _session.exercises[_exerciseIndex.clamp(
+      : _session.exercises[_viewIndex.clamp(
           0,
           _session.exercises.length - 1,
         )];
 
-  /// The set the ✓ button acts on: the first one not yet ticked off.
-  int get _currentSetIndex {
-    final sets = _exercise?.sets ?? const <WorkoutSet>[];
+  SessionExercise? _exerciseAt(int index) => _session.exercises.isEmpty
+      ? null
+      : _session.exercises[index.clamp(0, _session.exercises.length - 1)];
+
+  /// The first set not yet ticked off in [exercise]: the one Start/Done acts on.
+  int _firstOpenSet(SessionExercise? exercise) {
+    final sets = exercise?.sets ?? const <WorkoutSet>[];
     for (var i = 0; i < sets.length; i++) {
       if (!sets[i].completed) return i;
     }
     return sets.length - 1;
   }
+
+  /// The set highlighted in the on-screen (viewed) exercise.
+  int get _currentSetIndex => _firstOpenSet(_exercise);
 
   /* ------------------------------------------------------ local writes -- */
 
@@ -165,6 +242,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
   Future<void> _editValue(int setIndex, {required bool firstField}) async {
     final exercise = _exercise;
     if (exercise == null) return;
+    final viewed = _viewIndex.clamp(0, _session.exercises.length - 1);
     final set = exercise.sets[setIndex];
     final timed = exercise.mode == ExerciseMode.time;
 
@@ -190,7 +268,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
               ? set.copyWith(distance: parsed)
               : set.copyWith(weight: parsed));
 
-    _replaceSet(_exerciseIndex, setIndex, updated);
+    _replaceSet(viewed, setIndex, updated);
 
     try {
       await _repo.updateSessionSet(
@@ -266,13 +344,15 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
   }
 
   Future<void> _completeSet() async {
-    final exercise = _exercise;
+    // Acts on the RUNNING exercise, not the viewed one: previewing never
+    // moves the timer, so Done always belongs to the active set.
+    final active = _activeIndex.clamp(0, _session.exercises.length - 1);
+    final exercise = _exerciseAt(active);
     if (exercise == null || exercise.sets.isEmpty) return;
 
-    final index = _currentSetIndex;
+    final index = _firstOpenSet(exercise);
     final set = exercise.sets[index];
-    _replaceSet(_exerciseIndex, index, set.copyWith(completed: true));
-    _sounds.play(WorkoutCue.setDone);
+    _replaceSet(active, index, set.copyWith(completed: true));
 
     try {
       await _repo.updateSessionSet(
@@ -286,8 +366,9 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     }
     if (!mounted) return;
 
+    // Done starts playing here: the timer (and the view) move with it.
     final wasLastSet = index >= exercise.sets.length - 1;
-    final isLastExercise = _exerciseIndex >= _session.exercises.length - 1;
+    final isLastExercise = active >= _session.exercises.length - 1;
 
     if (wasLastSet && isLastExercise) {
       await _finish();
@@ -295,25 +376,31 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     }
 
     setState(() {
-      _setElapsed = 0;
+      _activeIndex = wasLastSet ? active + 1 : active;
+      _viewIndex = _activeIndex;
+      _setStartedAt = DateTime.now();
       if (wasLastSet) {
-        _exerciseIndex++;
-        _restRemaining = _session.restBetweenExercisesSec > 0
-            ? _session.restBetweenExercisesSec
-            : null;
+        _startRest(_session.restBetweenExercisesSec);
         _notesOpen = false;
       } else {
-        _restRemaining = exercise.restBetweenSetsSec > 0
-            ? exercise.restBetweenSetsSec
-            : null;
+        _startRest(exercise.restBetweenSetsSec);
       }
+    });
+  }
+
+  /// The user pressed Start on a previewed exercise: the running timer moves
+  /// over to it. Previewing alone (step-rail taps) never calls this.
+  void _startExercise() {
+    setState(() {
+      _activeIndex = _viewIndex.clamp(0, _session.exercises.length - 1);
+      _clearRest();
+      _notesOpen = false;
     });
   }
 
   Future<void> _finish() async {
     if (_finishing) return;
     setState(() => _finishing = true);
-    _sounds.play(WorkoutCue.workoutDone);
     try {
       final result = await _repo.finishSession(
         _session.id,
@@ -378,7 +465,11 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
   Widget build(BuildContext context) {
     final c = context.colors;
     final exercise = _exercise;
+    // Global rest state: belongs to the RUNNING exercise and keeps counting
+    // while the user previews another one.
     final resting = _restRemaining != null;
+    // Row highlight only follows the rest when viewing the running exercise.
+    final viewingRunning = !_previewing;
 
     return PopScope(
       // Backing out mid-workout would silently leave an active session behind,
@@ -463,7 +554,9 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                               set: exercise.sets[i],
                               exercise: exercise,
                               isCurrent: i == _currentSetIndex,
-                              resting: resting,
+                              // Amber rest state only on the running exercise —
+                              // a preview must not inherit its highlight.
+                              resting: resting && viewingRunning,
                               onEditFirst: () =>
                                   _editValue(i, firstField: true),
                               onEditSecond: () =>
@@ -524,14 +617,15 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
 
   Widget _stepChip(int index, double size) {
     final c = context.colors;
-    final isCurrent = index == _exerciseIndex;
+    final isCurrent = index == _viewIndex;
+    final running = index == _activeIndex;
     final done = _session.exercises[index].isDone;
 
     return GestureDetector(
+      // Preview only: shows the exercise without touching the running timer.
+      // The timer moves over on Start (_startExercise) or Done (_completeSet).
       onTap: () => setState(() {
-        _exerciseIndex = index;
-        _restRemaining = null;
-        _setElapsed = 0;
+        _viewIndex = index;
         _notesOpen = false;
       }),
       child: Container(
@@ -541,13 +635,20 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
         decoration: BoxDecoration(
           color: isCurrent
               ? c.primary
-              : (done ? c.primarySoftStrong : c.surface),
+              : (running ? c.primarySoftStrong : c.surface),
+          // Ring around the exercise the timer belongs to while previewing
+          // another one, so the running set stays visible on the rail.
+          border: (!isCurrent && running)
+              ? Border.all(color: c.primary, width: 1.5)
+              : null,
           shape: BoxShape.circle,
         ),
         child: Text(
           '${index + 1}',
           style: AppText.caption.copyWith(
-            color: isCurrent ? c.textOnPrimary : c.textSecondary,
+            color: isCurrent
+                ? c.textOnPrimary
+                : (done ? c.text : c.textSecondary),
           ),
         ),
       ),
@@ -556,6 +657,63 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
 
   Widget _bottomBar(bool resting) {
     final c = context.colors;
+    // Previewing: the bar stays neutral and offers Start — the running timer
+    // (and its rest gap) is untouched until the user starts this exercise.
+    if (_previewing) {
+      return Container(
+        color: c.surface,
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          AppSpacing.md,
+        ),
+        child: Row(
+          children: [
+            FitnessIconButton(
+              icon: Icons.close_rounded,
+              size: 40,
+              iconSize: 18,
+              background: c.surfaceElevated,
+              onTap: _abandon,
+            ),
+            Expanded(
+              child: Center(
+                child: Text(
+                  'Previewing',
+                  style: AppText.caption.copyWith(color: c.textSecondary),
+                ),
+              ),
+            ),
+            FitnessPill(
+              onTap: _finishing ? null : _startExercise,
+              background: c.primary,
+              radius: AppRadius.sm,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: 10,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.play_arrow_rounded,
+                    size: 16,
+                    color: c.textOnPrimary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Start',
+                    style: AppText.body.copyWith(color: c.textOnPrimary),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final tint = resting ? c.warning : c.primary;
     // c.textOnPrimary is tuned for the blue Done pill; the amber Skip pill
     // needs a dark label instead to stay readable against that lighter tint.
@@ -608,10 +766,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
             onTap: _finishing
                 ? null
                 : (resting
-                      ? () => setState(() {
-                          _restRemaining = null;
-                          _setElapsed = 0;
-                        })
+                      ? () => setState(_clearRest)
                       : _completeSet),
             background: tint,
             radius: AppRadius.sm,

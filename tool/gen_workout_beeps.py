@@ -13,24 +13,30 @@ import os
 import struct
 import wave
 
-RATE = 22050  # Plenty for a sine under 1.5 kHz, and half the size of 44.1k.
+RATE = 22050  # Plenty for a tone under 5 kHz, and half the size of 44.1k.
 AMPLITUDE = 0.55  # Loud enough to hear over a gym, short of clipping.
 OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "sounds")
 
 
-def tone(freq, ms, gain=1.0):
-    """One note, with a 6 ms fade either end so it starts and stops without a click."""
+def tone(freq, ms, gain=1.0, sharp=False, fade_ms=6.0):
+    """One note, fading either end so it starts and stops without a click.
+
+    sharp=True adds 2nd/3rd harmonics so the cue cuts through gym noise
+    instead of sounding like a soft sine blip. A longer fade (tens of ms)
+    softens the attack into a rounder, more professional timer chime.
+    """
     total = int(RATE * ms / 1000)
-    fade = max(1, int(RATE * 0.006))
+    fade = max(1, int(RATE * fade_ms / 1000))
     samples = []
     for i in range(total):
         envelope = min(1.0, i / fade, (total - i) / fade)
-        samples.append(AMPLITUDE * gain * envelope * math.sin(2 * math.pi * freq * i / RATE))
+        s = math.sin(2 * math.pi * freq * i / RATE)
+        if sharp:
+            s += 0.35 * math.sin(2 * math.pi * freq * 2 * i / RATE)
+            s += 0.15 * math.sin(2 * math.pi * freq * 3 * i / RATE)
+            s /= 1.5
+        samples.append(AMPLITUDE * gain * envelope * s)
     return samples
-
-
-def silence(ms):
-    return [0.0] * int(RATE * ms / 1000)
 
 
 def write(name, samples):
@@ -45,18 +51,10 @@ def write(name, samples):
     print(f"{name}: {os.path.getsize(path) / 1024:.1f} KB")
 
 
-# The four cues, deliberately distinguishable without looking at the screen:
-# one blip acknowledges, a rising pair means go, three flat blips mean the rest
-# is over, and the fanfare only ever plays once.
+# The rest-over cue: a single soft 1 s chime — pure sine, no harsh harmonics,
+# gentle 60 ms fades so it reads as a professional timer, not an OS alert.
 CUES = {
-    # A set was ticked off.
-    "set_done.wav": tone(880, 90),
-    # The workout just started.
-    "workout_start.wav": tone(660, 110) + silence(40) + tone(990, 140),
-    # Rest is over, next set now.
-    "rest_over.wav": tone(1046, 80) + silence(70) + tone(1046, 80) + silence(70) + tone(1318, 160),
-    # The whole workout is done.
-    "workout_done.wav": tone(660, 120) + tone(880, 120) + tone(1318, 260),
+    "workout_beep.wav": tone(1046, 1000, fade_ms=60),
 }
 
 if __name__ == "__main__":

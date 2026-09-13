@@ -63,6 +63,14 @@ class _BuildRoutineDialogState extends ConsumerState<_BuildRoutineDialog> {
   int _minutes = 45;
   final _notes = TextEditingController();
 
+  /// The rest the plan writes between every set unless a lift needs otherwise.
+  int _restSec = 90;
+
+  /// Every instruction the user has given this draft, oldest first: the brief's
+  /// notes, then each change request. Sent back with every revision so the
+  /// model keeps the whole conversation, not just the latest sentence.
+  final List<String> _history = [];
+
   final _change = TextEditingController();
 
   BuiltPlan? _draft;
@@ -98,12 +106,21 @@ class _BuildRoutineDialogState extends ConsumerState<_BuildRoutineDialog> {
     'level': _level,
     'equipment': _place,
     'minutes': _minutes,
+    'defaultRestSec': _restSec,
     if (_notes.text.trim().isNotEmpty) 'notes': _notes.text.trim(),
   };
 
   /* ---------------------------------------------------------- generating -- */
 
   Future<void> _generate({String? request}) async {
+    final trimmed = request?.trim() ?? '';
+    final notes = _notes.text.trim();
+    // A fresh build starts a new conversation: context is just the current
+    // notes. A revision appends, so "make it shorter" never drops the
+    // "sore knees" from three turns ago.
+    final history = trimmed.isEmpty
+        ? [if (notes.isNotEmpty) notes]
+        : [..._history, trimmed];
     setState(() {
       _step = _Step.working;
       _error = null;
@@ -120,11 +137,15 @@ class _BuildRoutineDialogState extends ConsumerState<_BuildRoutineDialog> {
     try {
       final draft = await _repo.buildRoutines(
         brief: _brief,
-        current: request == null ? null : _draft,
-        request: request,
+        current: trimmed.isEmpty ? null : _draft,
+        request: trimmed.isEmpty ? null : trimmed,
+        history: history,
       );
       if (!mounted) return;
       setState(() {
+        _history
+          ..clear()
+          ..addAll(history);
         _draft = draft;
         _routineIndex = _routineIndex.clamp(
           0,
@@ -153,7 +174,12 @@ class _BuildRoutineDialogState extends ConsumerState<_BuildRoutineDialog> {
       _error = null;
     });
     try {
-      final plan = await _repo.applyBuiltRoutines(widget.plan.id, draft);
+      final plan = await _repo.applyBuiltRoutines(
+        widget.plan.id,
+        draft,
+        brief: _brief,
+        history: _history,
+      );
       if (mounted) Navigator.of(context).pop(plan);
     } catch (e) {
       if (!mounted) return;
@@ -277,7 +303,7 @@ class _BuildRoutineDialogState extends ConsumerState<_BuildRoutineDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Five quick answers and I will write the week for you. You can ask '
+          'Six quick answers and I will write the week for you. You can ask '
           'for changes before anything is saved.',
           style: AppText.bodySm.copyWith(color: c.textSubtle),
         ),
@@ -317,6 +343,19 @@ class _BuildRoutineDialogState extends ConsumerState<_BuildRoutineDialog> {
           value: '$_minutes min',
           onChanged: (value) =>
               setState(() => _minutes = int.parse(value.split(' ').first)),
+        ),
+        _RestRow(
+          value: _restSec,
+          onTap: () async {
+            final seconds = await showDurationSheet(
+              context,
+              title: 'Default rest between sets',
+              initialSeconds: _restSec,
+            );
+            if (seconds != null && mounted) {
+              setState(() => _restSec = seconds);
+            }
+          },
         ),
         const SizedBox(height: AppSpacing.xs),
         TextField(
@@ -425,17 +464,22 @@ class _BuildRoutineDialogState extends ConsumerState<_BuildRoutineDialog> {
             hintStyle: AppText.bodySm.copyWith(color: c.textPlaceholder),
             filled: true,
             fillColor: c.surface,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.md,
+            contentPadding: const EdgeInsets.only(
+              left: AppSpacing.md,
+              top: AppSpacing.sm,
+              bottom: AppSpacing.sm,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.sm),
               borderSide: BorderSide.none,
             ),
-            suffixIcon: IconButton(
-              icon: Icon(Icons.arrow_upward_rounded, size: 18, color: c.primary),
-              onPressed: _askForChange,
+            suffixIcon: Padding(
+              padding: const EdgeInsets.all(6),
+              child: _SendButton(onTap: _askForChange),
+            ),
+            suffixIconConstraints: const BoxConstraints(
+              minWidth: 48,
+              minHeight: 48,
             ),
           ),
         ),
@@ -643,6 +687,67 @@ class _Chip extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The filled circular send button inside the "ask for a change" fields —
+/// a solid target rather than a faint glyph, so it reads as the way forward.
+class _SendButton extends StatelessWidget {
+  const _SendButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Material(
+      color: c.primary,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Icon(
+            Icons.arrow_upward_rounded,
+            size: 20,
+            color: c.textOnPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The default rest between sets, shown the way the config screen shows it.
+class _RestRow extends StatelessWidget {
+  const _RestRow({required this.value, required this.onTap});
+
+  final int value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Default rest between sets',
+            style: AppText.bodySm.copyWith(color: c.textSubtle),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _Chip(
+            label: 'Rest: ${formatRest(value)}',
+            selected: false,
+            onTap: onTap,
+          ),
+        ],
       ),
     );
   }

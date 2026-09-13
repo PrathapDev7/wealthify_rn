@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:app_settings/app_settings.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/widgets.dart';
+import '../../data/repositories/bills_repository.dart';
 
 /// Persisted reminder settings (mirrors the RN `NotifSettings` shape stored
 /// under `wealthify_notif`).
@@ -105,11 +107,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       }
     }
 
-    // Initialise the plugin and request permission so the status line is live.
+    // Check current status without prompting: on iOS the system dialog shows
+    // at most once, so re-prompting here would burn the one shot on screen
+    // open and leave denied users with no path forward.
     bool granted = false;
     try {
-      await LocalNotifications.instance.init();
-      granted = await LocalNotifications.instance.requestPermission();
+      granted = await LocalNotifications.instance.isGranted();
     } catch (_) {
       granted = false;
     }
@@ -130,14 +133,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   Future<void> _enableNotifications() async {
     bool granted = false;
     try {
-      granted = await LocalNotifications.instance.requestPermission();
+      granted = await LocalNotifications.instance.isGranted();
+      granted =
+          granted || await LocalNotifications.instance.requestPermission();
     } catch (_) {
       granted = false;
     }
     if (!mounted) return;
     setState(() => _granted = granted);
     if (!granted) {
-      showAppSnack(context, "Notifications aren't available here");
+      _showOpenSettingsSnack(
+          'Notifications are off — enable them in Settings');
     }
   }
 
@@ -145,7 +151,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     if (value) {
       bool granted = _granted;
       try {
-        granted = await LocalNotifications.instance.requestPermission();
+        granted = await LocalNotifications.instance.isGranted();
+        granted =
+            granted || await LocalNotifications.instance.requestPermission();
       } catch (_) {
         granted = false;
       }
@@ -153,7 +161,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       setState(() => _granted = granted);
       if (!granted) {
         // Leave the switch off if permission was refused.
-        showAppSnack(context, 'Notification permission denied');
+        _showOpenSettingsSnack(
+            'Notifications are off — enable them in Settings');
         return;
       }
     }
@@ -196,22 +205,67 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   Future<void> _sendTest() async {
     bool granted = _granted;
     try {
-      granted = await LocalNotifications.instance.requestPermission();
+      granted = await LocalNotifications.instance.isGranted();
+      granted =
+          granted || await LocalNotifications.instance.requestPermission();
     } catch (_) {
       granted = false;
     }
     if (mounted) setState(() => _granted = granted);
     if (!granted) {
-      if (mounted) showAppSnack(context, "Notifications aren't available here");
+      if (mounted) {
+        _showOpenSettingsSnack(
+            'Notifications are off — enable them in Settings');
+      }
       return;
     }
-    final ok = await LocalNotifications.instance.showTest();
+    var ok = await LocalNotifications.instance.showTest();
+    ok = ok || await LocalNotifications.instance.showTestDelayed();
     if (!mounted) return;
     showAppSnack(
       context,
       ok ? 'Test notification sent' : "Notifications aren't available here",
       error: !ok,
     );
+  }
+
+  void _showOpenSettingsSnack(String message) {
+    final c = context.colors;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: c.negativeSoft,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            side: BorderSide(color: c.negative),
+          ),
+          content: Row(
+            children: [
+              Icon(Icons.error, color: c.negative, size: 22),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(message,
+                    style: AppText.bodyMedium.copyWith(color: c.text)),
+              ),
+              TextButton(
+                onPressed: _openAppSettings,
+                child: Text('Settings',
+                    style: AppText.bodyMedium.copyWith(color: c.primary)),
+              ),
+            ],
+          ),
+        ),
+      );
+  }
+
+  Future<void> _openAppSettings() async {
+    try {
+      await AppSettings.openAppSettings(type: AppSettingsType.notification);
+    } catch (_) {
+      if (mounted) showAppSnack(context, 'Open Settings manually', error: true);
+    }
   }
 
   @override
@@ -290,6 +344,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   variant: PillVariant.secondary,
                   onPressed: _sendTest,
                 ),
+
+                _sectionLabel(c, 'Alerts inbox'),
+                const _ServerInbox(),
               ],
             ),
           ),
@@ -429,6 +486,110 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Server-side alerts inbox (bill due, budget, recurring created).
+class _ServerInbox extends ConsumerWidget {
+  const _ServerInbox();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final async = ref.watch(notificationsProvider);
+
+    return async.when(
+      loading: () => const AppCard(
+        child: Text('Loading alerts...'),
+      ),
+      error: (_, _) => AppCard(
+        child: Text('Alerts unavailable offline',
+            style: AppText.bodySm.copyWith(color: c.textSubtle)),
+      ),
+      data: (result) {
+        if (result.items.isEmpty) {
+          return AppCard(
+            child: Text('No alerts yet',
+                style: AppText.bodySm.copyWith(color: c.textSubtle)),
+          );
+        }
+        return AppCard(
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('${result.unread} unread',
+                        style:
+                            AppText.caption.copyWith(color: c.textSubtle)),
+                  ),
+                  GestureDetector(
+                    onTap: () async {
+                      await ref
+                          .read(notificationsRepositoryProvider)
+                          .markAllRead();
+                      ref.invalidate(notificationsProvider);
+                    },
+                    child: Text('Mark all read',
+                        style: AppText.caption.copyWith(
+                            color: c.primary,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              for (final n in result.items.take(20)) ...[
+                Opacity(
+                  opacity: n.read ? 0.6 : 1,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        switch (n.type) {
+                          'bill_due' => Icons.receipt_long_outlined,
+                          'budget_alert' => Icons.warning_amber_outlined,
+                          'recurring_created' => Icons.autorenew,
+                          _ => Icons.swap_horiz_outlined,
+                        },
+                        size: 18,
+                        color: n.read ? c.textSubtle : c.primary,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(n.title,
+                                style: AppText.bodyMedium
+                                    .copyWith(color: c.text)),
+                            if (n.body != null)
+                              Text(n.body!,
+                                  style: AppText.caption.copyWith(
+                                      color: c.textSubtle)),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () async {
+                          await ref
+                              .read(notificationsRepositoryProvider)
+                              .markRead(n.id);
+                          ref.invalidate(notificationsProvider);
+                        },
+                        child: Icon(Icons.check,
+                            size: 18, color: c.textSubtle),
+                      ),
+                    ],
+                  ),
+                ),
+                if (n != result.items.take(20).last)
+                  Divider(height: AppSpacing.md, color: c.divider),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }

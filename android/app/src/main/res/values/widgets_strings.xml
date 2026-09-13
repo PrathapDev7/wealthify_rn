@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_balance_desc">Align balance snapshot</string>
+    <string name="widget_budget_desc">Align budget tracker</string>
+    <string name="widget_calories_desc">Align calories donut</string>
+    <string name="widget_fitness_desc">Align fitness status</string>
+</resources>

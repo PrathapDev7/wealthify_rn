@@ -168,12 +168,17 @@ class WorkoutRepository {
   /// Drafts a week from the brief, or redrafts the one on screen from a change
   /// the user asked for. Nothing is written until [applyBuiltRoutines].
   ///
+  /// [history] is every instruction so far — the brief's notes first, then
+  /// each change request — so a revision keeps the whole conversation rather
+  /// than just the latest sentence.
+  ///
   /// A longer receive timeout than the client default: this waits on a language
   /// model, which is slower than any other call in the app.
   Future<BuiltPlan> buildRoutines({
     Map<String, dynamic>? brief,
     BuiltPlan? current,
     String? request,
+    List<String>? history,
   }) async {
     final res = await _api.dio.post(
       'build-routines',
@@ -181,6 +186,7 @@ class WorkoutRepository {
         if (brief != null) 'brief': brief,
         if (current != null) 'current': current.toJson(),
         if (request != null && request.trim().isNotEmpty) 'request': request,
+        if (history != null && history.isNotEmpty) 'history': history,
       },
       options: Options(receiveTimeout: const Duration(seconds: 90)),
     );
@@ -189,10 +195,65 @@ class WorkoutRepository {
 
   /// Writes an accepted draft over the plan, replacing every routine and
   /// exercise it had. Answers with the plan as it now stands.
-  Future<WorkoutPlan> applyBuiltRoutines(String planId, BuiltPlan plan) async {
+  ///
+  /// [brief] and [history] are the conversation the draft was built from —
+  /// the backend stores them on the plan so a later "Update with AI" refines
+  /// with the same injuries and dislikes in context.
+  Future<WorkoutPlan> applyBuiltRoutines(
+    String planId,
+    BuiltPlan plan, {
+    Map<String, dynamic>? brief,
+    List<String>? history,
+  }) async {
     final res = await _api.dio.post(
       'apply-built-routines/$planId',
-      data: {'routines': plan.raw['routines']},
+      data: {
+        'routines': plan.raw['routines'],
+        if (brief != null) 'brief': brief,
+        if (history != null && history.isNotEmpty) 'history': history,
+      },
+    );
+    return WorkoutPlan.fromJson(
+      (res.data['data'] as Map).cast<String, dynamic>(),
+    );
+  }
+
+  /// Drafts a refinement of the routines a plan already has, from a change
+  /// the user asked for. The stored builder conversation travels server-side,
+  /// so the model remembers the original brief. Nothing is written until
+  /// [applyRefinedRoutines].
+  ///
+  /// A longer receive timeout than the client default: this waits on a language
+  /// model, which is slower than any other call in the app.
+  Future<BuiltPlan> refineRoutines({
+    required String planId,
+    required String request,
+    List<Map<String, dynamic>>? routines,
+  }) async {
+    final res = await _api.dio.post(
+      'refine-routines/$planId',
+      data: {
+        'request': request,
+        if (routines != null) 'routines': routines,
+      },
+      options: Options(receiveTimeout: const Duration(seconds: 90)),
+    );
+    return BuiltPlan.fromJson((res.data['data'] as Map).cast<String, dynamic>());
+  }
+
+  /// Writes an accepted refinement over the plan. [request] is the change that
+  /// produced it — the backend appends it to the stored conversation.
+  Future<WorkoutPlan> applyRefinedRoutines(
+    String planId,
+    BuiltPlan plan, {
+    String? request,
+  }) async {
+    final res = await _api.dio.post(
+      'apply-refined-routines/$planId',
+      data: {
+        'routines': plan.raw['routines'],
+        if (request != null && request.trim().isNotEmpty) 'request': request,
+      },
     );
     return WorkoutPlan.fromJson(
       (res.data['data'] as Map).cast<String, dynamic>(),

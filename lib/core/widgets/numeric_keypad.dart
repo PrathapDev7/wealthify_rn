@@ -44,13 +44,16 @@ class NumericKeypad extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    // Android 15+ enforces edge-to-edge drawing, so without the system nav
+    // bar inset the bottom key row lands behind it.
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Container(
       decoration: BoxDecoration(
         color: c.surface,
         border: Border(top: BorderSide(color: c.divider)),
       ),
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xl, AppSpacing.xs, AppSpacing.xl, AppSpacing.sm),
+      padding: EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.xs, AppSpacing.xl, AppSpacing.sm + bottomInset),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

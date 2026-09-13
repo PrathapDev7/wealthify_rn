@@ -15,7 +15,6 @@ class Prefs {
   static const kPreferences = 'wealthify_prefs';
   static const kAppLock = 'wealthify_app_lock';
   static const kNotifSettings = 'wealthify_notif';
-  static const kAddMenuTourSeen = 'wealthify_add_menu_tour_seen_v2';
 
   String? getString(String key) => _prefs.getString(key);
   Future<void> setString(String key, String value) =>

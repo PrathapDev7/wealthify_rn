@@ -320,6 +320,7 @@ class WorkoutPlan {
     this.remindersEnabled = false,
     this.reminders = const [],
     this.routines = const [],
+    this.hasBuilderConversation = false,
   });
 
   final String id;
@@ -330,21 +331,39 @@ class WorkoutPlan {
   final List<WorkoutReminder> reminders;
   final List<Routine> routines;
 
-  factory WorkoutPlan.fromJson(Map<String, dynamic> j) => WorkoutPlan(
-    id: _id(j),
-    name: (j['name'] ?? '').toString(),
-    order: _int(j['order']),
-    isActive: j['isActive'] == true,
-    remindersEnabled: j['remindersEnabled'] == true,
-    reminders: _maps(j['reminders']).map(WorkoutReminder.fromJson).toList(),
-    routines: _maps(j['routines']).map(Routine.fromJson).toList(),
-  );
+  /// Whether the backend holds the "Build me a routine" conversation behind
+  /// these routines — the brief and the change history it was written from.
+  /// Kept for future gating; the "Update with AI" row currently always shows
+  /// because refining works with or without stored context.
+  final bool hasBuilderConversation;
+
+  factory WorkoutPlan.fromJson(Map<String, dynamic> j) {
+    final conversation = j['builderConversation'];
+    final history = conversation is Map
+        ? ((conversation['history'] as List?) ?? const [])
+        : const [];
+    return WorkoutPlan(
+      id: _id(j),
+      name: (j['name'] ?? '').toString(),
+      order: _int(j['order']),
+      isActive: j['isActive'] == true,
+      remindersEnabled: j['remindersEnabled'] == true,
+      reminders: _maps(j['reminders']).map(WorkoutReminder.fromJson).toList(),
+      routines: _maps(j['routines']).map(Routine.fromJson).toList(),
+      hasBuilderConversation:
+          (conversation is Map &&
+              (((conversation['brief'] is Map) &&
+                      (conversation['brief'] as Map).isNotEmpty) ||
+                  history.isNotEmpty)),
+    );
+  }
 
   /// See [Routine.copyWith] — the same idea one level up.
   WorkoutPlan copyWith({
     String? name,
     bool? isActive,
     List<Routine>? routines,
+    bool? hasBuilderConversation,
   }) => WorkoutPlan(
     id: id,
     name: name ?? this.name,
@@ -353,6 +372,8 @@ class WorkoutPlan {
     remindersEnabled: remindersEnabled,
     reminders: reminders,
     routines: routines ?? this.routines,
+    hasBuilderConversation:
+        hasBuilderConversation ?? this.hasBuilderConversation,
   );
 
   /// The plan with one of its routines swapped for an edited copy — see
@@ -368,6 +389,7 @@ class WorkoutPlan {
     routines: [
       for (final r in routines) r.id == routine.id ? routine : r,
     ],
+    hasBuilderConversation: hasBuilderConversation,
   );
 }
 

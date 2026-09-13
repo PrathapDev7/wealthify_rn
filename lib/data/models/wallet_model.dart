@@ -16,7 +16,16 @@ class WalletModel {
     this.balance = 0,
     this.income = 0,
     this.expense = 0,
+    this.transferIn = 0,
+    this.transferOut = 0,
     this.isPrimary = false,
+    this.owedBalance = 0,
+    this.creditLimit,
+    this.apr,
+    this.minPayment,
+    this.dueDay,
+    this.utilization,
+    this.payoffProgress,
   });
 
   final String id;
@@ -35,7 +44,16 @@ class WalletModel {
   final num balance; // computed server-side
   final num income;
   final num expense;
+  final num transferIn;
+  final num transferOut;
   final bool isPrimary; // server-authoritative default wallet
+  final num owedBalance;
+  final num? creditLimit;
+  final num? apr;
+  final num? minPayment;
+  final int? dueDay;
+  final double? utilization;
+  final double? payoffProgress;
 
   bool get isCard => kind == 'card';
 
@@ -56,7 +74,17 @@ class WalletModel {
         balance: (j['balance'] ?? 0) as num,
         income: (j['income'] ?? 0) as num,
         expense: (j['expense'] ?? 0) as num,
+        transferIn: (j['transferIn'] ?? 0) as num,
+        transferOut: (j['transferOut'] ?? 0) as num,
         isPrimary: j['isPrimary'] == true,
+        owedBalance: (j['owedBalance'] ?? 0) as num,
+        creditLimit: (j['creditLimit'] as num?),
+        apr: (j['apr'] as num?),
+        minPayment: (j['minPayment'] as num?),
+        dueDay: (j['dueDay'] as num?)?.toInt() ??
+            (j['effectiveDueDay'] as num?)?.toInt(),
+        utilization: (j['utilization'] as num?)?.toDouble(),
+        payoffProgress: (j['payoffProgress'] as num?)?.toDouble(),
       );
 }
 

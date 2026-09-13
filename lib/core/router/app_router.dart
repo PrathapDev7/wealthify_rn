@@ -14,6 +14,11 @@ import '../../features/auth/session_controller.dart';
 import '../../features/auth/splash_screen.dart';
 import '../../features/budgets/budgets_screen.dart';
 import '../../features/budgets/set_budget_screen.dart';
+import '../../features/calories/calorie_history_screen.dart';
+import '../../features/calories/calorie_screen.dart';
+import '../../features/calories/health_goals_screen.dart';
+import '../../features/calories/healthify_stats_screen.dart';
+import '../../features/calories/log_weight_screen.dart';
 import '../../features/categories/edit_category_screen.dart';
 import '../../features/categories/manage_categories_screen.dart';
 import '../../features/categories/select_category_screen.dart';
@@ -29,10 +34,6 @@ import '../../features/notifications/notifications_screen.dart';
 import '../../features/onboarding/welcome_screen.dart';
 import '../../features/preferences/preferences_screen.dart';
 import '../../features/premium/premium_screen.dart';
-import '../../features/calories/calorie_history_screen.dart';
-import '../../features/calories/calorie_screen.dart';
-import '../../features/calories/health_goals_screen.dart';
-import '../../features/calories/healthify_stats_screen.dart';
 import '../../features/recurring/edit_recurring_screen.dart';
 import '../../features/recurring/recurring_screen.dart';
 import '../../features/reports/reports_screen.dart';
@@ -43,33 +44,64 @@ import '../../features/transactions/transaction_detail_screen.dart';
 import '../../features/transactions/transactions_screen.dart';
 import '../../features/wallets/edit_wallet_screen.dart';
 import '../../features/wallets/select_provider_screen.dart';
+import '../../features/wallets/transfer_screen.dart';
 import '../../features/wallets/wallets_screen.dart';
 import '../../features/wishlist/wishlist_screen.dart';
 import '../providers.dart';
+import '../shortcuts/app_links.dart';
 import '../storage/prefs.dart';
 import '../theme/app_theme.dart';
 import 'routes.dart';
+
+/// Root navigator key so non-go_router routes (e.g. the raw-pushed workout
+/// screens) can be popped when a 401 forces the user back to the auth screen.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen(sessionProvider, (_, _) => refresh.value++);
   ref.onDispose(refresh.dispose);
+  // The splash redirect below is only for the initial session load. Login and
+  // register submits also flip sessionProvider into loading; once booted,
+  // those must keep the user on the auth screen until the API responds.
+  var booted = false;
+
+  // A 401 means the stored token is dead: pop any raw-pushed routes and clear
+  // the session so the redirect below sends the user to the auth screen.
+  ref.read(apiClientProvider).onUnauthorized = () {
+    rootNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+    ref.read(sessionProvider.notifier).markUnauthenticated();
+  };
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: Routes.splash,
     refreshListenable: refresh,
     redirect: (context, state) {
       final session = ref.read(sessionProvider);
       final loc = state.matchedLocation;
 
-      if (session.isLoading) return loc == Routes.splash ? null : Routes.splash;
+      if (!booted) {
+        if (session.isLoading) {
+          return loc == Routes.splash ? null : Routes.splash;
+        }
+        booted = true;
+      }
 
       final user = session.asData?.value;
       final seenWelcome = ref.read(prefsProvider).getBool(Prefs.kSeenWelcome);
       final atEntry =
           loc == Routes.splash || loc == Routes.welcome || loc == Routes.auth;
 
-      if (user != null) return atEntry ? Routes.dashboard : null;
+      // Cold-start deep links (launcher quick action / widget tap) resolve
+      // once the session is known: signed-in users land on the target,
+      // signed-out users fall through to the normal auth flow and the warm
+      // AppLinkListener picks it up after login.
+      if (user != null) {
+        final pending = AppLinks.consumeRoute();
+        if (pending != null) return pending;
+        return atEntry ? Routes.dashboard : null;
+      }
       if (!seenWelcome) return loc == Routes.welcome ? null : Routes.welcome;
       return (loc == Routes.auth || loc == Routes.welcome) ? null : Routes.auth;
     },
@@ -222,6 +254,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: Routes.wallets, builder: (_, _) => const WalletsScreen()),
       GoRoute(
+        path: Routes.transfer,
+        builder: (_, _) => const TransferScreen(),
+      ),
+      GoRoute(
         path: Routes.editWallet,
         builder: (_, state) =>
             EditWalletScreen(wallet: state.extra as WalletModel?),
@@ -275,6 +311,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.calorieHistory,
         builder: (_, _) =>
             const HealthifyTheme(child: CalorieHistoryScreen()),
+      ),
+      GoRoute(
+        path: Routes.logWeight,
+        builder: (_, _) =>
+            const HealthifyTheme(child: LogWeightScreen()),
       ),
     ],
   );

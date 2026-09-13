@@ -23,6 +23,7 @@ class LocalNotifications {
 
   static const int _dailyId = 0;
   static const int _testId = 99;
+  static const int _restOverId = 77;
 
   /// Initialises the plugin + timezone database. Safe to call repeatedly.
   Future<void> init() async {
@@ -49,7 +50,10 @@ class LocalNotifications {
       );
       const settings =
           InitializationSettings(android: android, iOS: darwin, macOS: darwin);
-      await _plugin.initialize(settings: settings);
+      await _plugin.initialize(
+        settings: settings,
+        onDidReceiveNotificationResponse: (_) {},
+      );
       _initialized = true;
     } catch (_) {
       // Plugin unavailable (e.g. web/test) — leave uninitialised.
@@ -93,6 +97,37 @@ class LocalNotifications {
     return false;
   }
 
+  /// Non-prompting permission check. Unlike [requestPermission], this never
+  /// shows the OS dialog — on iOS the system prompt appears at most once and
+  /// repeat calls are silently ignored, so the UI must check first and route
+  /// denied users to Settings instead of re-prompting.
+  Future<bool> isGranted() async {
+    if (kIsWeb) return false;
+    await init();
+    try {
+      final android = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        return await android.areNotificationsEnabled() ?? false;
+      }
+      final ios = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      if (ios != null) {
+        final opts = await ios.checkPermissions();
+        return opts?.isEnabled ?? false;
+      }
+      final macos = _plugin.resolvePlatformSpecificImplementation<
+          MacOSFlutterLocalNotificationsPlugin>();
+      if (macos != null) {
+        final opts = await macos.checkPermissions();
+        return opts?.isEnabled ?? false;
+      }
+    } catch (_) {
+      return false;
+    }
+    return false;
+  }
+
   NotificationDetails _details({
     required String channelId,
     required String channelName,
@@ -119,7 +154,7 @@ class LocalNotifications {
   Future<void> scheduleDaily({required int hour, required int minute}) async {
     await init();
     try {
-      await _plugin.cancelAll();
+      await _plugin.cancel(id: _dailyId);
       await _plugin.zonedSchedule(
         id: _dailyId,
         title: 'Align',
@@ -132,16 +167,6 @@ class LocalNotifications {
       );
     } catch (_) {
       // Scheduling unavailable — swallow so the UI stays responsive.
-    }
-  }
-
-  /// Cancels all scheduled notifications.
-  Future<void> cancelAll() async {
-    await init();
-    try {
-      await _plugin.cancelAll();
-    } catch (_) {
-      // ignore
     }
   }
 
@@ -158,6 +183,78 @@ class LocalNotifications {
       return true;
     } catch (_) {
       return false;
+    }
+  }
+
+  /// Schedules the test notification ~2 s out instead of showing it instantly.
+  /// Fallback for cases where an immediate `show()` is swallowed (e.g. an
+  /// iOS foreground-presentation race or a transient plugin state) — a
+  /// scheduled fire goes through the OS scheduler and surfaces even if the
+  /// app state changes in between. Mirrors the legacy RN screen, which used
+  /// a 2 s `TIME_INTERVAL` trigger for its test.
+  Future<bool> showTestDelayed() async {
+    await init();
+    if (kIsWeb) return false;
+    try {
+      await _plugin.cancel(id: _testId);
+      final when = tz.TZDateTime.now(tz.local).add(const Duration(seconds: 2));
+      await _plugin.zonedSchedule(
+        id: _testId,
+        title: 'Align',
+        body: 'This is a test reminder.',
+        scheduledDate: when,
+        notificationDetails: _details(channelId: 'test', channelName: 'Test'),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Cancels all scheduled notifications.
+  Future<void> cancelAll() async {
+    await init();
+    try {
+      await _plugin.cancelAll();
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  /// Fires a "rest over" alert at [endsAt] even if the app is backgrounded —
+  /// a backup for the in-app beep, which cannot play while the OS has the app
+  /// suspended. Exact so a 30 s rest doesn't drift; silent-ish (low
+  /// importance) so it reads as a cue, not an alarm.
+  Future<void> scheduleRestOver(DateTime endsAt) async {
+    await init();
+    if (kIsWeb) return;
+    try {
+      await _plugin.cancel(id: _restOverId);
+      await _plugin.zonedSchedule(
+        id: _restOverId,
+        title: 'Rest over',
+        body: 'Next set — go.',
+        scheduledDate: tz.TZDateTime.from(endsAt, tz.local),
+        notificationDetails: _details(
+          channelId: 'rest',
+          channelName: 'Rest timer',
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    } catch (_) {
+      // Scheduling unavailable — the in-app beep still covers foreground.
+    }
+  }
+
+  /// Cancels a pending rest-over alert: rest skipped, set ticked early, the
+  /// user switched exercise, or the screen went away.
+  Future<void> cancelRestOver() async {
+    await init();
+    try {
+      await _plugin.cancel(id: _restOverId);
+    } catch (_) {
+      // ignore
     }
   }
 

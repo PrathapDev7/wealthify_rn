@@ -13,6 +13,7 @@ import '../../../core/widgets/widgets.dart';
 import '../../../data/models/workout_models.dart';
 import '../../../data/repositories/workout_repository.dart';
 import 'build_routine_dialog.dart';
+import 'update_routine_dialog.dart';
 import 'exercise_config_screen.dart';
 import 'exercise_picker_screen.dart';
 import 'workout_prestart_screen.dart';
@@ -476,6 +477,12 @@ class _WorkoutPlanScreenState extends ConsumerState<WorkoutPlanScreen> {
       title: routine.name,
       options: (sheetContext) => [
         SheetActionRow(
+          icon: Icons.auto_awesome_rounded,
+          label: 'Update with AI',
+          onTap: () =>
+              Navigator.of(sheetContext).pop(RoutineMenuAction.update),
+        ),
+        SheetActionRow(
           icon: Icons.edit_rounded,
           label: 'Rename routine',
           onTap: () =>
@@ -511,6 +518,13 @@ class _WorkoutPlanScreenState extends ConsumerState<WorkoutPlanScreen> {
     HapticFeedback.selectionClick();
 
     switch (action) {
+      case RoutineMenuAction.update:
+        // The dialog owns the whole flow — request, refined draft, revisions,
+        // and the confirm — and only answers once the plan is rewritten.
+        final updated = await showUpdateRoutineDialog(context, plan: plan);
+        if (updated == null || !mounted) return;
+        _applyPlan(updated, selectRoutineId: '');
+
       case RoutineMenuAction.rename:
         final name = await showNamePrompt(
           context,

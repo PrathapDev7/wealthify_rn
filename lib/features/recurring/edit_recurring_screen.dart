@@ -57,6 +57,9 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
   bool _saving = false;
+  bool _isBill = false;
+  bool _autoCreate = true;
+  late final TextEditingController _remindDays;
 
   bool get _isEdit => widget.rule != null;
 
@@ -73,6 +76,10 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
     _startDate = _parseDate(r?.startDate);
     _endDate = _parseDate(r?.endDate);
     _account = r?.account;
+    _isBill = r?.isBill ?? false;
+    _autoCreate = r?.autoCreate ?? true;
+    _remindDays =
+        TextEditingController(text: '${r?.remindBeforeDays ?? 2}');
     _loadWallets();
   }
 
@@ -108,6 +115,7 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
     _amount.dispose();
     _interval.dispose();
     _description.dispose();
+    _remindDays.dispose();
     super.dispose();
   }
 
@@ -172,6 +180,9 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
       'startDate': DateFormat('yyyy-MM-dd').format(_startDate!),
       'description': desc,
       'account': _account,
+      'isBill': _isBill,
+      'autoCreate': _autoCreate,
+      'remindBeforeDays': int.tryParse(_remindDays.text.trim()) ?? 2,
       if (_endDate != null) 'endDate': DateFormat('yyyy-MM-dd').format(_endDate!),
       if (_kind == 'income') 'title': category,
     };
@@ -362,6 +373,40 @@ class _EditRecurringScreenState extends ConsumerState<EditRecurringScreen> {
                         onClear:
                             _endDate == null ? null : () => setState(() => _endDate = null),
                       ),
+                      const SizedBox(height: AppSpacing.lg),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('Track as bill',
+                            style:
+                                AppText.body.copyWith(color: c.text)),
+                        subtitle: Text('Shows in upcoming bills',
+                            style: AppText.caption
+                                .copyWith(color: c.textSubtle)),
+                        value: _isBill,
+                        onChanged: (v) =>
+                            setState(() => _isBill = v),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('Auto-create transaction',
+                            style:
+                                AppText.body.copyWith(color: c.text)),
+                        subtitle: Text('Off = tracker only, no entry logged',
+                            style: AppText.caption
+                                .copyWith(color: c.textSubtle)),
+                        value: _autoCreate,
+                        onChanged: (v) =>
+                            setState(() => _autoCreate = v),
+                      ),
+                      if (_isBill) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        AppTextField(
+                          controller: _remindDays,
+                          label: 'Remind days before due',
+                          hint: '2',
+                          keyboardType: TextInputType.number,
+                        ),
+                      ],
                     ],
                   ),
                 ),

@@ -58,6 +58,9 @@ dependencies:
   # The workout timer's beeps. Web included, which rules out the platform
   # sound APIs — see lib/core/audio/workout_sounds.dart.
   audioplayers: ^6.1.0
+  quick_actions: ^1.1.1
+  home_widget: ^0.9.4
+  app_settings: ^9.0.0
 
 dev_dependencies:
   flutter_test:

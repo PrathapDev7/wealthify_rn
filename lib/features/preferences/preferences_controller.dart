@@ -6,6 +6,7 @@ import '../../core/providers.dart';
 import '../../core/storage/prefs.dart';
 import '../../core/utils/currency.dart';
 import '../../data/models/wallet_model.dart';
+import '../../data/repositories/preferences_repository.dart';
 
 class Preferences {
   const Preferences({
@@ -19,10 +20,10 @@ class Preferences {
 
   final String currencySymbol;
   final String currencyCode;
-  final String defaultTxnType; // 'expense' | 'income'
-  final String? defaultCategory; // pre-selected category for new transactions
-  final String? defaultWallet; // pre-selected wallet id for new transactions
-  final String weekStart; // 'monday' | 'sunday'
+  final String defaultTxnType;
+  final String? defaultCategory;
+  final String? defaultWallet;
+  final String weekStart;
 
   Preferences copyWith({
     String? currencySymbol,
@@ -76,14 +77,37 @@ class PreferencesController extends Notifier<Preferences> {
     return const Preferences();
   }
 
-  void update(Preferences next) {
-    state = next;
-    ref.read(prefsProvider).setString(Prefs.kPreferences, jsonEncode(next.toJson()));
+  void _persistLocal(Preferences next) {
+    ref
+        .read(prefsProvider)
+        .setString(Prefs.kPreferences, jsonEncode(next.toJson()));
   }
 
-  /// Persists the user's default wallet (the wallet pre-selected for new
-  /// transactions). Pass null to clear it. Builds the next state directly
-  /// because [Preferences.copyWith] can't null-out an existing value.
+  Future<void> _syncRemote(Preferences next) async {
+    try {
+      await ref
+          .read(preferencesRepositoryProvider)
+          .updatePreferences(next.toJson());
+    } catch (_) {}
+  }
+
+  void update(Preferences next) {
+    state = next;
+    _persistLocal(next);
+    _syncRemote(next);
+  }
+
+  Future<void> refreshFromServer() async {
+    try {
+      final remote =
+          await ref.read(preferencesRepositoryProvider).getPreferences();
+      if (remote.isEmpty) return;
+      final next = Preferences.fromJson(remote);
+      state = next;
+      _persistLocal(next);
+    } catch (_) {}
+  }
+
   void setDefaultWallet(String? walletId) {
     if (state.defaultWallet == walletId) return;
     update(Preferences(
@@ -96,9 +120,6 @@ class PreferencesController extends Notifier<Preferences> {
     ));
   }
 
-  /// Mirrors the server's primary wallet into [Preferences.defaultWallet] so
-  /// the add-transaction picker and dashboard follow the server's choice.
-  /// No-op when the current default already matches.
   void syncDefaultFromWallets(List<WalletModel> wallets) {
     WalletModel? primary;
     for (final w in wallets) {
@@ -112,7 +133,6 @@ class PreferencesController extends Notifier<Preferences> {
     }
   }
 
-  /// Formats a value using the active currency symbol.
   String money(num? value) =>
       formatCurrency(value, symbol: state.currencySymbol);
 }

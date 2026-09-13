@@ -932,10 +932,29 @@ class _SheetSaveButtonState extends State<SheetSaveButton> {
         ),
       ),
       onPressed: _busy ? null : _run,
-      child: Text(
-        _busy ? widget.pendingLabel : widget.label,
-        style: AppText.button,
-      ),
+      child: _busy
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: c.textOnPrimary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  widget.pendingLabel,
+                  style: AppText.button,
+                ),
+              ],
+            )
+          : Text(
+              widget.label,
+              style: AppText.button,
+            ),
     );
   }
 }
@@ -1201,12 +1220,33 @@ Future<String?> showNamePrompt(
               ),
               TextButton(
                 onPressed: busy ? null : submit,
-                child: Text(
-                  busy ? pendingLabel : confirmLabel,
-                  style: AppText.button.copyWith(
-                    color: busy ? c.textPlaceholder : c.primary,
-                  ),
-                ),
+                child: busy
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: c.textPlaceholder,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            pendingLabel,
+                            style: AppText.button.copyWith(
+                              color: c.textPlaceholder,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        confirmLabel,
+                        style: AppText.button.copyWith(
+                          color: c.primary,
+                        ),
+                      ),
               ),
             ],
           ),
@@ -1305,12 +1345,33 @@ Future<bool> confirmDestructive(
               ),
               TextButton(
                 onPressed: busy ? null : confirm,
-                child: Text(
-                  busy ? pendingLabel : confirmLabel,
-                  style: AppText.button.copyWith(
-                    color: busy ? c.textPlaceholder : c.negative,
-                  ),
-                ),
+                child: busy
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: c.textPlaceholder,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            pendingLabel,
+                            style: AppText.button.copyWith(
+                              color: c.textPlaceholder,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        confirmLabel,
+                        style: AppText.button.copyWith(
+                          color: c.negative,
+                        ),
+                      ),
               ),
             ],
           ),

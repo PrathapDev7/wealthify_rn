@@ -74,5 +74,18 @@
 		<string>Align needs camera access to capture a custom category icon.</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLName</key>
+				<string>com.invent.wealthify.widget</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>align</string>
+				</array>
+			</dict>
+		</array>
 	</dict>
 </plist>

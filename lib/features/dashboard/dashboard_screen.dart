@@ -12,6 +12,7 @@ import '../../core/widgets/buttons.dart';
 import '../../core/widgets/misc.dart';
 import '../../core/widgets/skeleton.dart';
 import '../../core/widgets/transaction_row.dart';
+import '../../core/widgets/widget_sync_service.dart';
 import '../../data/models/budget_model.dart';
 import '../../data/models/stats_model.dart';
 import '../../data/models/wallet_model.dart';
@@ -153,6 +154,10 @@ class _WealthifyDashboardState extends ConsumerState<_WealthifyDashboard>
       data: (data) {
         final c = context.colors;
         final (stats, budget) = data;
+        // Keep the home-screen widgets fresh with data already in hand.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(widgetSyncProvider).saveBalance(stats, budget, money);
+        });
         final overall = budget.overall;
         final isFirstRun =
             stats.allData.isEmpty &&

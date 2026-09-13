@@ -549,7 +549,6 @@ class AccountScreen extends ConsumerWidget {
     await prefs.remove(Prefs.kPreferences);
     await prefs.remove(Prefs.kAppLock);
     await prefs.remove(Prefs.kNotifSettings);
-    await prefs.remove(Prefs.kAddMenuTourSeen);
     await ref.read(secureStoreProvider).clearSession();
 
     if (context.mounted) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/widgets.dart';
+import '../../core/widgets/widget_sync_service.dart';
 import '../../data/models/workout_models.dart';
 import '../../data/repositories/workout_repository.dart';
 import 'fitness_stats_screen.dart';
@@ -70,6 +73,7 @@ class _FitnessHomeScreenState extends ConsumerState<FitnessHomeScreen> {
         _day = results[0];
         _week = results[1];
       });
+      unawaited(ref.read(widgetSyncProvider).saveFitness(results[0]));
     } catch (e) {
       if (mounted) showAppSnack(context, e.toString(), error: true);
     } finally {

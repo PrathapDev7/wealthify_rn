@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -115,7 +116,12 @@ class _QuickAddSheetState extends State<QuickAddSheet> {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    // max: with the keyboard closed viewInsets is 0, so the system nav bar
+    // inset (padding) is what lifts the content on edge-to-edge Android.
+    final bottom = math.max(
+      MediaQuery.viewInsetsOf(context).bottom,
+      MediaQuery.paddingOf(context).bottom,
+    );
     return Container(
       padding: EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, bottom + AppSpacing.xl),
       decoration: BoxDecoration(

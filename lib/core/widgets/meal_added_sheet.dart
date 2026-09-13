@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -23,7 +25,10 @@ class MealAddedSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final bottom = math.max(
+      MediaQuery.viewInsetsOf(context).bottom,
+      MediaQuery.paddingOf(context).bottom,
+    );
     final isPending = pendingMessage != null;
     final totalCalories = items.fold<int>(0, (sum, m) => sum + m.calories);
 

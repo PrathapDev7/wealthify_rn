@@ -13,6 +13,7 @@ import '../../core/widgets/misc.dart';
 import '../../core/widgets/skeleton.dart';
 import '../../data/repositories/wallets_repository.dart';
 import '../preferences/preferences_controller.dart';
+import 'debts_card.dart';
 import 'widgets/wallet_card_visual.dart';
 
 class WalletsScreen extends ConsumerWidget {
@@ -77,6 +78,8 @@ class WalletsScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.lg),
+                      const DebtsCard(),
                       const SizedBox(height: AppSpacing.lg),
                       if (wallets.isEmpty)
                         const EmptyState(
@@ -144,6 +147,14 @@ class WalletsScreen extends ConsumerWidget {
                       PillButton(
                         label: 'Add wallet',
                         onPressed: () => context.push(Routes.editWallet),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      PillButton(
+                        label: 'Transfer',
+                        onPressed: () async {
+                          await context.push(Routes.transfer);
+                          ref.invalidate(walletsListProvider);
+                        },
                       ),
                     ],
                   ),

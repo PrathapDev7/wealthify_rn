@@ -16,6 +16,13 @@ class RecurringModel {
     this.endDate,
     this.lastRunDate,
     this.active = true,
+    this.isBill = false,
+    this.autoCreate = true,
+    this.remindBeforeDays = 2,
+    this.lastStatus,
+    this.paidDates = const [],
+    this.skippedDates = const [],
+    this.overdue = false,
   });
 
   final String id;
@@ -34,6 +41,13 @@ class RecurringModel {
   final String? endDate;
   final String? lastRunDate;
   final bool active;
+  final bool isBill;
+  final bool autoCreate;
+  final int remindBeforeDays;
+  final String? lastStatus;
+  final List<String> paidDates;
+  final List<String> skippedDates;
+  final bool overdue;
 
   factory RecurringModel.fromJson(Map<String, dynamic> j) => RecurringModel(
         id: (j['_id'] ?? j['id'] ?? '').toString(),
@@ -52,5 +66,16 @@ class RecurringModel {
         endDate: j['endDate']?.toString(),
         lastRunDate: j['lastRunDate']?.toString(),
         active: j['active'] != false,
+        isBill: j['isBill'] == true,
+        autoCreate: j['autoCreate'] != false,
+        remindBeforeDays: (j['remindBeforeDays'] as num?)?.toInt() ?? 2,
+        lastStatus: j['lastStatus']?.toString(),
+        paidDates: ((j['paidDates'] as List?) ?? const [])
+            .map((e) => e.toString())
+            .toList(),
+        skippedDates: ((j['skippedDates'] as List?) ?? const [])
+            .map((e) => e.toString())
+            .toList(),
+        overdue: j['overdue'] == true,
       );
 }

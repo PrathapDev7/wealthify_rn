@@ -184,20 +184,26 @@ class EmptyState extends StatelessWidget {
 /// Toast-style feedback, replacing react-native-toast-message.
 void showAppSnack(BuildContext context, String message, {bool error = false}) {
   final c = context.colors;
+  final tint = error ? c.negative : c.accentDark;
   ScaffoldMessenger.of(context)
     ..clearSnackBars()
     ..showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: c.surface,
+        elevation: 4,
+        backgroundColor: error ? c.negativeSoft : c.accentSoft,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          side: BorderSide(color: tint),
+        ),
         content: Row(
           children: [
-            Icon(error ? Icons.error_outline : Icons.check_circle_outline,
-                color: error ? c.negative : c.accentDark, size: 20),
+            Icon(error ? Icons.error : Icons.check_circle,
+                color: tint, size: 22),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(message,
-                  style: AppText.bodySm.copyWith(color: c.text)),
+                  style: AppText.bodyMedium.copyWith(color: c.text)),
             ),
           ],
         ),

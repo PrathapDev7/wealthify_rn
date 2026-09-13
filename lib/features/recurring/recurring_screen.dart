@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -13,6 +12,7 @@ import '../../core/widgets/gradient_scaffold.dart';
 import '../../core/widgets/misc.dart';
 import '../../core/widgets/skeleton.dart';
 import '../../data/models/recurring_model.dart';
+import '../../data/repositories/bills_repository.dart';
 import '../../data/repositories/recurring_repository.dart';
 import '../auth/auth_screen.dart';
 import '../preferences/preferences_controller.dart';
@@ -68,11 +68,16 @@ class RecurringScreen extends ConsumerWidget {
                 ),
               ),
               data: (rules) => RefreshIndicator(
-                onRefresh: () => ref.refresh(recurringListProvider.future),
+                onRefresh: () {
+                  ref.invalidate(upcomingBillsProvider);
+                  return ref.refresh(recurringListProvider.future);
+                },
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(
                       AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, 120),
                   children: [
+                    const _BillsSection(),
+                    const SizedBox(height: AppSpacing.lg),
                     if (rules.isEmpty)
                       const EmptyState(
                         icon: Icons.autorenew,
@@ -341,6 +346,132 @@ class _RecurringCardState extends ConsumerState<_RecurringCard> {
   }
 }
 
+/// Upcoming bills section at the top of the recurring screen.
+class _BillsSection extends ConsumerWidget {
+  const _BillsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final money = ref.read(preferencesProvider.notifier).money;
+    final async = ref.watch(upcomingBillsProvider);
+
+    return async.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (bills) {
+        if (bills.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Upcoming bills',
+                style: AppText.subtitle.copyWith(color: c.text)),
+            const SizedBox(height: AppSpacing.sm),
+            for (final b in bills)
+              _BillRow(bill: b, money: money),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _BillRow extends ConsumerStatefulWidget {
+  const _BillRow({required this.bill, required this.money});
+
+  final RecurringModel bill;
+  final String Function(num?) money;
+
+  @override
+  ConsumerState<_BillRow> createState() => _BillRowState();
+}
+
+class _BillRowState extends ConsumerState<_BillRow> {
+  bool _busy = false;
+
+  Future<void> _mark(String status) async {
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(billsRepositoryProvider)
+          .markBill(widget.bill.id, status);
+      if (!mounted) return;
+      showAppSnack(context,
+          status == 'paid' ? 'Bill marked paid' : 'Bill skipped');
+      ref.invalidate(upcomingBillsProvider);
+      ref.invalidate(recurringListProvider);
+    } catch (e) {
+      if (mounted) showAppSnack(context, errorMessage(e), error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final b = widget.bill;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: AppCard(
+        child: Row(
+          children: [
+            Icon(
+              b.overdue ? Icons.error_outline : Icons.receipt_long_outlined,
+              size: 20,
+              color: b.overdue ? c.negative : c.textSubtle,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    b.title?.isNotEmpty == true ? b.title! : b.category,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.bodyMedium.copyWith(color: c.text),
+                  ),
+                  Text(
+                    b.overdue
+                        ? 'Overdue · ${b.nextRunDate}'
+                        : 'Due ${b.nextRunDate}',
+                    style: AppText.caption.copyWith(
+                        color: b.overdue ? c.negative : c.textSubtle),
+                  ),
+                ],
+              ),
+            ),
+            Text(widget.money(b.amount),
+                style: AppText.bodyStrong
+                    .copyWith(color: b.overdue ? c.negative : c.text)),
+            const SizedBox(width: AppSpacing.xs),
+            if (_busy)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else ...[
+              GestureDetector(
+                onTap: () => _mark('paid'),
+                child: Icon(Icons.check_circle_outline,
+                    size: 22, color: c.accentDark),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              GestureDetector(
+                onTap: () => _mark('skipped'),
+                child:
+                    Icon(Icons.skip_next_outlined, size: 22, color: c.textSubtle),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Labeled row action (Pause/Resume, Delete) mirroring the RN `actionBtn`.
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
@@ -370,17 +501,14 @@ class _ActionButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
         child: busy
-            ? Container(
-                height: 8,
-                width: 24,
-                decoration: BoxDecoration(
-                  color: c.primary.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(4),
+            ? SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: c.primary,
                 ),
-              ).animate(onPlay: (ctrl) => ctrl.repeat()).shimmer(
-                    duration: 1000.ms,
-                    color: c.primary.withValues(alpha: 0.85),
-                  )
+              )
             : Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
