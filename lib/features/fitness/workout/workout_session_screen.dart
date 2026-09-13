@@ -370,7 +370,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     final path = exercise.gif;
     if (path == null || path.isEmpty) return null;
     if (path.startsWith('http')) return path;
-    final base = Env.apiBaseUrl;
+    final base = Env.serverRoot;
     return '$base${path.startsWith('/') ? path.substring(1) : path}';
   }
 

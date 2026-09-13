@@ -160,12 +160,12 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
     if (p.gif != null && p.gif!.isNotEmpty) {
       final path = p.gif!;
       if (path.startsWith('http')) return path;
-      final base = Env.apiBaseUrl;
+      final base = Env.serverRoot;
       return '$base${path.startsWith('/') ? path.substring(1) : path}';
     }
     if (p.catalogId == null || p.catalogId!.isEmpty) return null;
     for (final item in _cache.items) {
-      if (item.catalogId == p.catalogId) return item.gifUrl(Env.apiBaseUrl);
+      if (item.catalogId == p.catalogId) return item.gifUrl(Env.serverRoot);
     }
     return null;
   }
@@ -503,7 +503,7 @@ class _ExercisePickerScreenState extends ConsumerState<ExercisePickerScreen> {
                         else
                           for (final item in _matches.take(_shown))
                             _ExerciseRow(
-                              gifUrl: item.gifUrl(Env.apiBaseUrl),
+                              gifUrl: item.gifUrl(Env.serverRoot),
                               name: item.name,
                               muscle: item.muscleLabel,
                               equipment: item.equipment,

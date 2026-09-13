@@ -279,7 +279,7 @@ class _ExerciseConfigScreenState extends ConsumerState<ExerciseConfigScreen> {
         ? null
         : (gifPath.startsWith('http')
               ? gifPath
-              : '${Env.apiBaseUrl}${gifPath.startsWith('/') ? gifPath.substring(1) : gifPath}');
+              : '${Env.serverRoot}${gifPath.startsWith('/') ? gifPath.substring(1) : gifPath}');
 
     return Scaffold(
       backgroundColor: c.background,

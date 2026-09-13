@@ -20,4 +20,15 @@ abstract class Env {
         : (_devTunnel.isNotEmpty ? _devTunnel : _hosted);
     return raw.endsWith('/') ? raw : '$raw/';
   }
+
+  /// The server root without the `/api/v1/` suffix — for static assets like
+  /// the exercise gifs, which are mounted at the root, not under the API.
+  static String get serverRoot {
+    final base = apiBaseUrl;
+    const suffix = 'api/v1/';
+    if (base.endsWith(suffix)) {
+      return base.substring(0, base.length - suffix.length);
+    }
+    return base;
+  }
 }

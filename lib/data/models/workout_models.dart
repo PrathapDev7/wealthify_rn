@@ -428,12 +428,14 @@ class ExerciseCatalogItem {
   final String? gif;
   final bool hasGif;
 
-  /// The absolute gif URL against [baseUrl], or null when there is no demo.
-  String? gifUrl(String baseUrl) {
+  /// The absolute gif URL against [serverRoot] (the backend root, without the
+  /// `/api/v1/` API prefix — static assets mount at the root), or null when
+  /// there is no demo.
+  String? gifUrl(String serverRoot) {
     final path = gif;
     if (path == null || path.isEmpty) return null;
     if (path.startsWith('http')) return path;
-    final base = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/';
+    final base = serverRoot.endsWith('/') ? serverRoot : '$serverRoot/';
     return '$base${path.startsWith('/') ? path.substring(1) : path}';
   }
 
