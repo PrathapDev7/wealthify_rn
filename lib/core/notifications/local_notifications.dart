@@ -47,6 +47,8 @@ class LocalNotifications {
         defaultPresentAlert: true,
         defaultPresentBadge: true,
         defaultPresentSound: true,
+        defaultPresentBanner: true,
+        defaultPresentList: true,
       );
       const settings =
           InitializationSettings(android: android, iOS: darwin, macOS: darwin);
@@ -141,10 +143,14 @@ class LocalNotifications {
     );
     // Force foreground presentation on iOS/macOS (show the banner, play the
     // sound, and update the badge even when Align is the active app).
+    // NOTE: on iOS 14+ the native plugin only honours presentBanner/presentList
+    // in willPresentNotification — presentAlert alone shows nothing.
     const darwin = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      presentBanner: true,
+      presentList: true,
     );
     return NotificationDetails(android: android, iOS: darwin, macOS: darwin);
   }

@@ -1,4 +1,4 @@
-# Codemagic CI/CD for Wealthify (Flutter).
+# Codemagic CI/CD for Align (Flutter).
 # Docs: https://docs.codemagic.io/yaml-quick-start/building-a-flutter-app/
 #
 # ─────────────────────────────────────────────────────────────────────────────
@@ -11,7 +11,7 @@
 #    add an "App Store Connect API key" (generate it in App Store Connect →
 #    Users and Access → Integrations, with the "App Manager" role).
 #    Give it a name and put that SAME name below under  integrations.app_store_connect
-#    (replace "WealthifyAppStoreConnect").
+#    (replace "AlignAppStoreConnect").
 # 4. Codemagic → connect this repository (branch: feature-flutter), then
 #    "Start new build" → pick the workflow.
 #
@@ -22,11 +22,11 @@
 workflows:
   # ───────────────────────────── iOS → TestFlight ─────────────────────────────
   ios-testflight:
-    name: Wealthify iOS (TestFlight)
+    name: Align iOS (TestFlight)
     instance_type: mac_mini_m2
     max_build_duration: 90
     integrations:
-      app_store_connect: WealthifyAppStoreConnect   # <-- name of your ASC API key in Codemagic
+      app_store_connect: AlignAppStoreConnect   # <-- name of your ASC API key in Codemagic
     environment:
       vars:
         BUNDLE_ID: "com.invent.wealthify"
@@ -83,7 +83,7 @@ workflows:
   # (https://sideloadly.io) or AltStore using a FREE Apple ID. The app runs for 7
   # days, then just re-sign to renew. No $99 membership required.
   ios-unsigned:
-    name: Wealthify iOS (unsigned · sideload)
+    name: Align iOS (unsigned · sideload)
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
@@ -107,7 +107,7 @@ workflows:
           cd build/ios/iphoneos
           mkdir -p Payload
           cp -r Runner.app Payload/
-          zip -r9 Wealthify-unsigned.ipa Payload
+          zip -r9 Align-unsigned.ipa Payload
     artifacts:
       - build/ios/iphoneos/*.ipa
     publishing:
@@ -121,7 +121,7 @@ workflows:
   # ───────────────────────────── Android → APK ────────────────────────────────
   # Bonus: builds an installable (debug-signed) release APK in the cloud.
   android-apk:
-    name: Wealthify Android (APK)
+    name: Align Android (APK)
     instance_type: linux_x2
     max_build_duration: 60
     environment:
